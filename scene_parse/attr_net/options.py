@@ -1,7 +1,15 @@
 import argparse
 import os
-import utils
 import torch
+
+def mkdirs(paths):
+    if isinstance(paths, list):
+        for path in paths:
+            if not os.path.exists(path):
+                os.makedirs(path)
+    else:
+        if not os.path.exists(paths):
+            os.makedirs(paths)
 
 
 class BaseOptions():
@@ -50,7 +58,7 @@ class BaseOptions():
         print('| options')
         for k, v in args.items():
             print('%s: %s' % (str(k), str(v)))
-        utils.mkdirs(self.opt.run_dir)
+        mkdirs(self.opt.run_dir)
 
         if self.is_train:
             filename = 'train_opt.txt'

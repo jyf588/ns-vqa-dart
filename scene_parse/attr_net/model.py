@@ -26,7 +26,8 @@ class AttributeNetwork():
         else:
             print('| creating new model')
             output_dims = {
-                'clevr': 18,
+                'clevr': 18,    #TODO
+                'clevr_dart': 12
             }
             self.output_dim = output_dims[opt.dataset]
             self.net = _Net(self.output_dim, self.input_channels)
@@ -58,7 +59,8 @@ class AttributeNetwork():
             self.loss = self.criterion(self.pred, self.label)
             
     def get_loss(self):
-        if PYTORCH_VER.startswith('0.4'):
+        # print(PYTORCH_VER)
+        if PYTORCH_VER.startswith('1.'):   # TODO
             return self.loss.data.item()
         else:
             return self.loss.data[0]

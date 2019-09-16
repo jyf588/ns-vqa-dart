@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import argparse
 import numpy as np
@@ -9,43 +8,36 @@ import torch
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='clevr', type=str)
 parser.add_argument('--proposal_path', required=True, type=str)
 parser.add_argument('--gt_scene_path', default=None, type=str)
 parser.add_argument('--output_path', required=True, type=str)
 parser.add_argument('--align_iou_thresh', default=0.7, type=float)
 parser.add_argument('--score_thresh', default=0.9, type=float)
-parser.add_argument('--suppression', default=0, type=int)
-parser.add_argument('--suppression_iou_thresh', default=0.5, type=float)
-parser.add_argument('--suppression_iomin_thresh', default=0.5, type=float)
+# parser.add_argument('--suppression', default=0, type=int)
+# parser.add_argument('--suppression_iou_thresh', default=0.5, type=float)
+# parser.add_argument('--suppression_iomin_thresh', default=0.5, type=float)
 
 
-def get_feat_vec_clevr(obj):
+def get_feat_vec_clevr_dart(obj):
     attr_to_idx = {
-        'sphere': 0,
-        'cube': 1,
-        'cylinder': 2,
-        'large': 3,
-        'small': 4,
-        'metal': 5,
-        'rubber': 6,
-        'blue': 7,
-        'brown': 8,
-        'cyan': 9,
-        'gray': 10,
-        'green': 11,
-        'purple': 12,
-        'red': 13,
-        'yellow': 14
+        'box': 0,
+        'cylinder': 1,
+        'sphere': 2,
+        'small': 3,
+        'large': 4,
+        'red': 5,
+        'orange': 6,
+        'green': 7,
+        'blue': 8
     }
-    feat_vec = np.zeros(18)
-    for attr in ['color', 'material', 'shape', 'size']:
+    feat_vec = np.zeros(9+3)
+    for attr in ['color', 'shape', 'size']:
         feat_vec[attr_to_idx[obj[attr]]] = 1
-    feat_vec[15:] = obj['position']
+    feat_vec[9:] = obj['position']
     return list(feat_vec)
 
 
-def load_clevr_scenes(scenes_json):
+def load_clevr_dart_scenes(scenes_json):
     with open(scenes_json) as f:
         scenes_dict = json.load(f)['scenes']
     scenes = []
@@ -53,15 +45,12 @@ def load_clevr_scenes(scenes_json):
         objs = []
         for i, o in enumerate(s['objects']):
             item = {}
-            item['id'] = '%d-%d' % (s['image_index'], i)
+            item['id'] = '%d-%d' % (s['image_index'], i)    # TODO: deprecated?
             if '3d_coords' in o:
-                item['position'] = [np.dot(o['3d_coords'], s['directions']['right']),
-                                    np.dot(o['3d_coords'], s['directions']['front']),
-                                    o['3d_coords'][2]]
+                item['position'] = o['3d_coords']   # dart camera is not tilted
             else:
                 item['position'] = o['position']
             item['color'] = o['color']
-            item['material'] = o['material']
             item['shape'] = o['shape']
             item['size'] = o['size']
             item['mask'] = o['mask']
@@ -85,7 +74,7 @@ def main(args):
 
     scenes = None
     if args.gt_scene_path is not None:
-        scenes = load_clevr_scenes(args.gt_scene_path)    # load and rotate xyz camera
+        scenes = load_clevr_dart_scenes(args.gt_scene_path)    # load and rotate xyz camera
 
     # with open(args.proposal_path, 'rb') as f:
     #     proposals = pickle.load(f)
@@ -159,7 +148,7 @@ def main(args):
                         # print(mask_gt.shape)
                         if iou(mask, mask_gt) > args.align_iou_thresh:
                             # input("found")
-                            vec = get_feat_vec_clevr(o)
+                            vec = get_feat_vec_clevr_dart(o)
                             obj_ann = {
                                 'mask': rle,
                                 'image_idx': image_id,
