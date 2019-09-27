@@ -30,10 +30,15 @@ def get_feat_vec_clevr_dart(obj):
         'green': 7,
         'blue': 8
     }
-    feat_vec = np.zeros(9+3)
+    feat_vec = np.zeros(9+3+9)
     for attr in ['color', 'shape', 'size']:
         feat_vec[attr_to_idx[obj[attr]]] = 1
-    feat_vec[9:] = obj['position']
+    feat_vec[9:12] = obj['position']
+
+    feat_vec[12:15] = obj['rotation_x'] - feat_vec[9:12]
+    feat_vec[15:18] = obj['rotation_y'] - feat_vec[9:12]
+    feat_vec[18:21] = obj['rotation_z'] - feat_vec[9:12]
+
     return list(feat_vec)
 
 
@@ -50,6 +55,11 @@ def load_clevr_dart_scenes(scenes_json):
                 item['position'] = o['3d_coords']   # dart camera is not tilted
             else:
                 item['position'] = o['position']
+
+            item['rotation_x'] = o['rotation_x']
+            item['rotation_y'] = o['rotation_y']
+            item['rotation_z'] = o['rotation_z']
+
             item['color'] = o['color']
             item['shape'] = o['shape']
             item['size'] = o['size']

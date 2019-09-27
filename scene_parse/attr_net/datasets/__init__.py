@@ -17,12 +17,13 @@ def get_dataset(opt, split):
     elif opt.dataset == 'clevr_dart':
         if split == 'train':
             ds = ClevrDartObjectDataset(opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
-                                    max_img_id=opt.split_id, concat_img=opt.concat_img)
+                                    max_img_id=opt.split_id, concat_img=opt.concat_img, with_depth=opt.with_depth, with_rot=opt.with_rot)
         elif split == 'val':
             ds = ClevrDartObjectDataset(opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
-                                    min_img_id=opt.split_id, concat_img=opt.concat_img)
+                                    min_img_id=opt.split_id, concat_img=opt.concat_img, with_depth=opt.with_depth, with_rot=opt.with_rot)
         elif split == 'test':
-            ds = ClevrDartObjectDataset(opt.clevr_val_ann_path, opt.clevr_val_img_dir, 'val', concat_img=opt.concat_img)
+            ds = ClevrDartObjectDataset(opt.clevr_val_ann_path, opt.clevr_val_img_dir, 'val', concat_img=opt.concat_img,
+                                        with_depth=opt.with_depth, with_rot=opt.with_rot)
         else:
             raise ValueError('Invalid dataset split: %s' % split)
     else:
