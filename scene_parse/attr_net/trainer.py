@@ -26,6 +26,8 @@ class Trainer:
             "rot_losses": []
         }
 
+        self.opt = opt
+
     def train(self):
         print('| start training, running in directory %s' % self.run_dir)
         t = 0
@@ -44,11 +46,10 @@ class Trainer:
                 if t % self.display_every == 0:
                     self.stats['train_losses'].append(loss)
                     print('| iteration %d / %d, epoch %d, loss %f' % (t, self.num_iters, epoch, loss), end = '')
-                    if old_loss:
-                        self.stats['old_losses'].append(loss)
+                    if self.opt.with_rot:
+                        self.stats['old_losses'].append(old_loss)
                         print(' ,ol %f' % old_loss, end = '')
-                    if rot_loss:
-                        self.stats['rot_losses'].append(loss)
+                        self.stats['rot_losses'].append(rot_loss)
                         print(' ,rl %f' % rot_loss)
                     else:
                         print("")

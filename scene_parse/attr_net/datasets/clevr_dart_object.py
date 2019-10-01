@@ -28,7 +28,6 @@ class ClevrDartObjectDataset(Dataset):
 
         self.obj_masks = anns['object_masks'][min_id: max_id]
         self.img_ids = anns['image_idxs'][min_id: max_id]
-        self.cat_ids = anns['category_idxs'][min_id: max_id]
         if anns['feature_vectors'] != []:
             self.feat_vecs = np.array(anns['feature_vectors'][min_id: max_id]).astype(float)
         else:
@@ -48,58 +47,85 @@ class ClevrDartObjectDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = 's%04d.png' % (self.img_ids[idx])
-        # print(os.path.join(self.img_dir, img_name))
-        # input("press enter")
-        img = cv2.imread(os.path.join(self.img_dir, img_name), cv2.IMREAD_COLOR)
-        img = self._transform(img)
+        img = cv2.imread(os.path.join(self.img_dir, img_name), cv2.IMREAD_COLOR)    # 0~255
+        img = self._transform(img)  # 0~1
 
         if self.with_depth:
             dimg_name = 's%04d_depth.png' % (self.img_ids[idx])
             dimg = cv2.imread(os.path.join(self.img_dir, dimg_name), cv2.IMREAD_GRAYSCALE)
-            # print(dimg.shape)
             dimg = self._transform(dimg)
-            # print(dimg.size())
+
+        # print(self.img_ids[idx])
 
         label = -1
         if self.feat_vecs is not None:
-            label = torch.Tensor(self.feat_vecs[idx])
+            label = torch.Tensor(self.feat_vecs[idx])   # TODO: feat 2 3 4 are actualy not useful
             if not self.with_rot:
-                label = label[:12]  # TODO
+                label = label[:-9]  # TODO: asuume final 9 are rot
+        # print(label)
         img_id = self.img_ids[idx]
-        cat_id = self.cat_ids[idx]
 
-        mask = torch.Tensor(mask_util.decode(self.obj_masks[idx]))
-        seg = img.clone()
-        for i in range(3):
-            seg[i, :, :] = img[i, :, :] * mask.float()
+        rle = self.obj_masks[idx]
+        bbox = mask_util.toBbox(rle)    # xywh
+        x, y, w, h = [int(bbox[i]) for i in (0, 1, 2, 3)]
+        # print(x)
+
+        seg = img[:, y:y+h, x:x+w].clone()
+        seg_transform_list = [transforms.ToPILImage(),
+                          transforms.Resize((360, 360)),
+                          transforms.ToTensor(),
+                          transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.225, 0.225, 0.225])]
+        transform_list = [transforms.ToPILImage(),
+                          transforms.Resize((240, 360)),
+                          transforms.ToTensor(),
+                          transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.225, 0.225, 0.225])]
 
         if self.with_depth:
-            dseg = dimg.clone()
-            dseg[0, :, :] = dimg[0, :, :] * mask.float()
+            dseg = dimg[0, y:y+h, x:x+w].clone()
+            dseg_transform_list = [transforms.ToPILImage(),
+                               transforms.Resize((360, 360)),
+                               transforms.ToTensor(),   # back to tensor
+                               transforms.Normalize(mean=[0.5], std=[0.3])]
             dtransform_list = [transforms.ToPILImage(),
-                              transforms.Resize((149, 224)),
-                              transforms.ToTensor(),
-                              transforms.Normalize(mean=[0.5], std=[0.3])]      # TODO: maybe changed to 0.6
+                               transforms.Resize((240, 360)),
+                               transforms.ToTensor(),   # back to tensor
+                               transforms.Normalize(mean=[0.5], std=[0.3])]
 
-        transform_list = [transforms.ToPILImage(),
-                          transforms.Resize((149, 224)),
-                          transforms.ToTensor(),
-                          transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
         if self.concat_img:
             if self.with_depth:
-                data = img.clone().resize_(8, 224, 224).fill_(0)
-                data[0:3, 38:187, :] = transforms.Compose(transform_list)(seg)
-                data[3:4, 38:187, :] = transforms.Compose(dtransform_list)(dseg)
-                data[4:7, 38:187, :] = transforms.Compose(transform_list)(img)
-                data[7:8, 38:187, :] = transforms.Compose(dtransform_list)(dimg)
-                # print(dimg.mean())
-                # print("bb", dimg.std())
-            else:
-                data = img.clone().resize_(6, 224, 224).fill_(0)        # TODO: what is this?
-                data[0:3, 38:187, :] = transforms.Compose(transform_list)(seg)
-                data[3:6, 38:187, :] = transforms.Compose(transform_list)(img)
-        else:
-            data = img.clone().resize_(3, 224, 224).fill_(0)
-            data[:, 38:187, :] = transforms.Compose(transform_list)(seg)
+                data = img.clone().resize_(8, 360, 360).fill_(0)
 
-        return data, label, img_id, cat_id
+                data[0:3, :, :] = transforms.Compose(seg_transform_list)(seg)
+                data[3:4, :, :] = transforms.Compose(dseg_transform_list)(dseg)
+                # TODO: corp the object out, otherwise confusing
+                img[:, y:y + h, x:x + w] = 0.0
+                data[4:7, 60:300, :] = transforms.Compose(transform_list)(img)
+                dimg[0, y:y + h, x:x + w] = 0.0
+                data[7:8, 60:300, :] = transforms.Compose(dtransform_list)(dimg)
+
+                # data = dimg.clone().resize_(2, 360, 360).fill_(0)
+                # data[0:1, :, :] = transforms.Compose(dseg_transform_list)(dseg)
+                # dimg[0, y:y + h, x:x + w] = 0.0
+                # data[1:2, 60:300, :] = transforms.Compose(dtransform_list)(dimg)
+
+                # cv2.imwrite('tmp_img_seg.png', (data[0:3, :, :].permute(1, 2, 0).numpy()*0.3+0.5) * 255)
+                # cv2.imwrite('tmp_img_dseg.png', (data[3:4, :, :].permute(1, 2, 0).numpy()*0.3+0.5) * 255)
+                # cv2.imwrite('tmp_img.png', (data[4:7, :, :].permute(1, 2, 0).numpy()*0.225+0.5) * 255)
+                # cv2.imwrite('tmp_img_dimg.png', (data[7:8, :, :].permute(1, 2, 0).numpy()*0.225+0.5) * 255)
+                # input('press enter')
+            else:
+                data = img.clone().resize_(6, 360, 360).fill_(0)
+                # data[0:3, 80:400, :] = transforms.Compose(transform_list)(seg)
+                # data[3:6, 80:400, :] = transforms.Compose(transform_list)(img)
+
+                data[0:3, :, :] = transforms.Compose(seg_transform_list)(seg)
+                # TODO: corp the object out, otherwise confusing
+                img[:, y:y + h, x:x + w] = 0.0
+                data[3:6, 60:300, :] = transforms.Compose(transform_list)(img)
+        else:
+            data = img.clone().resize_(3, 360, 360).fill_(0)
+            # data[:, 80:400, :] = transforms.Compose(transform_list)(seg)
+
+        return data, label, img_id, 0       # cat_id dont care
+
+# if __name__ == '__main__':

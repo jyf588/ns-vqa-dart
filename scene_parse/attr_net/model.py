@@ -33,6 +33,7 @@ class AttributeNetwork():
                 'clevr_dart': (9+3+9, 9+3)
             }
             self.output_dim = output_dims[opt.dataset]
+            print(self.output_dim)
             if opt.with_rot:
                 self.output_dim = self.output_dim[0]
             else:
@@ -46,6 +47,8 @@ class AttributeNetwork():
         self.gpu_ids = opt.gpu_ids
         if self.use_cuda:
             self.net.cuda(opt.gpu_ids[0])
+
+        self.opt = opt
 
         self.input, self.label = None, None
                 
@@ -64,9 +67,9 @@ class AttributeNetwork():
         self.pred = self.net(self.input)
         if self.label is not None:
             self.loss = self.criterion(self.pred, self.label)
-            if self.output_dim == 21:   # TODO: this is with orientation
-                self.old_loss = self.criterion(self.pred[:12], self.label[:12])
-                self.rot_loss = self.criterion(self.pred[12:], self.label[12:])
+            if self.opt.with_rot:
+                self.old_loss = self.criterion(self.pred[:-9], self.label[:-9])
+                self.rot_loss = self.criterion(self.pred[-9:], self.label[-9:])
             
     def get_loss(self):
         # print(PYTORCH_VER)
@@ -76,7 +79,7 @@ class AttributeNetwork():
             return self.loss.data[0]
 
     def get_old_loss(self):
-        if self.output_dim != 21:
+        if not self.opt.with_rot:
             return None
         if PYTORCH_VER.startswith('1.'):   # TODO
             return self.old_loss.data.item()
@@ -84,7 +87,7 @@ class AttributeNetwork():
             return self.old_loss.data[0]
 
     def get_rot_loss(self):
-        if self.output_dim != 21:
+        if not self.opt.with_rot:
             return None
         if PYTORCH_VER.startswith('1.'):   # TODO
             return self.rot_loss.data.item()
@@ -121,7 +124,7 @@ class _Net(nn.Module):
     def __init__(self, output_dim, input_channels=6):
         super(_Net, self).__init__()
 
-        resnet = models.resnet34(pretrained=False)
+        resnet = models.resnet18(pretrained=False)
         layers = list(resnet.children())
         
         # remove the last layer
@@ -131,15 +134,19 @@ class _Net(nn.Module):
         layers.insert(0, nn.Conv2d(input_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False))
 
         self.main = nn.Sequential(*layers)
-        self.fc1 = nn.Linear(512, 256)
-        self.fc2 = nn.Linear(256, output_dim)
+        # self.fc1 = nn.Linear(512, 256)
+        # self.fc2 = nn.Linear(256, output_dim)
+
+        self.fc1 = nn.Linear(512, output_dim)
 
     def forward(self, x):
         x = self.main(x)
         x = x.view(x.size(0), -1)
-        import torch.nn.functional as F
-        x = F.relu(self.fc1(x))
-        output = self.fc2(x)
+        # import torch.nn.functional as F
+        # x = F.relu(self.fc1(x))
+        # output = self.fc2(x)
+
+        output = self.fc1(x)
         return output
 
 

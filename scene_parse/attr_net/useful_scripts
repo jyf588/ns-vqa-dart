@@ -1,0 +1,20 @@
+python process_proposals.py \
+    --proposal_path /home/yifengj/mask_rcnn/maskrcnn-benchmark/output_new96/inference/clevr_mask_train/predictions.pth \
+    --gt_scene_path /home/yifengj/mask_rcnn/maskrcnn-benchmark/datasets/clevr_mask/CLEVR_mini_coco_anns.json \
+    --output_path /home/yifengj/mask_rcnn/maskrcnn-benchmark/datasets/clevr_mask/clevr_mini_objs.json
+
+python process_proposals_dart.py \
+    --proposal_path /home/yifengj/mask_rcnn/mask-rcnn-dart/output_new916_one_float/inference/clevr_dart_mask_test/predictions.pth \
+    --gt_scene_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_annos.json \
+    --output_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json
+
+python run_train.py \
+	--dataset clevr_dart \
+    --run_dir ../../data/attr_net/outputs/trained_model_clevr_dart_930_only_depth_unsym2_retry\
+    --clevr_mini_ann_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json \
+    --clevr_mini_img_dir /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/images \
+    --split_id 18500
+
+python process_proposals_dart_unsym.py \
+    --gt_scene_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_annos.json \
+    --output_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json
