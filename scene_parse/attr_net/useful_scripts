@@ -18,3 +18,12 @@ python run_train.py \
 python process_proposals_dart_unsym.py \
     --gt_scene_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_annos.json \
     --output_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json
+
+python run_test.py \
+    --run_dir ../../data/attr_net/results \
+    --dataset clevr_dart \
+    --load_checkpoint_path ../../data/attr_net/outputs/trained_model_clevr_dart_930_only_depth_unsym2_retry_fullcolor/checkpoint.pt \
+    --output_path ../../data/attr_net/results/clevr_val_scenes_derendered.json \
+    --clevr_mini_ann_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json \
+    --clevr_mini_img_dir /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/images \
+    --split_id 18500
