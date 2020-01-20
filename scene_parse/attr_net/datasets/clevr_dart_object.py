@@ -12,7 +12,7 @@ import pycocotools.mask as mask_util
 class ClevrDartObjectDataset(Dataset):
 
     def __init__(self, obj_ann_path, img_dir, split,
-                 min_img_id=None, max_img_id=None, concat_img=True, with_depth=False, with_rot=True):
+                 min_img_id=None, max_img_id=None, concat_img=True, with_depth=False, with_rot=False):
         with open(obj_ann_path) as f:
             anns = json.load(f)
 
@@ -46,7 +46,7 @@ class ClevrDartObjectDataset(Dataset):
         return len(self.img_ids)
 
     def __getitem__(self, idx):
-        img_name = 's%04d.png' % (self.img_ids[idx])
+        img_name = 's%05d.png' % (self.img_ids[idx])
         img = cv2.imread(os.path.join(self.img_dir, img_name), cv2.IMREAD_COLOR)    # 0~255
         img = self._transform(img)  # 0~1
 
@@ -60,8 +60,8 @@ class ClevrDartObjectDataset(Dataset):
         label = -1
         if self.feat_vecs is not None:
             label = torch.Tensor(self.feat_vecs[idx])   # TODO: feat 2 3 4 are actualy not useful
-            if not self.with_rot:
-                label = label[:-9]  # TODO: asuume final 9 are rot
+            # if not self.with_rot:
+            #     label = label[:-9]  # TODO: asuume final 9 are rot
         # print(label)
         img_id = self.img_ids[idx]
 
@@ -72,36 +72,36 @@ class ClevrDartObjectDataset(Dataset):
 
         seg = img[:, y:y+h, x:x+w].clone()
         seg_transform_list = [transforms.ToPILImage(),
-                          transforms.Resize((360, 360)),
+                          transforms.Resize((480, 480)),
                           transforms.ToTensor(),
                           transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.225, 0.225, 0.225])]
         transform_list = [transforms.ToPILImage(),
-                          transforms.Resize((240, 360)),
+                          transforms.Resize((320, 480)),
                           transforms.ToTensor(),
                           transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.225, 0.225, 0.225])]
 
         if self.with_depth:
             dseg = dimg[0, y:y+h, x:x+w].clone()
             dseg_transform_list = [transforms.ToPILImage(),
-                               transforms.Resize((360, 360)),
+                               transforms.Resize((480, 480)),
                                transforms.ToTensor(),   # back to tensor
                                transforms.Normalize(mean=[0.5], std=[0.3])]
             dtransform_list = [transforms.ToPILImage(),
-                               transforms.Resize((240, 360)),
+                               transforms.Resize((320, 480)),
                                transforms.ToTensor(),   # back to tensor
                                transforms.Normalize(mean=[0.5], std=[0.3])]
 
         if self.concat_img:
             if self.with_depth:
-                data = img.clone().resize_(8, 360, 360).fill_(0)
+                data = img.clone().resize_(8, 480, 480).fill_(0)
 
                 data[0:3, :, :] = transforms.Compose(seg_transform_list)(seg)
                 data[3:4, :, :] = transforms.Compose(dseg_transform_list)(dseg)
                 # TODO: corp the object out, otherwise confusing
                 img[:, y:y + h, x:x + w] = 0.0
-                data[4:7, 60:300, :] = transforms.Compose(transform_list)(img)
+                data[4:7, 80:400, :] = transforms.Compose(transform_list)(img)
                 dimg[0, y:y + h, x:x + w] = 0.0
-                data[7:8, 60:300, :] = transforms.Compose(dtransform_list)(dimg)
+                data[7:8, 80:400, :] = transforms.Compose(dtransform_list)(dimg)
 
                 # data = dimg.clone().resize_(2, 360, 360).fill_(0)
                 # data[0:1, :, :] = transforms.Compose(dseg_transform_list)(dseg)
@@ -114,16 +114,17 @@ class ClevrDartObjectDataset(Dataset):
                 # cv2.imwrite('tmp_img_dimg.png', (data[7:8, :, :].permute(1, 2, 0).numpy()*0.225+0.5) * 255)
                 # input('press enter')
             else:
-                data = img.clone().resize_(6, 360, 360).fill_(0)
-                # data[0:3, 80:400, :] = transforms.Compose(transform_list)(seg)
-                # data[3:6, 80:400, :] = transforms.Compose(transform_list)(img)
+                data = img.clone().resize_(6, 480, 480).fill_(0)
 
                 data[0:3, :, :] = transforms.Compose(seg_transform_list)(seg)
                 # TODO: corp the object out, otherwise confusing
                 img[:, y:y + h, x:x + w] = 0.0
-                data[3:6, 60:300, :] = transforms.Compose(transform_list)(img)
+                data[3:6, 80:400, :] = transforms.Compose(transform_list)(img)
+                # cv2.imwrite('tmp_img.png', (data[3:6, :, :].permute(1, 2, 0).numpy()*0.225+0.5) * 255)
+                # cv2.imwrite('tmp_img_seg.png', (data[0:3, :, :].permute(1, 2, 0).numpy()*0.225+0.5) * 255)
+                # input('press enter')
         else:
-            data = img.clone().resize_(3, 360, 360).fill_(0)
+            data = img.clone().resize_(3, 480, 480).fill_(0)
             # data[:, 80:400, :] = transforms.Compose(transform_list)(seg)
 
         return data, label, img_id, 0       # cat_id dont care

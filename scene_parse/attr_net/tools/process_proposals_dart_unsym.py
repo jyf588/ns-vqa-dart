@@ -26,18 +26,18 @@ def get_feat_vec_clevr_dart(obj):
         'small': 3,
         'large': 4,
         'red': 5,
-        'orange': 6,
+        'yellow': 6,
         'green': 7,
         'blue': 8
     }
-    feat_vec = np.zeros(9+3+9)
+    feat_vec = np.zeros(9+3)
     for attr in ['color', 'shape', 'size']:
         feat_vec[attr_to_idx[obj[attr]]] = 1
     feat_vec[9:12] = obj['position']
 
-    feat_vec[12:15] = obj['rotation_x'] - feat_vec[9:12]
-    feat_vec[15:18] = obj['rotation_y'] - feat_vec[9:12]
-    feat_vec[18:21] = obj['rotation_z'] - feat_vec[9:12]
+    # feat_vec[12:15] = obj['rotation_x'] - feat_vec[9:12]
+    # feat_vec[15:18] = obj['rotation_y'] - feat_vec[9:12]
+    # feat_vec[18:21] = obj['rotation_z'] - feat_vec[9:12]
 
     return list(feat_vec)
 
@@ -56,9 +56,9 @@ def load_clevr_dart_scenes(scenes_json):
             else:
                 item['position'] = o['position']
 
-            item['rotation_x'] = o['rotation_x']
-            item['rotation_y'] = o['rotation_y']
-            item['rotation_z'] = o['rotation_z']
+            # item['rotation_x'] = o['rotation_x']
+            # item['rotation_y'] = o['rotation_y']
+            # item['rotation_z'] = o['rotation_z']
 
             item['color'] = o['color']
             item['shape'] = o['shape']
@@ -103,6 +103,8 @@ def main(args):
                 }
                 obj_anns.append(obj_ann)
                 A = A + 1
+            else:
+                print(image_id, o)
         img_anns.append(obj_anns)
         print('| processing proposals %d th image' % image_id)
 
@@ -233,7 +235,7 @@ def main(args):
     }
     print('| saving object annotations to %s' % args.output_path)
     with open(args.output_path, 'w') as fout:
-        json.dump(output, fout)
+        json.dump(output, fout, indent=2, separators=(',', ': '))
 
 
 if __name__ == '__main__':
