@@ -34,7 +34,7 @@ from model import get_model
 def get_attrs_clevr_dart(feat_vec):
     shapes = ['box', 'cylinder', 'sphere']
     sizes = ['small', 'large']
-    colors = ['red', 'orange', 'green', 'blue']
+    colors = ['red', 'yellow', 'green', 'blue']
     obj = {
         'shape': shapes[np.argmax(feat_vec[0:3])],
         'size': sizes[np.argmax(feat_vec[3:5])],
@@ -54,9 +54,9 @@ model = get_model(opt)
 
 scenes = [{
     'image_index': i,
-    'image_filename': 's%04d.png' % (i+opt.split_id),
+    'image_filename': 's%05d.png' % (i+opt.split_id),
     'objects': []
-} for i in range(1500)]     # TODO
+} for i in range(2000)]     # TODO
 
 count = 0
 for data, _, idxs, cat_idxs in test_loader:
@@ -79,4 +79,4 @@ output = {
 print('| saving annotation file to %s' % opt.output_path)
 # utils.mkdirs(os.path.dirname(opt.output_path))
 with open(opt.output_path, 'w') as fout:
-    json.dump(output, fout)
+    json.dump(output, fout, sort_keys=True, indent=2, separators=(',', ': '))

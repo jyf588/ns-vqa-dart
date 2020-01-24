@@ -34,7 +34,7 @@ class BaseOptions():
                                  help='predict rotation matrix')
         self.parser.add_argument('--split_id', default=18500, type=int, help='splitting index between train and val images')
         self.parser.add_argument('--batch_size', default=20, type=int, help='batch size')
-        self.parser.add_argument('--num_workers', default=1, type=int, help='number of workers for loading')
+        self.parser.add_argument('--num_workers', default=4, type=int, help='number of workers for loading')
         self.parser.add_argument('--learning_rate', default=0.002, type=float, help='learning rate')
 
         self.initialized = True

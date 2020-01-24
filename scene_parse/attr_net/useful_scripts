@@ -30,10 +30,10 @@ python run_test.py \
 
 
 Notes:
-To run the crack of bullet gen:
-1. gen image using pybullet script
+To run the crank of bullet gen:
+1. gen image using pybullet script, copy data to Documents and rename to images
 2. run /home/yifengj/Documents/gen_clevr_dart_annos.py (change n_imgs, # obj_id starts from 0 for bullet_gen)
-3. create symbolic links to clevr_dart_mask: 
+3. delete old sym links, and create symbolic links to clevr_dart_mask: 
     ln -s ~/Documents/images ~/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask/images
     ln -s ~/Documents/clevr_dart_annos.json ~/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask/clevr_dart_annos.json
 4. cd ~/ns-vqa-dart/scene_parse/attr_net/tools
@@ -48,5 +48,13 @@ python run_train.py \
     --run_dir ../../data/attr_net/outputs/trained_model_clevr_bullet_0119_init\
     --clevr_mini_ann_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask/clevr_dart_objs.json \
     --clevr_mini_img_dir /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask/images \
-    --split_id 40
+    --split_id 20000
 
+python run_test.py \
+    --run_dir ../../data/attr_net/results \
+    --dataset clevr_dart \
+    --load_checkpoint_path ../../data/attr_net/outputs/trained_model_clevr_bullet_0119_init/checkpoint.pt \
+    --output_path ../../data/attr_net/results/clevr_val_scenes_derendered_0119.json \
+    --clevr_mini_ann_path /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/clevr_dart_objs.json \
+    --clevr_mini_img_dir /home/yifengj/mask_rcnn/mask-rcnn-dart/datasets/clevr_dart_mask_test/images \
+    --split_id 20000
