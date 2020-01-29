@@ -15,22 +15,28 @@ class Trainer:
         self.val_loader = val_loader
         self.model = model
 
-        self.stats = {
-            'train_losses': [],
-            'train_losses_ts': [],
-            'val_losses': [],
-            'val_losses_ts': [],
-            'best_val_loss': 9999,
-            'model_t': 0,
-            'old_losses': [],
-            "rot_losses": []
-        }
+        self.checkpoint_t = opt.checkpoint_t
+
+        if opt.load_checkpoint_path is not None:
+            self.stats = json.load(open(f'{self.run_dir}/stats.json'))
+            assert opt.checkpoint_t is not None
+        else:
+            self.stats = {
+                'train_losses': [],
+                'train_losses_ts': [],
+                'val_losses': [],
+                'val_losses_ts': [],
+                'best_val_loss': 9999,
+                'model_t': 0,
+                'old_losses': [],
+                "rot_losses": []
+            }
 
         self.opt = opt
 
     def train(self):
         print('| start training, running in directory %s' % self.run_dir)
-        t = 0
+        t = 0 if self.checkpoint_t is None else self.checkpoint_t
         epoch = 0
         while t < self.num_iters:
             epoch += 1

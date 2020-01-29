@@ -22,6 +22,7 @@ class BaseOptions():
         self.parser.add_argument('--run_dir', default='scratch/test_run', type=str, help='experiment directory')
         self.parser.add_argument('--dataset', default='clevr', type=str, help='dataset')
         self.parser.add_argument('--load_checkpoint_path', default=None, type=str, help='load checkpoint path')
+        self.parser.add_argument('--checkpoint_t', default=None, type=int, help='Iteration of the loaded checkpoint')
         self.parser.add_argument('--gpu_ids', default='0', type=str, help='ids of gpu to be used')
 
         self.parser.add_argument('--clevr_mini_img_dir', default='../../data/raw/CLEVR_mini/images', type=str, help='clevr-mini image directory')
