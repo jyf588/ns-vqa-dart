@@ -5,7 +5,6 @@ import numpy as np
 import pycocotools.mask as mask_util
 
 import torch
-from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--proposal_path', required=True, type=str)
