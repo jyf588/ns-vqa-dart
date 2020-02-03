@@ -28,16 +28,28 @@ class AttributeNetwork():
             self.net.load_state_dict(checkpoint['model_state'])
         else:
             print('| creating new model')
-            output_dims = {
-                'clevr': 18,    #TODO
-                'clevr_dart': (9+3+9, 9+3)
-            }
-            self.output_dim = output_dims[opt.dataset]
-            print(self.output_dim)
-            if opt.with_rot:
-                self.output_dim = self.output_dim[0]
+            label2dim = {
+                'attr': 9,
+                'position': 3,
+                'z_dir': 3,
+                'z_size': 1,
+            }            
+            if opt.dataset == 'clevr_dart':
+                output_dim = 0
+                if opt.pred_attr:
+                    output_dim += label2dim['attr']                
+                if opt.pred_position:
+                    output_dim += label2dim['position']                
+                if opt.pred_z_dir:
+                    output_dim += label2dim['z_dir']                
+                if opt.pred_z_size:
+                    output_dim += label2dim['z_size']  
+                assert output_dim > 0
+                self.output_dim = output_dim    
+            elif opt.dataset == 'clevr':
+                self.output_dim = 18
             else:
-                self.output_dim = self.output_dim[1]
+                raise ValueError(f'Unsupported dataset: {opt.dataset}')
             self.net = _Net(self.output_dim, self.input_channels)
 
         self.criterion = nn.MSELoss()
@@ -67,9 +79,9 @@ class AttributeNetwork():
         self.pred = self.net(self.input)
         if self.label is not None:
             self.loss = self.criterion(self.pred, self.label)
-            if self.opt.with_rot:
-                self.old_loss = self.criterion(self.pred[:-9], self.label[:-9])
-                self.rot_loss = self.criterion(self.pred[-9:], self.label[-9:])
+            # if self.opt.with_rot:
+            #     self.old_loss = self.criterion(self.pred[:-9], self.label[:-9])
+            #     self.rot_loss = self.criterion(self.pred[-9:], self.label[-9:])
             
     def get_loss(self):
         # print(PYTORCH_VER)

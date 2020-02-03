@@ -16,17 +16,14 @@ def get_dataset(opt, split):
             raise ValueError('Invalid dataset split: %s' % split)
     elif opt.dataset == 'clevr_dart':
         if split == 'train':
-            ds = ClevrDartObjectDataset(opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
-                                    max_img_id=opt.split_id, concat_img=opt.concat_img,
-                                        with_depth=opt.with_depth, with_rot=opt.with_rot)
+            ds = ClevrDartObjectDataset(opt, opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
+                                    max_img_id=opt.split_id)
         elif split == 'val':
-            ds = ClevrDartObjectDataset(opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
-                                    min_img_id=opt.split_id, concat_img=opt.concat_img,
-                                        with_depth=opt.with_depth, with_rot=opt.with_rot)      # TODO: tmp
+            ds = ClevrDartObjectDataset(opt, opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
+                                    min_img_id=opt.split_id)      # TODO: tmp
         elif split == 'test':
-            ds = ClevrDartObjectDataset(opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
-                                    min_img_id=opt.split_id, concat_img=opt.concat_img,
-                                        with_depth=opt.with_depth, with_rot=opt.with_rot)   # TODO: tmp
+            ds = ClevrDartObjectDataset(opt, opt.clevr_mini_ann_path, opt.clevr_mini_img_dir, 'mini',
+                                    min_img_id=opt.split_id)   # TODO: tmp
         else:
             raise ValueError('Invalid dataset split: %s' % split)
     else:

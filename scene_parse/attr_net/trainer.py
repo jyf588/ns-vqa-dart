@@ -46,19 +46,19 @@ class Trainer:
                 self.model.step()
                 loss = self.model.get_loss()
 
-                old_loss = self.model.get_old_loss()
-                rot_loss = self.model.get_rot_loss()
+                # old_loss = self.model.get_old_loss()
+                # rot_loss = self.model.get_rot_loss()
 
                 if t % self.display_every == 0:
                     self.stats['train_losses'].append(loss)
-                    print('| iteration %d / %d, epoch %d, loss %f' % (t, self.num_iters, epoch, loss), end = '')
-                    if self.opt.with_rot:
-                        self.stats['old_losses'].append(old_loss)
-                        print(' ,ol %f' % old_loss, end = '')
-                        self.stats['rot_losses'].append(rot_loss)
-                        print(' ,rl %f' % rot_loss)
-                    else:
-                        print("")
+                    print('| iteration %d / %d, epoch %d, loss %f\n' % (t, self.num_iters, epoch, loss), end = '')
+                    # if self.opt.with_rot:
+                    #     self.stats['old_losses'].append(old_loss)
+                    #     print(' ,ol %f' % old_loss, end = '')
+                    #     self.stats['rot_losses'].append(rot_loss)
+                    #     print(' ,rl %f' % rot_loss)
+                    # else:
+                    #     print("")
                     self.stats['train_losses_ts'].append(t)
 
                 if t % self.checkpoint_every == 0 or t >= self.num_iters:

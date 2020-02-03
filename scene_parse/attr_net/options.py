@@ -31,8 +31,14 @@ class BaseOptions():
         self.parser.add_argument('--concat_img', default=1, type=int, help='concatenate original image when sent to network')
         self.parser.add_argument('--with_depth', default=0, type=int,
                                  help='include depth info (rgbd)')
-        self.parser.add_argument('--with_rot', default=0, type=int,
-                                 help='predict rotation matrix')
+        self.parser.add_argument('--pred_attr', action='store_true',
+                                 help='If true, predicts the object attributes (shape, size, color) in world coordinates.')
+        self.parser.add_argument('--pred_position', action='store_true',
+                                 help='If true, predicts the object position (x, y, z) in world coordinates.')
+        self.parser.add_argument('--pred_z_dir', action='store_true',
+                                 help='If true, predicts the z direction vector in world coordinates.')
+        self.parser.add_argument('--pred_z_size', action='store_true',
+                                 help='If true, predicts the z size in world coordinates.')
         self.parser.add_argument('--split_id', default=18500, type=int, help='splitting index between train and val images')
         self.parser.add_argument('--batch_size', default=20, type=int, help='batch size')
         self.parser.add_argument('--num_workers', default=4, type=int, help='number of workers for loading')

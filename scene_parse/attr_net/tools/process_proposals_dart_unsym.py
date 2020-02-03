@@ -17,29 +17,6 @@ parser.add_argument('--output_path', required=True, type=str)
 # parser.add_argument('--suppression_iomin_thresh', default=0.5, type=float)
 
 
-def get_feat_vec_clevr_dart(obj):
-    attr_to_idx = {
-        'box': 0,
-        'cylinder': 1,
-        'sphere': 2,
-        'small': 3,
-        'large': 4,
-        'red': 5,
-        'yellow': 6,
-        'green': 7,
-        'blue': 8
-    }
-    feat_vec = np.zeros(9+3)
-    for attr in ['color', 'shape', 'size']:
-        feat_vec[attr_to_idx[obj[attr]]] = 1
-    feat_vec[9:12] = obj['position']
-
-    # feat_vec[12:15] = obj['rotation_x'] - feat_vec[9:12]
-    # feat_vec[15:18] = obj['rotation_y'] - feat_vec[9:12]
-    # feat_vec[18:21] = obj['rotation_z'] - feat_vec[9:12]
-
-    return list(feat_vec)
-
 
 def load_clevr_dart_scenes(scenes_json):
     with open(scenes_json) as f:
@@ -50,18 +27,18 @@ def load_clevr_dart_scenes(scenes_json):
         for i, o in enumerate(s['objects']):
             item = {}
             item['id'] = '%d-%d' % (s['image_index'], i)    # TODO: deprecated?
-            if '3d_coords' in o:
-                item['position'] = o['3d_coords']   # dart camera is not tilted
-            else:
-                item['position'] = o['position']
-
-            # item['rotation_x'] = o['rotation_x']
-            # item['rotation_y'] = o['rotation_y']
-            # item['rotation_z'] = o['rotation_z']
+            
+            # if '3d_coords' in o:
+            #     item['position'] = o['3d_coords']   # dart camera is not tilted
+            # else:
+            #     item['position'] = o['position']
 
             item['color'] = o['color']
             item['shape'] = o['shape']
             item['size'] = o['size']
+            item['world_pos'] = o['world_pos']
+            item['world_rot'] = o['world_rot']
+            item['z_size'] = o['z_size']
             item['mask'] = o['mask']
             objs.append(item)
         scenes.append({
@@ -94,11 +71,12 @@ def main(args):
         obj_anns = []
         for o in scene['objects']:
             if mask_util.area(o['mask']) > 0:
-                vec = get_feat_vec_clevr_dart(o)
+                # vec = get_feat_vec_clevr_dart(o)
                 obj_ann = {
                     'mask': o['mask'],
                     'image_idx': image_id,
-                    'feature_vector': vec,
+                    'feature_vector': [],
+                    'obj_dict': o
                 }
                 obj_anns.append(obj_ann)
                 A = A + 1
@@ -224,12 +202,15 @@ def main(args):
     obj_masks = [o['mask'] for o in all_objs]
     img_ids = [o['image_idx'] for o in all_objs]
     if scenes is not None:
+        obj_dicts = [o['obj_dict'] for o in all_objs]
         feat_vecs = [o['feature_vector'] for o in all_objs]
     else:
+        obj_dicts = []
         feat_vecs = []
     output = {
         'object_masks': obj_masks,
         'image_idxs': img_ids,
+        'obj_dicts': obj_dicts,
         'feature_vectors': feat_vecs,
     }
     print('| saving object annotations to %s' % args.output_path)

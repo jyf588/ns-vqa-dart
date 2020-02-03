@@ -31,16 +31,32 @@ from model import get_model
 #
 #     return list(feat_vec)
 
-def get_attrs_clevr_dart(feat_vec):
-    shapes = ['box', 'cylinder', 'sphere']
-    sizes = ['small', 'large']
-    colors = ['red', 'yellow', 'green', 'blue']
-    obj = {
-        'shape': shapes[np.argmax(feat_vec[0:3])],
-        'size': sizes[np.argmax(feat_vec[3:5])],
-        'color': colors[np.argmax(feat_vec[5:9])],
-        'position': feat_vec[9:].tolist(),
+def get_attrs_clevr_dart(opt, feat_vec):
+    attr2choices = {
+        'shape': ['box', 'cylinder', 'sphere'],
+        'size': ['small', 'large'],
+        'color': ['red', 'yellow', 'green', 'blue']
     }
+    
+    start_idx = 0
+    obj = {}
+    if opt.pred_attr:
+        for attr in ['color', 'shape', 'size']:
+            end_idx = start_idx + len(attr2choices[attr])
+            pred_idx = np.argmax(feat_vec[start_idx:end_idx])
+            obj[attr] = attr2choices[attr][pred_idx]
+            start_idx = end_idx
+    if opt.pred_position:
+        end_idx = start_idx + 3
+        obj['position'] = feat_vec[start_idx:end_idx].tolist()
+        start_idx = end_idx
+    if opt.pred_z_dir:
+        end_idx = start_idx + 3
+        obj['z_dir'] = feat_vec[start_idx:end_idx].tolist()
+        start_idx = end_idx
+    if opt.pred_z_size:
+        obj['z_size'] = float(feat_vec[start_idx])
+    
     return obj
 
 
@@ -66,7 +82,7 @@ for data, _, idxs, cat_idxs in test_loader:
     pred = model.get_pred()
     for i in range(pred.shape[0]):  # batchsize?
         img_id = idxs[i] - opt.split_id
-        obj = get_attrs_clevr_dart(pred[i])
+        obj = get_attrs_clevr_dart(opt, pred[i])
         scenes[img_id]['objects'].append(obj)
     assert idxs.size(0) == pred.shape[0]
     count += idxs.size(0)
