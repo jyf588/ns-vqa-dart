@@ -6,17 +6,6 @@ import pycocotools.mask as mask_util
 
 import torch
 
-parser = argparse.ArgumentParser()
-# parser.add_argument('--proposal_path', required=True, type=str)
-parser.add_argument('--gt_scene_path', default=None, type=str)
-parser.add_argument('--output_path', required=True, type=str)
-# parser.add_argument('--align_iou_thresh', default=0.7, type=float)
-# parser.add_argument('--score_thresh', default=0.9, type=float)
-# parser.add_argument('--suppression', default=0, type=int)
-# parser.add_argument('--suppression_iou_thresh', default=0.5, type=float)
-# parser.add_argument('--suppression_iomin_thresh', default=0.5, type=float)
-
-
 
 def load_clevr_dart_scenes(scenes_json):
     with open(scenes_json) as f:
@@ -25,7 +14,7 @@ def load_clevr_dart_scenes(scenes_json):
     for s in scenes_dict:
         objs = []
         for i, o in enumerate(s['objects']):
-            item = {}
+            item = o.copy()
             item['id'] = '%d-%d' % (s['image_index'], i)    # TODO: deprecated?
             
             # if '3d_coords' in o:
@@ -33,13 +22,13 @@ def load_clevr_dart_scenes(scenes_json):
             # else:
             #     item['position'] = o['position']
 
-            item['color'] = o['color']
-            item['shape'] = o['shape']
-            item['size'] = o['size']
-            item['world_pos'] = o['world_pos']
-            item['world_rot'] = o['world_rot']
-            item['z_size'] = o['z_size']
-            item['mask'] = o['mask']
+            # item['color'] = o['color']
+            # item['shape'] = o['shape']
+            # item['size'] = o['size']
+            # item['world_pos'] = o['world_pos']
+            # item['world_rot'] = o['world_rot']
+            # item['z_size'] = o['z_size']
+            # item['mask'] = o['mask']
             objs.append(item)
         scenes.append({
             'objects': objs,
@@ -53,14 +42,14 @@ def iou(m1, m2):
     return intersect.sum() / union.sum()
 
 
-def main(args):
-    output_dir = os.path.dirname(args.output_path)
+def process_proposals(gt_scene_path, output_path):
+    output_dir = os.path.dirname(output_path)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
     scenes = None
-    if args.gt_scene_path is not None:
-        scenes = load_clevr_dart_scenes(args.gt_scene_path)    # load and rotate xyz camera
+    if gt_scene_path is not None:
+        scenes = load_clevr_dart_scenes(gt_scene_path)    # load and rotate xyz camera
 
     image_width = 480
     image_height = 320  # TODO: hard coded size
@@ -84,9 +73,33 @@ def main(args):
                 print(image_id, o)
         img_anns.append(obj_anns)
         print('| processing proposals %d th image' % image_id)
+    all_objs = [obj_ann for img_ann in img_anns for obj_ann in img_ann]
+    obj_masks = [o['mask'] for o in all_objs]
+    img_ids = [o['image_idx'] for o in all_objs]
+    if scenes is not None:
+        obj_dicts = [o['obj_dict'] for o in all_objs]
+        feat_vecs = [o['feature_vector'] for o in all_objs]
+    else:
+        obj_dicts = []
+        feat_vecs = []
+    output = {
+        'object_masks': obj_masks,
+        'image_idxs': img_ids,
+        'obj_dicts': obj_dicts,
+        'feature_vectors': feat_vecs,
+    }
+    print('| saving object annotations to %s' % output_path)
+    with open(output_path, 'w') as fout:
+        json.dump(output, fout, indent=2, separators=(',', ': '))
 
     print(A)
 
+
+
+def main(args):
+    process_proposals(
+        args.output_path, args.gt_scene_path
+    )
 
     # # with open(args.proposal_path, 'rb') as f:
     # #     proposals = pickle.load(f)
@@ -198,26 +211,17 @@ def main(args):
     # # else:
     # #     all_objs = [obj_ann for img_ann in img_anns for obj_ann in img_ann]
 
-    all_objs = [obj_ann for img_ann in img_anns for obj_ann in img_ann]
-    obj_masks = [o['mask'] for o in all_objs]
-    img_ids = [o['image_idx'] for o in all_objs]
-    if scenes is not None:
-        obj_dicts = [o['obj_dict'] for o in all_objs]
-        feat_vecs = [o['feature_vector'] for o in all_objs]
-    else:
-        obj_dicts = []
-        feat_vecs = []
-    output = {
-        'object_masks': obj_masks,
-        'image_idxs': img_ids,
-        'obj_dicts': obj_dicts,
-        'feature_vectors': feat_vecs,
-    }
-    print('| saving object annotations to %s' % args.output_path)
-    with open(args.output_path, 'w') as fout:
-        json.dump(output, fout, indent=2, separators=(',', ': '))
-
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # parser.add_argument('--proposal_path', required=True, type=str)
+    parser.add_argument('--gt_scene_path', default=None, type=str)
+    parser.add_argument('--output_path', required=True, type=str)
+    # parser.add_argument('--align_iou_thresh', default=0.7, type=float)
+    # parser.add_argument('--score_thresh', default=0.9, type=float)
+    # parser.add_argument('--suppression', default=0, type=int)
+    # parser.add_argument('--suppression_iou_thresh', default=0.5, type=float)
+    # parser.add_argument('--suppression_iomin_thresh', default=0.5, type=float)
+
     args = parser.parse_args()
     main(args)
