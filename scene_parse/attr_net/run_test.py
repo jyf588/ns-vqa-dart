@@ -80,6 +80,7 @@ for data, _, idxs, cat_idxs in test_loader:
     model.set_input(data)
     model.forward()
     pred = model.get_pred()
+    print(f'pred shape: {pred.shape}')
     for i in range(pred.shape[0]):  # batchsize?
         img_id = idxs[i] - opt.split_id
         obj = get_attrs_clevr_dart(opt, pred[i])

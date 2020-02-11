@@ -98,7 +98,7 @@ def process_proposals(gt_scene_path, output_path):
 
 def main(args):
     process_proposals(
-        args.output_path, args.gt_scene_path
+        args.gt_scene_path, args.output_path
     )
 
     # # with open(args.proposal_path, 'rb') as f:
