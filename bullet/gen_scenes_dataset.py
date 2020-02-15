@@ -1,0 +1,27 @@
+"""
+Generates a dataset containing various scenes of random objects placed randomly
+on a tabletop, all upright. Currently does not generate examples of stacked 
+objects. Robot arm is not in view for this dataset.
+"""
+import time
+
+from bullet.scenes import RandomSceneGenerator
+
+
+def main():
+    generator = RandomSceneGenerator(
+        seed=1,
+        render_mode="gui",
+        n_objs_bounds=(3, 7),
+        shapes=["box", "cylinder"],
+        sizes=["large", "small"],
+        colors=["red", "blue", "yellow", "green"],
+        x_bounds=(0, 0.4),
+        y_bounds=(-0.3, 0.7),
+        z_bounds=(0.0, 0.0),
+    )
+    generator.generate_scenes(n=22000)
+
+
+if __name__ == "__main__":
+    main()
