@@ -5,7 +5,7 @@ from tqdm import tqdm
 from typing import List, Tuple
 
 from bullet.camera import BulletCamera
-from bullet.dash_object import DashObject, DashTable
+from bullet.dash_object import DashObject, DashTable, DashRobot
 from bullet.renderer import BulletRenderer
 import bullet.util
 
@@ -15,6 +15,7 @@ class RandomSceneGenerator:
         self,
         seed: int,
         render_mode: str,
+        egocentric: bool,
         n_objs_bounds: Tuple[int],
         shapes: List[str],
         sizes: List[str],
@@ -35,13 +36,20 @@ class RandomSceneGenerator:
         # Set the seed for numpy's random number generator.
         np.random.seed(seed)
 
-        # Initialize the Bullet client, renderer, and camera.
+        # Initialize the Bullet client and renderer.
         self.p = bullet.util.create_bullet_client(mode=render_mode)
         self.renderer = BulletRenderer(p=self.p)
+
+        # Define the camera as default or egocentric.
         self.camera = BulletCamera(p=self.p)
+        if egocentric:
+            self.robot = DashRobot(p=self.p)
+            self.camera.set_cam_position_from_robot(self.robot)
 
         # Initialize the tabletop which is constant throughout the scenes.
         self.table = DashTable()
+        self.table_id = self.renderer.render_object(self.table)
+        self.oids = []
 
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds
@@ -61,12 +69,17 @@ class RandomSceneGenerator:
         for _ in tqdm(range(n)):
             self.generate_scene()
             self.camera.get_rgb_and_mask()
+            self.reset_scene()
             time.sleep(0.25)
+
+    def reset_scene(self):
+        """Removes tabletop objects."""
+        for oid in self.oids:
+            self.p.removeBody(oid)
 
     def generate_scene(self):
         """Generates a single random scene."""
-        self.p.resetSimulation()
-        self.renderer.render_object(self.table)
+        # self.p.resetSimulation()
 
         # Randomly select the number of objects to generate.
         # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
@@ -74,9 +87,12 @@ class RandomSceneGenerator:
         n_objects = random.randint(
             self.n_objs_bounds[0], self.n_objs_bounds[1] - 1
         )
+
+        self.oids = []
         for _ in range(n_objects):
             o: DashObject = self.generate_object()
-            self.renderer.render_object(o, fix_base=True)
+            oid = self.renderer.render_object(o, fix_base=True)
+            self.oids.append(oid)
 
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.

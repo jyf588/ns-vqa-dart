@@ -2,6 +2,8 @@ import numpy as np
 import pybullet
 import pybullet_utils.bullet_client as bc
 
+from bullet.dash_object import DashRobot
+
 
 class BulletCamera:
     def __init__(self, p=None):
@@ -48,11 +50,12 @@ class BulletCamera:
             self.up_axis_index,
         )
 
-    def set_cam_transform(self, position):
-        transform = np.eye(4)
-        transform[0:3, -1] = position
-        self.view_mat = transform.T
-        # print(transform)
+    def set_cam_position_from_robot(self, robot: DashRobot):
+        self.set_cam_position(
+            eye_position=robot.cam_position,
+            target_position=robot.cam_target_position,
+            up_vec=robot.cam_up_vector,
+        )
 
     def set_cam_position(
         self, eye_position, target_position, up_vec=[0.0, 0.0, 1.0]

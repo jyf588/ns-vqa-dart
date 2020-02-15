@@ -81,6 +81,7 @@ class BulletRenderer:
         self.p.changeVisualShape(
             objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[o.color]
         )
+        return oid
 
     def construct_urdf_path(self, o: DashObject) -> str:
         """Constructs the URDF path based on object attributes.

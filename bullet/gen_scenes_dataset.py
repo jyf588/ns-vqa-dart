@@ -12,12 +12,13 @@ def main():
     generator = RandomSceneGenerator(
         seed=1,
         render_mode="gui",
+        egocentric=True,
         n_objs_bounds=(3, 7),
         shapes=["box", "cylinder"],
         sizes=["large", "small"],
         colors=["red", "blue", "yellow", "green"],
         x_bounds=(0, 0.4),
-        y_bounds=(-0.3, 0.7),
+        y_bounds=(-0.5, 0.5),
         z_bounds=(0.0, 0.0),
     )
     generator.generate_scenes(n=22000)
