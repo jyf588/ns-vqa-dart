@@ -74,8 +74,8 @@ class BulletRenderer:
         # coordinates.
         oid = self.p.loadURDF(
             fileName=self.construct_urdf_path(o=o),
-            basePosition=o.world_position,
-            baseOrientation=o.world_orientation,
+            basePosition=o.position,
+            baseOrientation=o.orientation,
             useFixedBase=fix_base,
         )
         self.p.changeVisualShape(

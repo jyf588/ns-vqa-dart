@@ -14,8 +14,9 @@ def main():
 
     generator = RandomSceneGenerator(
         seed=1,
-        render_mode="direct",
+        render_mode="gui",
         egocentric=True,
+        dataset_dir="tmp",
         n_objs_bounds=(3, 7),
         shapes=["box", "cylinder"],
         sizes=["small", "large"],

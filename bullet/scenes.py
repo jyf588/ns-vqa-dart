@@ -5,6 +5,7 @@ from tqdm import tqdm
 from typing import List, Tuple
 
 from bullet.camera import BulletCamera
+from bullet.dash_dataset import DashDataset
 from bullet.dash_object import DashObject, DashTable, DashRobot
 from bullet.renderer import BulletRenderer
 import bullet.util
@@ -16,6 +17,7 @@ class RandomSceneGenerator:
         seed: int,
         render_mode: str,
         egocentric: bool,
+        dataset_dir: str,
         n_objs_bounds: Tuple[int],
         shapes: List[str],
         sizes: List[str],
@@ -45,16 +47,19 @@ class RandomSceneGenerator:
         self.renderer = BulletRenderer(p=self.p)
 
         # Define the camera as default or egocentric.
-        self.camera = BulletCamera(p=self.p)
         self.egocentric = egocentric
         if self.egocentric:
             self.robot = DashRobot(p=self.p)
-            self.camera.set_cam_position_from_robot(self.robot)
+        else:
+            self.camera = BulletCamera(p=self.p)
+            raise NotImplementedError
+
+        # Initialize the dataset generator.
+        self.dataset = DashDataset(dataset_dir=dataset_dir)
 
         # Initialize the tabletop which is constant throughout the scenes.
         self.table = DashTable()
         self.table_id = self.renderer.render_object(self.table)
-        self.oids = []
 
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds
@@ -76,33 +81,50 @@ class RandomSceneGenerator:
             n: The number of scenes to generate.
         """
         for _ in tqdm(range(n)):
-            self.generate_scene()
-            self.generate_image()
-            self.reset_scene()
+            objects = self.generate_scene()
+            rgb, mask = self.generate_image()
+            self.dataset.save_example(
+                objects=objects, camera=self.robot.camera, rgb=rgb, mask=mask
+            )
+            self.remove_objects(objects=objects)
 
-    def reset_scene(self):
-        """Removes tabletop objects."""
-        for oid in self.oids:
-            self.p.removeBody(oid)
+    def remove_objects(self, objects: List[DashObject]):
+        """Removes objects from the scene.
+        
+        Args:
+            objects: A list of DashObjects to be removed from the scene.
+        """
+        for o in objects:
+            assert o.id is not None
+            self.p.removeBody(o.id)
 
-    def generate_scene(self):
+    def generate_scene(self) -> List[DashObject]:
         """Generates a single random scene."""
         # self.p.resetSimulation()
 
         # Randomly select the number of objects to generate.
         # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
         # inclusive, so that's why we subtract one from the max.
-        n_objects = random.randint(
-            self.n_objs_bounds[0], self.n_objs_bounds[1] - 1
-        )
+        min_objs, max_objs = self.n_objs_bounds
+        n_objects = random.randint(min_objs, max_objs - 1)
 
-        self.oids = []
+        objects = []
         for _ in range(n_objects):
             o: DashObject = self.generate_object()
             oid = self.renderer.render_object(o, fix_base=True)
-            self.oids.append(oid)
+            o.set_id(oid=oid)
+            objects.append(o)
+        return objects
 
-    def generate_image(self):
+    def generate_image(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Takes a snapshot of the current scene, where viewpoint is randomly
+        chosen.
+
+        Returns:
+            rgb: The RGB image of the scene.
+            mask: The mask of the scene, where values represent the object ID
+                that is present at each pixel.
+        """
         roll, tilt, pan = self.generate_xyz(
             self.roll_bounds, self.tilt_bounds, self.pan_bounds
         )
@@ -110,9 +132,10 @@ class RandomSceneGenerator:
             self.robot.set_head_and_camera(
                 roll=roll, tilt=tilt, pan=pan, degrees=self.degrees
             )
-            self.camera.set_cam_position_from_robot(self.robot)
-
-        rgb, mask = self.camera.get_rgb_and_mask()
+            rgb, mask = self.robot.camera.get_rgb_and_mask()
+        else:
+            raise NotImplementedError
+        return rgb, mask
 
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.
@@ -125,10 +148,10 @@ class RandomSceneGenerator:
             shape=random.choice(self.shapes),
             size=random.choice(self.sizes),
             color=random.choice(self.colors),
-            world_position=self.generate_xyz(
+            position=self.generate_xyz(
                 self.x_bounds, self.y_bounds, self.z_bounds
             ),
-            world_orientation=[0.0, 0.0, 0.0, 1.0],
+            orientation=[0.0, 0.0, 0.0, 1.0],
         )
         return o
 
