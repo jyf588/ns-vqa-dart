@@ -1,3 +1,6 @@
 [submodule "bullet/assets/inmoov_ros"]
 	path = bullet/assets/inmoov_ros
 	url = git@github.com:jyf588/inmoov_ros.git
+[submodule "bullet/assets/shadow_hand_arm"]
+	path = bullet/assets/shadow_hand_arm
+	url = git@github.com:jyf588/shadow_hand_arm.git
