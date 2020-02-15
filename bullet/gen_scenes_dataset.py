@@ -9,20 +9,23 @@ from bullet.scenes import RandomSceneGenerator
 
 
 def main():
+    # gui: 4 hours
+    # direct: 1 hour
+
     generator = RandomSceneGenerator(
         seed=1,
-        render_mode="gui",
+        render_mode="direct",
         egocentric=True,
         n_objs_bounds=(3, 7),
         shapes=["box", "cylinder"],
-        sizes=["large", "small"],
+        sizes=["small", "large"],
         colors=["red", "blue", "yellow", "green"],
         x_bounds=(0.0, 0.4),
         y_bounds=(-0.5, 0.5),
         z_bounds=(0.0, 0.0),
         roll_bounds=(-5.0, 5.0),
-        tilt_bounds=(40.0, 60.0),
-        pan_bounds=(0.0, 0.0),
+        tilt_bounds=(35.0, 55.0),
+        pan_bounds=(-5.0, 5.0),
         degrees=True,
     )
     generator.generate_scenes(n=22000)

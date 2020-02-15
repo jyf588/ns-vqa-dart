@@ -79,7 +79,6 @@ class RandomSceneGenerator:
             self.generate_scene()
             self.generate_image()
             self.reset_scene()
-            time.sleep(0.25)
 
     def reset_scene(self):
         """Removes tabletop objects."""
