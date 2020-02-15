@@ -1,4 +1,1 @@
-*.pt
-data/*
-__pycache__
-*.so
+*.cpython*
