@@ -47,7 +47,7 @@ class DashRobot:
         self.joint_name2id = self.get_joint_name2id()
 
         # Initialize the head and camera to zero rotation.
-        self.set_head_and_camera(pan=0, tilt=50, roll=0, degrees=True)
+        self.set_head_and_camera(pan=0, tilt=0, roll=0, degrees=True)
 
     def render_robot(self) -> int:
         """Renders the robot in bullet.

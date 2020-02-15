@@ -17,9 +17,13 @@ def main():
         shapes=["box", "cylinder"],
         sizes=["large", "small"],
         colors=["red", "blue", "yellow", "green"],
-        x_bounds=(0, 0.4),
+        x_bounds=(0.0, 0.4),
         y_bounds=(-0.5, 0.5),
         z_bounds=(0.0, 0.0),
+        roll_bounds=(-5.0, 5.0),
+        tilt_bounds=(40.0, 60.0),
+        pan_bounds=(0.0, 0.0),
+        degrees=True,
     )
     generator.generate_scenes(n=22000)
 

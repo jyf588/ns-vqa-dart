@@ -23,6 +23,10 @@ class RandomSceneGenerator:
         x_bounds: Tuple[float],
         y_bounds: Tuple[float],
         z_bounds: Tuple[float],
+        roll_bounds: Tuple[float],
+        tilt_bounds: Tuple[float],
+        pan_bounds: Tuple[float],
+        degrees: bool,
     ):
         """
         Note: All lower bounds are inclusive. All upper bounds are exclusive.
@@ -42,7 +46,8 @@ class RandomSceneGenerator:
 
         # Define the camera as default or egocentric.
         self.camera = BulletCamera(p=self.p)
-        if egocentric:
+        self.egocentric = egocentric
+        if self.egocentric:
             self.robot = DashRobot(p=self.p)
             self.camera.set_cam_position_from_robot(self.robot)
 
@@ -59,6 +64,10 @@ class RandomSceneGenerator:
         self.x_bounds = x_bounds
         self.y_bounds = y_bounds
         self.z_bounds = z_bounds
+        self.roll_bounds = roll_bounds
+        self.tilt_bounds = tilt_bounds
+        self.pan_bounds = pan_bounds
+        self.degrees = degrees
 
     def generate_scenes(self, n: int):
         """Generates a specified number of randomized scenes.
@@ -68,7 +77,7 @@ class RandomSceneGenerator:
         """
         for _ in tqdm(range(n)):
             self.generate_scene()
-            self.camera.get_rgb_and_mask()
+            self.generate_image()
             self.reset_scene()
             time.sleep(0.25)
 
@@ -94,6 +103,18 @@ class RandomSceneGenerator:
             oid = self.renderer.render_object(o, fix_base=True)
             self.oids.append(oid)
 
+    def generate_image(self):
+        roll, tilt, pan = self.generate_xyz(
+            self.roll_bounds, self.tilt_bounds, self.pan_bounds
+        )
+        if self.egocentric:
+            self.robot.set_head_and_camera(
+                roll=roll, tilt=tilt, pan=pan, degrees=self.degrees
+            )
+            self.camera.set_cam_position_from_robot(self.robot)
+
+        rgb, mask = self.camera.get_rgb_and_mask()
+
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.
         
@@ -105,30 +126,28 @@ class RandomSceneGenerator:
             shape=random.choice(self.shapes),
             size=random.choice(self.sizes),
             color=random.choice(self.colors),
-            world_position=self.generate_position(),
+            world_position=self.generate_xyz(
+                self.x_bounds, self.y_bounds, self.z_bounds
+            ),
             world_orientation=[0.0, 0.0, 0.0, 1.0],
         )
         return o
 
-    def generate_position(self) -> List[int]:
-        """Generates a random position based on axis bounds.
+    def generate_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:
+        """Generates a random xyz based on axis bounds.
 
         Returns:
             position: The randomly generated xyz position.
         """
-        position = []
-        for (axis_min, axis_max) in [
-            self.x_bounds,
-            self.y_bounds,
-            self.z_bounds,
-        ]:
+        xyz = []
+        for (axis_min, axis_max) in [x_bounds, y_bounds, z_bounds]:
             if axis_min == axis_max:  # No randomization.
-                axis_pos = axis_min
+                axis_value = axis_min
             elif axis_min < axis_max:
-                axis_pos = np.random.uniform(axis_min, axis_max)
+                axis_value = np.random.uniform(axis_min, axis_max)
             else:
                 raise ValueError(
                     f"Invalid axis bounds: ({axis_min}, {axis_max})"
                 )
-            position.append(axis_pos)
-        return position
+            xyz.append(axis_value)
+        return xyz
