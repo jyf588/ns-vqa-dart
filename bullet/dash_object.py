@@ -61,6 +61,7 @@ class DashRobot:
     def __init__(
         self,
         p: bc.BulletClient,
+        urdf_path: str,
         position: List[float] = [-0.3, 0.0, -1.25],
         head_roll_joint_name: str = "head_roll_joint",
         head_tilt_joint_name: str = "head_tilt_joint",
@@ -68,7 +69,21 @@ class DashRobot:
         cam_position_joint_name: str = "eyes_pan_joint",
         cam_offset: List[float] = [0.02, 0.0, 0.0],
     ):
+        """
+        Args:
+            p: The PyBullet client.
+            urdf_path: The path to the urdf file of the robot.
+            position: The base position of the robot.
+            head_roll_joint_name: The joint representing head roll.
+            head_tilt_joint_name: The joint representing head tilt.
+            head_pan_joint_name: The joint representing head pan.
+            cam_position_joint_name: The joint representing the camera position.
+            cam_offset: The offset to add to the camera joint as the final 
+                camera position (e.g., if the joint is within the eye, we want
+                to offset it such that it's at the surface of the eye).
+        """
         self.p = p
+        self.urdf_path = urdf_path
         self.position = position
         self.robot_id = self.render_robot()
 
@@ -92,10 +107,7 @@ class DashRobot:
         Returns:
             robot_id: The unique bullet ID of the robot.
         """
-        robot_id = self.p.loadURDF(
-            "/Users/michelleguo/workspace/third_party/jyf588/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_1_revolute_head.urdf",
-            basePosition=self.position,
-        )
+        robot_id = self.p.loadURDF(self.urdf_path, basePosition=self.position)
         return robot_id
 
     def get_joint_name2id(self) -> Dict[str, int]:
