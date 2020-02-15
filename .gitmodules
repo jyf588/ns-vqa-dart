@@ -1,0 +1,3 @@
+[submodule "bullet/assets/inmoov_ros"]
+	path = bullet/assets/inmoov_ros
+	url = git@github.com:jyf588/inmoov_ros.git
