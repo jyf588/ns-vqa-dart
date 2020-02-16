@@ -32,12 +32,14 @@ class DashDataset:
             eid: The example ID.
         
         Returns:
+            json_dict: The JSON dictionary containing the labels.
             rgb: The RGB image for the example.
             mask: The mask for the example.
         """
+        json_dict = self.load_labels(eid=eid)
         rgb = self.load_rgb(eid=eid)
         mask = self.load_mask(eid=eid)
-        return rgb, mask
+        return json_dict, rgb, mask
 
     def save_example(
         self,
@@ -69,6 +71,20 @@ class DashDataset:
             eids: A list of example IDs to save.
         """
         self.save_json(path=self.construct_path(key="eids"), data=eids)
+
+    def load_labels(self, eid: int) -> Dict:
+        """Loads the ground truth labels for a single example.
+
+        Args:
+            eid: The example ID.
+
+        Returns:
+            json_dict: The JSON dictionary containing the labels.
+        """
+        json_dict = self.load_json(
+            path=self.construct_path(key="json", eid=eid)
+        )
+        return json_dict
 
     def save_labels(
         self, objects: List[DashObject], camera: BulletCamera, eid: str

@@ -55,15 +55,15 @@ class BulletRenderer:
         rgb, mask = self.camera.get_rgb_and_mask()
         return rgb
 
-    def render_table(self):
-        self.render_object(
-            position=self.table_attr["position"],
-            quaternion=self.table_attr["quaternion"],
-            size=self.table_attr["size"],
-            shape=self.table_attr["shape"],
-            color=self.table_attr["color"],
-            fix_base=True,
-        )
+    # def render_table(self):
+    #     self.render_object(
+    #         position=self.table_attr["position"],
+    #         quaternion=self.table_attr["quaternion"],
+    #         size=self.table_attr["size"],
+    #         shape=self.table_attr["shape"],
+    #         color=self.table_attr["color"],
+    #         fix_base=True,
+    #     )
 
     def render_object(self, o: DashObject, fix_base=False):
         # We set the pose in resetBasePositionAndOrientation instead of

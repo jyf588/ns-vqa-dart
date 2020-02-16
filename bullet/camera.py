@@ -6,12 +6,26 @@ from typing import *
 
 
 class BulletCamera:
-    def __init__(self, p=None, offset=[0.0, 0.0, 0.0]):
-        self.p = (
-            bc.BulletClient(connection_mode=pybullet.DIRECT)
-            if p is None
-            else p
-        )
+    def __init__(self, p, offset=[0.0, 0.0, 0.0]):
+        """
+        Args:
+            p: The pybullet client.
+            offset: The position offset to apply.
+
+        Attributes:
+            p: The pybullet client.
+            H: The height of the generated images.
+            W: The width of the generated images.
+            position: The position of the camera, in world coordinate frame.
+            rotation: The rotation of the camera (in degrees), in world 
+                coordinate frame.
+            offset: The position offset to apply.
+            cam_target_pos: The target position of the camera.
+            up_vector: The up vector of the camera.
+            view_mat: The view matrix of the camera.
+            proj_mat: The projection matrix of the camera.
+        """
+        self.p = p
 
         # Camera configurations.
         self.H = 480  # image dim
@@ -24,12 +38,7 @@ class BulletCamera:
         self.cam_target_pos = [0.0, 0.0, 0.0]
         self.up_vector = [0.0, 0.0, 1.0]
 
-        # Rotation
-        # self.cam_distance = 0.81
-        # self.pitch = -30.0
-        # self.roll = 0
-        # self.yaw = 270
-        # self.up_axis_index = 2
+        self.view_mat = None
         self.proj_mat = [
             1.0825318098068237,
             0.0,
@@ -49,18 +58,7 @@ class BulletCamera:
             0.0,
         ]
 
-        # self.view_mat = self.p.computeViewMatrixFromYawPitchRoll(
-        #     self.cam_target_pos,
-        #     self.cam_distance,
-        #     self.yaw,
-        #     self.pitch,
-        #     self.roll,
-        #     self.up_axis_index,
-        # )
-
-    def set_pose(
-        self, position: List[float], rotation: List[float], degrees: bool
-    ):
+    def set_pose(self, position: List[float], rotation: List[float]):
         """Sets the camera pose, including all the camera attributes related to
         pose.
 
@@ -70,20 +68,15 @@ class BulletCamera:
         """
         # Apply to offset to the camera position.
         position = self.offset_in_direction(
-            source=position,
-            offset=self.offset,
-            rotation=rotation,
-            degrees=degrees,
+            source=position, offset=self.offset, rotation=rotation
         )
 
         self.position = position
         self.rotation = rotation
         self.target_position = self.compute_target_position(
-            position=position, rotation=rotation, degrees=degrees
+            position=position, rotation=rotation
         )
-        self.up_vector = self.compute_up_vector(
-            rotation=rotation, degrees=degrees
-        )
+        self.up_vector = self.compute_up_vector(rotation=rotation)
         self.view_mat = self.compute_view_matrix()
 
     def compute_view_matrix(self) -> List[float]:
@@ -96,48 +89,35 @@ class BulletCamera:
         return view_mat
 
     def compute_target_position(
-        self, position: List[float], rotation: List[float], degrees: bool
+        self, position: List[float], rotation: List[float]
     ) -> List[float]:
         """Computes the target position based on the camera position and the
         camera rotation.
         """
         target_position = self.offset_in_direction(
-            source=position,
-            offset=[1.0, 0.0, 0.0],
-            rotation=rotation,
-            degrees=degrees,
+            source=position, offset=[1.0, 0.0, 0.0], rotation=rotation
         )
         return target_position
 
-    def compute_up_vector(
-        self, rotation: List[float], degrees: bool
-    ) -> List[float]:
+    def compute_up_vector(self, rotation: List[float]) -> List[float]:
         up_vector = self.rotate_vector(
-            vector=[0.0, 0.0, 1.0], rotation=rotation, degrees=degrees
+            vector=[0.0, 0.0, 1.0], rotation=rotation
         )
         up_vector[1] *= -1
         return up_vector
 
     def offset_in_direction(
-        self,
-        source: List[float],
-        offset: List[float],
-        rotation: List[float],
-        degrees: bool,
+        self, source: List[float], offset: List[float], rotation: List[float]
     ) -> List[float]:
         source = np.array(source)
-        vector = np.array(
-            self.rotate_vector(
-                vector=offset, rotation=rotation, degrees=degrees
-            )
-        )
+        vector = np.array(self.rotate_vector(vector=offset, rotation=rotation))
         new_xyz = source + vector
         return list(new_xyz)
 
     def rotate_vector(
-        self, vector: List[float], rotation: List[float], degrees: bool
+        self, vector: List[float], rotation: List[float]
     ) -> List[float]:
-        rot = R.from_euler("xyz", rotation, degrees=degrees)
+        rot = R.from_euler("xyz", rotation, degrees=True)
         vector = rot.apply(vector)
         return list(vector)
 
@@ -154,7 +134,7 @@ class BulletCamera:
         mask = np.reshape(img[4], (self.W, self.H))
         return rgb, mask
 
-    def to_json_dict(self) -> Dict:
+    def to_json(self) -> Dict:
         json_dict = {
             "H": self.H,
             "W": self.W,
@@ -167,3 +147,11 @@ class BulletCamera:
             "proj_mat": self.proj_mat,
         }
         return json_dict
+
+
+def from_json(p: bc.BulletClient, json_dict: Dict) -> BulletCamera:
+    camera = BulletCamera(p=p, offset=json_dict["offset"])
+    camera.set_pose(
+        position=json_dict["position"], rotation=json_dict["rotation"]
+    )
+    return camera

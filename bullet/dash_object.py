@@ -36,7 +36,7 @@ class DashObject:
     def set_id(self, oid: int):
         self.id = oid
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json(self) -> Dict[str, Any]:
         json_dict = {
             "id": self.id,
             "shape": self.shape,
@@ -46,6 +46,17 @@ class DashObject:
             "orientation": self.orientation,
         }
         return json_dict
+
+
+def from_json(json_dict: Dict) -> DashObject:
+    o = DashObject(
+        shape=json_dict["shape"],
+        size=json_dict["size"],
+        color=json_dict["color"],
+        position=json_dict["position"],
+        orientation=json_dict["orientation"],
+    )
+    return o
 
 
 class DashTable(DashObject):
