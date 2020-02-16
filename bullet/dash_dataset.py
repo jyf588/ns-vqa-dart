@@ -157,7 +157,7 @@ class DashDataset:
         Returns:
             eids: A list of example IDs.
         """
-        eids = self.load_json(path=self.construct_path(key="eids"))
+        eids = bullet.util.load_json(path=self.construct_path(key="eids"))
         return eids
 
     def save_example_ids(self, eids: List[int]):
@@ -166,7 +166,7 @@ class DashDataset:
         Args:
             eids: A list of example IDs to save.
         """
-        self.save_json(path=self.construct_path(key="eids"), data=eids)
+        bullet.util.save_json(path=self.construct_path(key="eids"), data=eids)
 
     """ Scene annotations. """
 
@@ -179,7 +179,7 @@ class DashDataset:
         Returns:
             json_dict: The JSON dictionary containing the labels.
         """
-        json_dict = self.load_json(
+        json_dict = bullet.util.load_json(
             path=self.construct_path(key="json", eid=eid)
         )
         return json_dict
@@ -201,7 +201,7 @@ class DashDataset:
             o.img_id = eid
             json_dict["objects"].append(o.to_json())
 
-        self.save_json(
+        bullet.util.save_json(
             path=self.construct_path(key="json", eid=eid), data=json_dict
         )
 
@@ -269,25 +269,4 @@ class DashDataset:
             os.makedirs(key_dir, exist_ok=True)
             path = os.path.join(key_dir, f"{eid:05}.{KEY2EXT[key]}")
         return path
-
-    """ JSON functions. """
-
-    def load_json(self, path: str) -> Any:
-        """Loads a JSON file.
-
-        Args:
-            path: The path to the JSON file.
-        
-        Returns:
-            data: The JSON data.
-        """
-        with open(path, "r") as f:
-            data = json.load(f)
-            return data
-
-    def save_json(self, path: str, data: Any):
-        with open(path, "w") as f:
-            json.dump(
-                data, f, sort_keys=True, indent=2, separators=(",", ": ")
-            )
 

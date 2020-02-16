@@ -17,7 +17,7 @@ def main():
         render_mode="direct",
         egocentric=True,
         dataset_dir="/home/michelle/datasets/ego_001",
-        n_objs_bounds=(3, 7),
+        n_objs_bounds=(2, 2),
         shapes=["box", "cylinder"],
         sizes=["small", "large"],
         colors=["red", "blue", "yellow", "green"],
@@ -29,7 +29,7 @@ def main():
         pan_bounds=(-5.0, 5.0),
         degrees=True,
     )
-    generator.generate_scenes(n=20)
+    generator.generate_scenes(n=1)
 
 
 if __name__ == "__main__":

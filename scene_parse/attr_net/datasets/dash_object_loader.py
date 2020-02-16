@@ -49,6 +49,7 @@ class DashTorchDataset(Dataset):
         self.objects = self.dataset.load_objects(
             min_img_id=min_img_id, max_img_id=max_img_id
         )
+        print("Note: min and max img_id is not implemented.")
 
         self.use_attr = use_attr
         self.use_position = use_position
@@ -83,8 +84,9 @@ class DashTorchDataset(Dataset):
                 object cropped out.
             y: Labels for the example.
         """
+        o = self.objects[idx]
         data, y = self.dataset.load_object_xy(
-            o=self.objects[idx],
+            o=o,
             use_attr=self.use_attr,
             use_position=self.use_position,
             use_up_vector=self.use_up_vector,
@@ -94,5 +96,5 @@ class DashTorchDataset(Dataset):
         data[:3] = transforms.Compose(self.normalize)(data[:3])
         data[3:6] = transforms.Compose(self.normalize)(data[3:6])
         y = torch.Tensor(y)
-        return data, y
+        return data, y, o.img_id, o.oid
 

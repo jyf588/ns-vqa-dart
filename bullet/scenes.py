@@ -106,7 +106,10 @@ class RandomSceneGenerator:
         # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
         # inclusive, so that's why we subtract one from the max.
         min_objs, max_objs = self.n_objs_bounds
-        n_objects = random.randint(min_objs, max_objs - 1)
+        if min_objs == max_objs:
+            n_objects = min_objs
+        else:
+            n_objects = random.randint(min_objs, max_objs - 1)
 
         objects = []
         for _ in range(n_objects):
