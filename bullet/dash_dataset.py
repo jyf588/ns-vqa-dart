@@ -1,3 +1,4 @@
+import cv2
 import imageio
 import json
 import numpy as np
@@ -5,6 +6,7 @@ import os
 from typing import *
 
 from bullet.camera import BulletCamera
+import bullet.dash_object
 from bullet.dash_object import DashObject
 
 KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json"}
@@ -24,6 +26,8 @@ class DashDataset:
         self.dataset_dir = dataset_dir
         self.eid = 0
         self.eids = []
+
+    """ Scene examples. """
 
     def load_example(self, eid: str) -> Tuple[Any]:
         """Loads data for a specified example.
@@ -55,6 +59,61 @@ class DashDataset:
         self.save_example_ids(eids=self.eids)
         self.eid += 1
 
+    """ Objects. """
+
+    def load_objects(
+        self,
+        min_img_id: Optional[int] = None,
+        max_img_id: Optional[int] = None,
+    ) -> List[DashObject]:
+        """Loads a list of DashObjects that fall within the bounds of image 
+        IDs.
+
+        Args:
+            min_img_id: The minimum image ID to include.
+            max_img_id: The maximum image ID to include.
+        
+        Returns:
+            objects: A list of DashObject's.
+        """
+        scene_ids = self.load_example_ids()
+        objects = []
+        for sid in scene_ids:
+            json_dict = self.load_labels(eid=sid)
+            for odict in json_dict["objects"]:
+                o: DashObject = bullet.dash_object.from_json(odict)
+                objects.append(o)
+        return objects
+
+    def load_object_xy(self, o: DashObject):
+        x = np.zeros((480, 480, 6)).astype(np.uint8)
+        rgb = self.load_rgb(eid=o.img_id)
+        mask = self.load_mask(eid=o.img_id)
+
+        bbox = o.compute_bbox(mask)
+        if bbox is None:
+            x = x
+        else:
+            x, y, w, h = bbox
+            seg = rgb[y : y + h, x : x + w, :].copy()
+            rgb[y : y + h, x : x + w, :] = 0.0
+            print(f"Bbox: {x, y, w, h}")
+            print(f"rgb shape: {rgb.shape}")
+            print(f"seg shape: {seg.shape}")
+            seg = cv2.resize(seg, (480, 480), interpolation=cv2.INTER_AREA)
+
+            x[:, :, :3] = seg
+        x[80:400, :, 3:6] = rgb  # (2, 0, 1)
+        # x = x.transpose(2, 0, 1)  # (H, W, C) to (C, H, W)
+        y = np.array([])
+        print(f"final x: {x.shape}")
+        return x, y
+
+    def process_seg(self, rgb):
+        return seg
+
+    """ Image IDs. """
+
     def load_example_ids(self) -> List[int]:
         """Gets all of the example ids that exist in the dataset dir.
         
@@ -71,6 +130,8 @@ class DashDataset:
             eids: A list of example IDs to save.
         """
         self.save_json(path=self.construct_path(key="eids"), data=eids)
+
+    """ Scene annotations. """
 
     def load_labels(self, eid: int) -> Dict:
         """Loads the ground truth labels for a single example.
@@ -96,14 +157,18 @@ class DashDataset:
             camera: A BulletCamera.
             eid: The example ID.
         """
-        json_dict = {"camera": camera.to_json_dict(), "objects": []}
+        json_dict = {"camera": camera.to_json(), "objects": []}
 
         for o in objects:
-            json_dict["objects"].append(o.to_json_dict())
+            # Store the image ID that the object corresponds to.
+            o.img_id = eid
+            json_dict["objects"].append(o.to_json())
 
         self.save_json(
             path=self.construct_path(key="json", eid=eid), data=json_dict
         )
+
+    """ RGB functions. """
 
     def load_rgb(self, eid: int) -> np.ndarray:
         """Loads a RGB image for an example ID.
@@ -126,6 +191,8 @@ class DashDataset:
         """
         imageio.imwrite(self.construct_path(key="rgb", eid=eid), rgb)
 
+    """ Mask functions. """
+
     def load_mask(self, eid: str):
         """Loads a mask for an example ID.
         
@@ -146,6 +213,8 @@ class DashDataset:
         """
         np.save(self.construct_path(key="mask", eid=eid), mask)
 
+    """ Path construction. """
+
     def construct_path(self, key: str, eid: Optional[int] = None) -> str:
         """Constructs the filepath for a given key and example.
 
@@ -163,6 +232,8 @@ class DashDataset:
             os.makedirs(key_dir, exist_ok=True)
             path = os.path.join(key_dir, f"{eid:05}.{KEY2EXT[key]}")
         return path
+
+    """ JSON functions. """
 
     def load_json(self, path: str) -> Any:
         """Loads a JSON file.

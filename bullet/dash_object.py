@@ -1,7 +1,8 @@
-import pybullet_utils.bullet_client as bc
 import math
 import numpy as np
 import os
+import pybullet_utils.bullet_client as bc
+import pycocotools.mask as mask_util
 from typing import Any, Dict, List, Optional, Tuple
 
 from bullet.camera import BulletCamera
@@ -15,6 +16,8 @@ class DashObject:
         color: str,
         position: List[float],
         orientation: List[float],
+        oid: Optional[int] = None,
+        img_id: Optional[int] = None,
     ):
         """
         Attributes:
@@ -24,21 +27,52 @@ class DashObject:
             position: The xyz position of the object, in world coordinate 
                 frame.
             orientation: The orientation of the object, expressed as a 
-                [x, y, z, w] quaternion, in world coordinate frame.            
+                [x, y, z, w] quaternion, in world coordinate frame.     
+            oid: PyBullet object ID that comes from p.loadURDF.
+            img_id: The image ID associated with the object.       
         """
-        self.id = None
         self.shape = shape
         self.size = size
         self.color = color
         self.position = position
         self.orientation = orientation
+        self.oid = oid
+        self.img_id = img_id
 
-    def set_id(self, oid: int):
-        self.id = oid
+    def compute_bbox(self, mask: np.ndarray) -> Tuple[int]:
+        """Compute the object bounding box.
+
+        Args:
+            mask: A 2D mask where values represent the object ID of each pixel.
+        
+        Returns:
+            (x, y, w, h): The bounding box of the object.
+        """
+        # Binary mask of the object.
+        obj_mask = mask == self.oid
+
+        # Mask to bbox.
+        mask = np.asfortranarray(obj_mask, dtype="uint8")
+        rle = mask_util.encode(mask)
+        rle["counts"] = rle["counts"].decode("ASCII")
+        if mask_util.area(rle) > 0:
+            bbox = mask_util.toBbox(rle)  # xywh
+
+            # Convert to integers.
+            x, y, w, h = [int(bbox[i]) for i in (0, 1, 2, 3)]
+            return x, y, w, h
+        else:
+            return None
 
     def to_json(self) -> Dict[str, Any]:
+        """Converts the current DashObject into a JSON dictionary.
+
+        Returns:
+            json_dict: The JSON dictionary representing the DashObject.
+        """
         json_dict = {
-            "id": self.id,
+            "oid": self.oid,
+            "img_id": self.img_id,
             "shape": self.shape,
             "size": self.size,
             "color": self.color,
@@ -50,6 +84,8 @@ class DashObject:
 
 def from_json(json_dict: Dict) -> DashObject:
     o = DashObject(
+        oid=json_dict["oid"],
+        img_id=json_dict["img_id"],
         shape=json_dict["shape"],
         size=json_dict["size"],
         color=json_dict["color"],
@@ -148,9 +184,7 @@ class DashRobot:
         """
         self.set_head_rotation(roll=roll, tilt=tilt, pan=pan, degrees=degrees)
         self.camera.set_pose(
-            position=self.get_camera_position(),
-            rotation=[roll, tilt, pan],
-            degrees=degrees,
+            position=self.get_camera_position(), rotation=[roll, tilt, pan]
         )
 
     def set_head_rotation(

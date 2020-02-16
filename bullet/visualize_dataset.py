@@ -39,17 +39,18 @@ def rerender(json_dict: Dict) -> np.ndarray:
 
     Args:
         gt_json: The JSON dictionary of scene labels.
+    
+    Returns:
+        rerendered: The rerendered image.
     """
     p = bullet.util.create_bullet_client(mode="direct")
     renderer = BulletRenderer(p=p)
     for odict in json_dict["objects"]:
         o = bullet.dash_object.from_json(json_dict=odict)
         renderer.render_object(o=o)
-    table = DashTable()
-    table_id = renderer.render_object(table)
+    table_id = renderer.render_object(DashTable())
     camera = bullet.camera.from_json(p, json_dict["camera"])
     rerendered, _ = camera.get_rgb_and_mask()
-    # rerendered = np.zeros((320, 480, 3)).astype(np.uint8)
     return rerendered
 
 

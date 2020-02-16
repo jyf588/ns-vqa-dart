@@ -7,9 +7,8 @@ import torchvision.models as models
 PYTORCH_VER = torch.__version__
 
 
-class AttributeNetwork():
-
-    def __init__(self, opt):    
+class AttributeNetwork:
+    def __init__(self, opt):
         if opt.concat_img:
             if opt.with_depth:
                 self.input_channels = 8
@@ -19,41 +18,38 @@ class AttributeNetwork():
             self.input_channels = 3
 
         if opt.load_checkpoint_path:
-            print('| loading checkpoint from %s' % opt.load_checkpoint_path)
+            print("| loading checkpoint from %s" % opt.load_checkpoint_path)
             checkpoint = torch.load(opt.load_checkpoint_path)
-            if self.input_channels != checkpoint['input_channels']:
-                raise ValueError('Incorrect input channels for loaded model')
-            self.output_dim = checkpoint['output_dim']
+            if self.input_channels != checkpoint["input_channels"]:
+                raise ValueError("Incorrect input channels for loaded model")
+            self.output_dim = checkpoint["output_dim"]
             self.net = _Net(self.output_dim, self.input_channels)
-            self.net.load_state_dict(checkpoint['model_state'])
+            self.net.load_state_dict(checkpoint["model_state"])
         else:
-            print('| creating new model')
-            label2dim = {
-                'attr': 9,
-                'position': 3,
-                'z_dir': 3,
-                'z_size': 1,
-            }            
-            if opt.dataset == 'clevr_dart':
+            print("| creating new model")
+            label2dim = {"attr": 9, "position": 3, "up_vector": 3, "height": 1}
+            if opt.dataset in ["dash", "clevr_dart"]:
                 output_dim = 0
                 if opt.pred_attr:
-                    output_dim += label2dim['attr']                
+                    output_dim += label2dim["attr"]
                 if opt.pred_position:
-                    output_dim += label2dim['position']                
-                if opt.pred_z_dir:
-                    output_dim += label2dim['z_dir']                
-                if opt.pred_z_size:
-                    output_dim += label2dim['z_size']  
+                    output_dim += label2dim["position"]
+                if opt.pred_up_vector:
+                    output_dim += label2dim["up_vector"]
+                if opt.pred_height:
+                    output_dim += label2dim["height"]
                 assert output_dim > 0
-                self.output_dim = output_dim    
-            elif opt.dataset == 'clevr':
+                self.output_dim = output_dim
+            elif opt.dataset == "clevr":
                 self.output_dim = 18
             else:
-                raise ValueError(f'Unsupported dataset: {opt.dataset}')
+                raise ValueError(f"Unsupported dataset: {opt.dataset}")
             self.net = _Net(self.output_dim, self.input_channels)
 
         self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=opt.learning_rate)
+        self.optimizer = torch.optim.Adam(
+            self.net.parameters(), lr=opt.learning_rate
+        )
 
         self.use_cuda = len(opt.gpu_ids) > 0 and torch.cuda.is_available()
         self.gpu_ids = opt.gpu_ids
@@ -63,7 +59,7 @@ class AttributeNetwork():
         self.opt = opt
 
         self.input, self.label = None, None
-                
+
     def set_input(self, x, y=None):
         self.input = self._to_var(x)
         if y is not None:
@@ -82,10 +78,10 @@ class AttributeNetwork():
             # if self.opt.with_rot:
             #     self.old_loss = self.criterion(self.pred[:-9], self.label[:-9])
             #     self.rot_loss = self.criterion(self.pred[-9:], self.label[-9:])
-            
+
     def get_loss(self):
         # print(PYTORCH_VER)
-        if PYTORCH_VER.startswith('1.'):   # TODO
+        if PYTORCH_VER.startswith("1."):  # TODO
             return self.loss.data.item()
         else:
             return self.loss.data[0]
@@ -93,7 +89,7 @@ class AttributeNetwork():
     def get_old_loss(self):
         if not self.opt.with_rot:
             return None
-        if PYTORCH_VER.startswith('1.'):   # TODO
+        if PYTORCH_VER.startswith("1."):  # TODO
             return self.old_loss.data.item()
         else:
             return self.old_loss.data[0]
@@ -101,7 +97,7 @@ class AttributeNetwork():
     def get_rot_loss(self):
         if not self.opt.with_rot:
             return None
-        if PYTORCH_VER.startswith('1.'):   # TODO
+        if PYTORCH_VER.startswith("1."):  # TODO
             return self.rot_loss.data.item()
         else:
             return self.rot_loss.data[0]
@@ -117,9 +113,9 @@ class AttributeNetwork():
 
     def save_checkpoint(self, save_path):
         checkpoint = {
-            'input_channels': self.input_channels,
-            'output_dim': self.output_dim,
-            'model_state': self.net.cpu().state_dict()
+            "input_channels": self.input_channels,
+            "output_dim": self.output_dim,
+            "model_state": self.net.cpu().state_dict(),
         }
         torch.save(checkpoint, save_path)
         if self.use_cuda:
@@ -132,18 +128,27 @@ class AttributeNetwork():
 
 
 class _Net(nn.Module):
-
     def __init__(self, output_dim, input_channels=6):
         super(_Net, self).__init__()
 
         resnet = models.resnet18(pretrained=False)
         layers = list(resnet.children())
-        
+
         # remove the last layer
         layers.pop()
         # remove the first layer as we take a 6-channel input
         layers.pop(0)
-        layers.insert(0, nn.Conv2d(input_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False))
+        layers.insert(
+            0,
+            nn.Conv2d(
+                input_channels,
+                64,
+                kernel_size=(7, 7),
+                stride=(2, 2),
+                padding=(3, 3),
+                bias=False,
+            ),
+        )
 
         self.main = nn.Sequential(*layers)
         # self.fc1 = nn.Linear(512, 256)

@@ -4,7 +4,6 @@ import torch
 
 
 class Trainer:
-
     def __init__(self, opt, model, train_loader, val_loader=None):
         self.num_iters = opt.num_iters
         self.run_dir = opt.run_dir
@@ -18,29 +17,30 @@ class Trainer:
         self.checkpoint_t = opt.checkpoint_t
 
         if opt.load_checkpoint_path is not None:
-            self.stats = json.load(open(f'{self.run_dir}/stats.json'))
+            self.stats = json.load(open(f"{self.run_dir}/stats.json"))
             assert opt.checkpoint_t is not None
         else:
             self.stats = {
-                'train_losses': [],
-                'train_losses_ts': [],
-                'val_losses': [],
-                'val_losses_ts': [],
-                'best_val_loss': 9999,
-                'model_t': 0,
-                'old_losses': [],
-                "rot_losses": []
+                "train_losses": [],
+                "train_losses_ts": [],
+                "val_losses": [],
+                "val_losses_ts": [],
+                "best_val_loss": 9999,
+                "model_t": 0,
+                "old_losses": [],
+                "rot_losses": [],
             }
 
         self.opt = opt
 
     def train(self):
-        print('| start training, running in directory %s' % self.run_dir)
+        print("| start training, running in directory %s" % self.run_dir)
         t = 0 if self.checkpoint_t is None else self.checkpoint_t
         epoch = 0
         while t < self.num_iters:
             epoch += 1
-            for data, label, _, _ in self.train_loader:
+            for data, label in self.train_loader:
+                print(data.size())
                 t += 1
                 self.model.set_input(data, label)
                 self.model.step()
@@ -50,8 +50,12 @@ class Trainer:
                 # rot_loss = self.model.get_rot_loss()
 
                 if t % self.display_every == 0:
-                    self.stats['train_losses'].append(loss)
-                    print('| iteration %d / %d, epoch %d, loss %f\n' % (t, self.num_iters, epoch, loss), end = '')
+                    self.stats["train_losses"].append(loss)
+                    print(
+                        "| iteration %d / %d, epoch %d, loss %f\n"
+                        % (t, self.num_iters, epoch, loss),
+                        end="",
+                    )
                     # if self.opt.with_rot:
                     #     self.stats['old_losses'].append(old_loss)
                     #     print(' ,ol %f' % old_loss, end = '')
@@ -59,25 +63,30 @@ class Trainer:
                     #     print(' ,rl %f' % rot_loss)
                     # else:
                     #     print("")
-                    self.stats['train_losses_ts'].append(t)
+                    self.stats["train_losses_ts"].append(t)
 
                 if t % self.checkpoint_every == 0 or t >= self.num_iters:
-                    if self.val_loader is not None:    
-                        print('| checking validation loss')
+                    if self.val_loader is not None:
+                        print("| checking validation loss")
                         val_loss = self.check_val_loss()
-                        print('| validation loss %f' % val_loss)
-                        if val_loss <= self.stats['best_val_loss']:
-                            print('| best model')
-                            self.stats['best_val_loss'] = val_loss
-                            self.stats['model_t'] = t
-                            self.model.save_checkpoint('%s/checkpoint_best.pt' % self.run_dir)
-                        self.stats['val_losses'].append(val_loss)
-                        self.stats['val_losses_ts'].append(t)
-                    print('| saving checkpoint')
-                    self.model.save_checkpoint('%s/checkpoint_iter%08d.pt' %
-                                                (self.run_dir, t))
-                    self.model.save_checkpoint(os.path.join(self.run_dir, 'checkpoint.pt'))
-                    with open('%s/stats.json' % self.run_dir, 'w') as fout:
+                        print("| validation loss %f" % val_loss)
+                        if val_loss <= self.stats["best_val_loss"]:
+                            print("| best model")
+                            self.stats["best_val_loss"] = val_loss
+                            self.stats["model_t"] = t
+                            self.model.save_checkpoint(
+                                "%s/checkpoint_best.pt" % self.run_dir
+                            )
+                        self.stats["val_losses"].append(val_loss)
+                        self.stats["val_losses_ts"].append(t)
+                    print("| saving checkpoint")
+                    self.model.save_checkpoint(
+                        "%s/checkpoint_iter%08d.pt" % (self.run_dir, t)
+                    )
+                    self.model.save_checkpoint(
+                        os.path.join(self.run_dir, "checkpoint.pt")
+                    )
+                    with open("%s/stats.json" % self.run_dir, "w") as fout:
                         json.dump(self.stats, fout)
 
                 if t >= self.num_iters:

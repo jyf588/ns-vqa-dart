@@ -112,7 +112,7 @@ class RandomSceneGenerator:
         for _ in range(n_objects):
             o: DashObject = self.generate_object()
             oid = self.renderer.render_object(o, fix_base=True)
-            o.set_id(oid=oid)
+            o.id = oid
             objects.append(o)
         return objects
 
