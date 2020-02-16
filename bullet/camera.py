@@ -4,9 +4,11 @@ import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
 from typing import *
 
+import bullet.util
+
 
 class BulletCamera:
-    def __init__(self, p, offset=[0.0, 0.0, 0.0]):
+    def __init__(self, offset=[0.0, 0.0, 0.0]):
         """
         Args:
             p: The pybullet client.
@@ -25,7 +27,7 @@ class BulletCamera:
             view_mat: The view matrix of the camera.
             proj_mat: The projection matrix of the camera.
         """
-        self.p = p
+        self.p = bullet.util.create_bullet_client(mode="direct")
 
         # Camera configurations.
         self.H = 480  # image dim
@@ -121,14 +123,14 @@ class BulletCamera:
         vector = rot.apply(vector)
         return list(vector)
 
-    def get_rgb_and_mask(self):
+    def get_rgb_and_mask(self, p: bc.BulletClient):
         view_mat = np.array(self.view_mat).reshape((4, 4))
-        img = self.p.getCameraImage(
+        img = p.getCameraImage(
             self.H,
             self.W,
             viewMatrix=self.view_mat,
             projectionMatrix=self.proj_mat,
-            renderer=self.p.ER_BULLET_HARDWARE_OPENGL,
+            renderer=p.ER_BULLET_HARDWARE_OPENGL,
         )
         rgb = np.reshape(img[2], (self.W, self.H, 4))[:, :, :3]
         mask = np.reshape(img[4], (self.W, self.H))
@@ -149,8 +151,8 @@ class BulletCamera:
         return json_dict
 
 
-def from_json(p: bc.BulletClient, json_dict: Dict) -> BulletCamera:
-    camera = BulletCamera(p=p, offset=json_dict["offset"])
+def from_json(json_dict: Dict) -> BulletCamera:
+    camera = BulletCamera(offset=json_dict["offset"])
     camera.set_pose(
         position=json_dict["position"], rotation=json_dict["rotation"]
     )

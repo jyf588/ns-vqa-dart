@@ -25,7 +25,7 @@ class BulletRenderer:
         # self.p = bc.BulletClient(connection_mode=pybullet.DIRECT)
         self.p = p
         self.urdf_dir = urdf_dir
-        self.camera = BulletCamera(p=self.p)
+        self.camera = BulletCamera()
 
         # Note: z position is defined by the top of the table.
         self.table_attr = {
@@ -40,20 +40,20 @@ class BulletRenderer:
             "quaternion": [0, 0, 0, 1],
         }
 
-    def render_scene(self, pose_dict, oid2attr):
-        self.p.resetSimulation()
-        for oid, pose in pose_dict.items():
-            pose.update(oid2attr[oid])
-            self.render_object(
-                position=pose["position"],
-                quaternion=pose["quaternion"],
-                size=oid2attr[oid]["size"],
-                shape=oid2attr[oid]["shape"],
-                color=oid2attr[oid]["color"],
-            )
-        self.render_table()
-        rgb, mask = self.camera.get_rgb_and_mask()
-        return rgb
+    # def render_scene(self, pose_dict, oid2attr):
+    #     self.p.resetSimulation()
+    #     for oid, pose in pose_dict.items():
+    #         pose.update(oid2attr[oid])
+    #         self.render_object(
+    #             position=pose["position"],
+    #             quaternion=pose["quaternion"],
+    #             size=oid2attr[oid]["size"],
+    #             shape=oid2attr[oid]["shape"],
+    #             color=oid2attr[oid]["color"],
+    #         )
+    #     self.render_table()
+    #     rgb, mask = self.camera.get_rgb_and_mask()
+    #     return rgb
 
     # def render_table(self):
     #     self.render_object(

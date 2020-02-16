@@ -36,14 +36,15 @@ class DashDataset:
             eid: The example ID.
         
         Returns:
-            json_dict: The JSON dictionary containing the labels.
-            rgb: The RGB image for the example.
-            mask: The mask for the example.
+            objects: A list of DashObjects in the scene.
+            camera: The camera of the scene.
+            rgb: The RGB image of the scene.
+            mask: The mask of the scene.
         """
-        json_dict = self.load_labels(eid=eid)
+        objects, camera = self.load_labels(eid=eid)
         rgb = self.load_rgb(eid=eid)
         mask = self.load_mask(eid=eid)
-        return json_dict, rgb, mask
+        return objects, camera, rgb, mask
 
     def save_example(
         self,
@@ -52,6 +53,14 @@ class DashDataset:
         rgb: np.ndarray,
         mask: np.ndarray,
     ):
+        """Saves an example scene.
+
+        Args:
+            objects: A list of DashObjects in the scene.
+            camera: The camera of the scene.
+            rgb: The RGB image of the scene.
+            mask: The mask of the scene.
+        """
         self.save_rgb(rgb=rgb, eid=self.eid)
         self.save_mask(mask=mask, eid=self.eid)
         self.save_labels(objects=objects, camera=camera, eid=self.eid)
@@ -62,10 +71,9 @@ class DashDataset:
     """ Objects. """
 
     def load_object(self, img_id: int, oid: int) -> DashObject:
-        labels_dict = self.load_labels(eid=img_id)
+        objects, camera = self.load_labels(eid=img_id)
         debug = 0
-        for odict in labels_dict["objects"]:
-            o: DashObject = bullet.dash_object.from_json(odict)
+        for o in objects:
             if o.img_id == img_id and o.oid == oid:
                 return o
         raise ValueError(
@@ -88,12 +96,10 @@ class DashDataset:
             objects: A list of DashObject's.
         """
         scene_ids = self.load_example_ids()
-        objects = []
+        all_objects = []
         for sid in scene_ids:
-            json_dict = self.load_labels(eid=sid)
-            for odict in json_dict["objects"]:
-                o: DashObject = bullet.dash_object.from_json(odict)
-                objects.append(o)
+            objects, camera = self.load_labels(eid=sid)
+            all_objects += objects
         return objects
 
     def load_object_xy(
@@ -188,12 +194,17 @@ class DashDataset:
             eid: The example ID.
 
         Returns:
-            json_dict: The JSON dictionary containing the labels.
+            objects: A list of DashObject's.
+            camera: A BulletCamera.
         """
         json_dict = bullet.util.load_json(
             path=self.construct_path(key="json", eid=eid)
         )
-        return json_dict
+        objects = []
+        for odict in json_dict["objects"]:
+            objects.append(bullet.dash_object.from_json(odict))
+        camera = bullet.camera.from_json(json_dict["camera"])
+        return objects, camera
 
     def save_labels(
         self, objects: List[DashObject], camera: BulletCamera, eid: str

@@ -2,6 +2,7 @@ import json
 import numpy as np
 import pybullet
 import pybullet_utils.bullet_client as bc
+from scipy.spatial.transform import Rotation as R
 from typing import *
 
 
@@ -52,6 +53,19 @@ def rotation_to_up(rotation: List[float]) -> List[float]:
     rotation = np.array(rotation).reshape((3, 3))
     up = list(rotation[:, -1])
     return up
+
+
+def rotation_to_quaternion(rotation: List[float]) -> List[float]:
+    """Converts a rotation matrix into a quaternion.
+
+    Args:
+        rotation: The 3x3 rotation matrix.
+
+    Returns:
+        quaternion: The [x, y, z, w] quaternion.
+    """
+    quaternion = R.from_matrix(np.array(rotation).reshape((3, 3))).as_quat()
+    return list(quaternion)
 
 
 """ JSON functions. """

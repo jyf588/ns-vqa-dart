@@ -172,24 +172,72 @@ class DashObject:
         return json_dict
 
 
-def from_y_vec(y: List[float]) -> Dict:
-    pred = {}
+def y_vec_to_dict(y: List[float]) -> Dict:
+    """Converts a y vector containing object labels into dictionary.
+
+    Args:
+        y: A vector of labels.
+
+    Returns:
+        y_dict: A dictionary representation of the y vector.
+    """
+    y_dict = {}
     start = 0
     for name, attr_list in ATTR_NAME2LIST.items():
         end = start + len(attr_list)
         attr_idx = np.argmax(y[start:end])
         start = end
         label = attr_list[attr_idx]
-        pred[name] = label
+        y_dict[name] = label
 
     end = start + 3
-    pred["position"] = y[start:end]
+    y_dict["position"] = y[start:end]
     start = end
     end = start + 3
-    pred["up_vector"] = y[start:end]
+    y_dict["up_vector"] = y[start:end]
     start = end
-    pred["height"] = y[start]
-    return pred
+    y_dict["height"] = y[start]
+
+    return y_dict
+
+
+def y_dict_to_object(
+    y_dict: Dict, gt_orientation: Optional[List[float]] = None
+) -> DashObject:
+    """Converts a y dictionary to a DashObject.
+
+    Args:
+        y_dict: The y dictionary.
+        gt_orientation: The GT orientation. If supplied, the GT z rotation 
+            (i.e., the first two columns of the rotation matrix), is included
+            in the orientation attribute of the DashObject.
+    
+    Returns:
+        o: The corresponding DashObject.
+    """
+    if gt_orientation is None:
+        print(f"Warning: GT orientation is not supplied.")
+        rotation = bullet.util.orientation_to_rotation(
+            orientation=gt_orientation
+        )
+        rotation = np.array(rotation).reshape((3, 3))
+    else:
+        rotation = np.zeros((3, 3))
+
+    # Set the up vector.
+    rotation[:, -1] = y_dict["up_vector"]
+
+    # Convert to orientation.
+    orientation = bullet.util.rotation_to_quaternion(rotation=rotation)
+
+    o = DashObject(
+        shape=y_dict["shape"],
+        size=y_dict["size"],
+        color=y_dict["color"],
+        position=y_dict["position"],
+        orientation=orientation,
+    )
+    return o
 
 
 def from_json(json_dict: Dict) -> DashObject:
