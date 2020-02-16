@@ -95,8 +95,8 @@ class RandomSceneGenerator:
             objects: A list of DashObjects to be removed from the scene.
         """
         for o in objects:
-            assert o.id is not None
-            self.p.removeBody(o.id)
+            assert o.oid is not None
+            self.p.removeBody(o.oid)
 
     def generate_scene(self) -> List[DashObject]:
         """Generates a single random scene."""
@@ -112,7 +112,7 @@ class RandomSceneGenerator:
         for _ in range(n_objects):
             o: DashObject = self.generate_object()
             oid = self.renderer.render_object(o, fix_base=True)
-            o.id = oid
+            o.oid = oid
             objects.append(o)
         return objects
 

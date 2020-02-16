@@ -85,32 +85,69 @@ class DashDataset:
                 objects.append(o)
         return objects
 
-    def load_object_xy(self, o: DashObject):
-        x = np.zeros((480, 480, 6)).astype(np.uint8)
+    def load_object_xy(
+        self,
+        o: DashObject,
+        use_attr: bool,
+        use_position: bool,
+        use_up_vector: bool,
+        use_height: bool,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Loads xy data for a given object.
+
+        Args:
+            o: The DashObject.
+            use_attr: Whether to use attributes in the label.
+            use_position: Whether to use position in the label.
+            use_up_vector: Whether to use the up vector in the label.
+            use_height: Whether to use height in the label.
+        
+        Returns:
+            data: The input data, which contains a cropped image of the object
+                concatenated with the original image of the scene, with the
+                object cropped out. (RGB, HWC)
+            y: Labels for the example.
+        """
         rgb = self.load_rgb(eid=o.img_id)
         mask = self.load_mask(eid=o.img_id)
+        data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
 
+        y = o.construct_label_vec(
+            use_attr=use_attr,
+            use_position=use_position,
+            use_up_vector=use_up_vector,
+            use_height=use_height,
+        )
+        return data, y
+
+    def compute_data_from_rgb_and_mask(
+        self, o: DashObject, rgb: np.ndarray, mask: np.ndarray
+    ) -> np.ndarray:
+        """Constructs the data tensor for an object.
+
+        Args:
+            o: The DashObject.
+            rgb: The RGB image of the entire scene.
+            mask: A 2D mask where each pixel holds the object ID it belongs to.
+        
+        Returns:
+            data: The final data, which contains a cropped image of the object
+                concatenated with the original image of the scene, with the
+                object cropped out. (RGB, HWC)
+        """
         bbox = o.compute_bbox(mask)
+        data = np.zeros((480, 480, 6)).astype(np.uint8)
         if bbox is None:
-            x = x
+            pass
+            print("Bbox is None")
         else:
             x, y, w, h = bbox
             seg = rgb[y : y + h, x : x + w, :].copy()
             rgb[y : y + h, x : x + w, :] = 0.0
-            print(f"Bbox: {x, y, w, h}")
-            print(f"rgb shape: {rgb.shape}")
-            print(f"seg shape: {seg.shape}")
             seg = cv2.resize(seg, (480, 480), interpolation=cv2.INTER_AREA)
-
-            x[:, :, :3] = seg
-        x[80:400, :, 3:6] = rgb  # (2, 0, 1)
-        # x = x.transpose(2, 0, 1)  # (H, W, C) to (C, H, W)
-        y = np.array([])
-        print(f"final x: {x.shape}")
-        return x, y
-
-    def process_seg(self, rgb):
-        return seg
+            data[:, :, :3] = seg
+        data[80:400, :, 3:6] = rgb
+        return data
 
     """ Image IDs. """
 

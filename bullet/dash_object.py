@@ -6,6 +6,7 @@ import pycocotools.mask as mask_util
 from typing import Any, Dict, List, Optional, Tuple
 
 from bullet.camera import BulletCamera
+import bullet.util
 
 
 class DashObject:
@@ -20,6 +21,17 @@ class DashObject:
         img_id: Optional[int] = None,
     ):
         """
+        Args:
+            shape: The shape of the object.
+            size: The size of the object.
+            color: The color of the object.
+            position: The xyz position of the object, in world coordinate 
+                frame.
+            orientation: The orientation of the object, expressed as a 
+                [x, y, z, w] quaternion, in world coordinate frame.     
+            oid: PyBullet object ID that comes from p.loadURDF.
+            img_id: The image ID associated with the object.      
+
         Attributes:
             shape: The shape of the object.
             size: The size of the object.
@@ -29,7 +41,9 @@ class DashObject:
             orientation: The orientation of the object, expressed as a 
                 [x, y, z, w] quaternion, in world coordinate frame.     
             oid: PyBullet object ID that comes from p.loadURDF.
-            img_id: The image ID associated with the object.       
+            img_id: The image ID associated with the object.      
+            attr_to_idx: A mapping from attribute to indices. Used for 
+                constructing label vectors. 
         """
         self.shape = shape
         self.size = size
@@ -38,6 +52,19 @@ class DashObject:
         self.orientation = orientation
         self.oid = oid
         self.img_id = img_id
+
+        self.attr_to_idx = {
+            "box": 0,
+            "cylinder": 1,
+            "sphere": 2,
+            "small": 3,
+            "large": 4,
+            "red": 5,
+            "yellow": 6,
+            "green": 7,
+            "blue": 8,
+        }
+        self.size2height = {"small": 0.13, "large": 0.18}
 
     def compute_bbox(self, mask: np.ndarray) -> Tuple[int]:
         """Compute the object bounding box.
@@ -63,6 +90,66 @@ class DashObject:
             return x, y, w, h
         else:
             return None
+
+    def construct_label_vec(
+        self,
+        use_attr: bool,
+        use_position: bool,
+        use_up_vector: bool,
+        use_height: bool,
+    ) -> np.ndarray:
+        """Constructs the label vector for an object.
+
+        Args:
+            use_attr: Whether to use attributes in the label.
+            use_position: Whether to use position in the label.
+            use_up_vector: Whether to use the up vector in the label.
+            use_height: Whether to use height in the label.
+        
+        Returns:
+            y: Labels for the example.
+        """
+        y = []
+        if use_attr:
+            y += list(self.construct_attr_vec())
+        if use_position:
+            y += self.position
+        if use_up_vector:
+            y += self.compute_up_vector()
+        if use_height:
+            y += [self.compute_height()]
+        return np.array(y)
+
+    def construct_attr_vec(self) -> np.ndarray:
+        """Constructs the attributes vector.
+        
+        Returns:
+            attr_vec: The attributes vector, which is a binary vector that 
+                assigns 1 to owned attributes and 0 everywhere else.
+        """
+        attr_vec = np.zeros((9,))
+        for attr in [self.shape, self.size, self.color]:
+            shape_idx = self.attr_to_idx[attr]
+            attr_vec[shape_idx] = 1
+        return attr_vec
+
+    def compute_up_vector(self) -> List[float]:
+        """Computes the up vector for the current object.
+
+        Returns:
+            up_vector: The up vector for the object.
+        """
+        up_vector = bullet.util.orientation_to_up(self.orientation)
+        return up_vector
+
+    def compute_height(self) -> float:
+        """Computes the height of the object.
+
+        Returns:
+            height: The height of the object.
+        """
+        height = self.size2height[self.size]
+        return height
 
     def to_json(self) -> Dict[str, Any]:
         """Converts the current DashObject into a JSON dictionary.
