@@ -14,9 +14,9 @@ def main():
 
     generator = RandomSceneGenerator(
         seed=1,
-        render_mode="gui",
+        render_mode="direct",
         egocentric=True,
-        dataset_dir="tmp",
+        dataset_dir="/home/michelle/datasets/ego_001",
         n_objs_bounds=(3, 7),
         shapes=["box", "cylinder"],
         sizes=["small", "large"],
@@ -29,7 +29,7 @@ def main():
         pan_bounds=(-5.0, 5.0),
         degrees=True,
     )
-    generator.generate_scenes(n=22000)
+    generator.generate_scenes(n=20)
 
 
 if __name__ == "__main__":

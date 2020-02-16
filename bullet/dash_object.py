@@ -61,7 +61,7 @@ class DashRobot:
     def __init__(
         self,
         p: bc.BulletClient,
-        urdf_path: str,
+        urdf_path: str = "bullet/assets/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_1_revolute_head.urdf",
         position: List[float] = [-0.3, 0.0, -1.25],
         head_roll_joint_name: str = "head_roll_joint",
         head_tilt_joint_name: str = "head_tilt_joint",
