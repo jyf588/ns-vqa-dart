@@ -61,6 +61,17 @@ class DashDataset:
 
     """ Objects. """
 
+    def load_object(self, img_id: int, oid: int) -> DashObject:
+        labels_dict = self.load_labels(eid=img_id)
+        debug = 0
+        for odict in labels_dict["objects"]:
+            o: DashObject = bullet.dash_object.from_json(odict)
+            if o.img_id == img_id and o.oid == oid:
+                return o
+        raise ValueError(
+            f"Could not local object with image ID {img_id} and object ID {oid}."
+        )
+
     def load_objects(
         self,
         min_img_id: Optional[int] = None,
@@ -112,7 +123,7 @@ class DashDataset:
         mask = self.load_mask(eid=o.img_id)
         data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
 
-        y = o.construct_label_vec(
+        y = o.to_y_vec(
             use_attr=use_attr,
             use_position=use_position,
             use_up_vector=use_up_vector,

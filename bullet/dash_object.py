@@ -9,6 +9,22 @@ from bullet.camera import BulletCamera
 import bullet.util
 
 
+# Note: order matters!
+ATTR_NAME2LIST = {
+    "shape": ["box", "cylinder", "sphere"],
+    "size": ["small", "large"],
+    "color": ["red", "yellow", "green", "blue"],
+}
+ATTR2IDX = {}
+idx = 0
+for name, attr_list in ATTR_NAME2LIST.items():
+    for label in attr_list:
+        ATTR2IDX[label] = idx
+        idx += 1
+
+SIZE2HEIGHT = {"small": 0.13, "large": 0.18}
+
+
 class DashObject:
     def __init__(
         self,
@@ -42,8 +58,6 @@ class DashObject:
                 [x, y, z, w] quaternion, in world coordinate frame.     
             oid: PyBullet object ID that comes from p.loadURDF.
             img_id: The image ID associated with the object.      
-            attr_to_idx: A mapping from attribute to indices. Used for 
-                constructing label vectors. 
         """
         self.shape = shape
         self.size = size
@@ -52,19 +66,6 @@ class DashObject:
         self.orientation = orientation
         self.oid = oid
         self.img_id = img_id
-
-        self.attr_to_idx = {
-            "box": 0,
-            "cylinder": 1,
-            "sphere": 2,
-            "small": 3,
-            "large": 4,
-            "red": 5,
-            "yellow": 6,
-            "green": 7,
-            "blue": 8,
-        }
-        self.size2height = {"small": 0.13, "large": 0.18}
 
     def compute_bbox(self, mask: np.ndarray) -> Tuple[int]:
         """Compute the object bounding box.
@@ -91,7 +92,7 @@ class DashObject:
         else:
             return None
 
-    def construct_label_vec(
+    def to_y_vec(
         self,
         use_attr: bool,
         use_position: bool,
@@ -129,7 +130,7 @@ class DashObject:
         """
         attr_vec = np.zeros((9,))
         for attr in [self.shape, self.size, self.color]:
-            shape_idx = self.attr_to_idx[attr]
+            shape_idx = ATTR2IDX[attr]
             attr_vec[shape_idx] = 1
         return attr_vec
 
@@ -148,7 +149,7 @@ class DashObject:
         Returns:
             height: The height of the object.
         """
-        height = self.size2height[self.size]
+        height = SIZE2HEIGHT[self.size]
         return height
 
     def to_json(self) -> Dict[str, Any]:
@@ -165,8 +166,30 @@ class DashObject:
             "color": self.color,
             "position": self.position,
             "orientation": self.orientation,
+            "up_vector": self.compute_up_vector(),
+            "height": self.compute_height(),
         }
         return json_dict
+
+
+def from_y_vec(y: List[float]) -> Dict:
+    pred = {}
+    start = 0
+    for name, attr_list in ATTR_NAME2LIST.items():
+        end = start + len(attr_list)
+        attr_idx = np.argmax(y[start:end])
+        start = end
+        label = attr_list[attr_idx]
+        pred[name] = label
+
+    end = start + 3
+    pred["position"] = y[start:end]
+    start = end
+    end = start + 3
+    pred["up_vector"] = y[start:end]
+    start = end
+    pred["height"] = y[start]
+    return pred
 
 
 def from_json(json_dict: Dict) -> DashObject:
