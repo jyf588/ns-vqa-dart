@@ -12,4 +12,6 @@ time python run_train.py \
     --pred_position \
     --pred_up_vector \
     --pred_height \
-    --coordinate_frame camera
+    --coordinate_frame camera \
+    --load_checkpoint_path ~/outputs/ego_v005/checkpoint_iter00004000.pt \
+    --checkpoint_t 4000

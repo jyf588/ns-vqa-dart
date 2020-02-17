@@ -10,15 +10,18 @@ time python run_test.py \
     --pred_attr \
     --pred_position \
     --pred_up_vector \
-    --pred_height
+    --pred_height \
+    --coordinate_frame world
 
 cd ../..
 
 time python bullet/metrics.py \
     --dataset_dir ~/datasets/ego_v004 \
-	--pred_path ~/outputs/ego_v004/test.json
+	--pred_path ~/outputs/ego_v004/test.json \
+    --coordinate_frame world
 
 time python bullet/visualize.py \
     --dataset_dir ~/datasets/ego_v004 \
     --pred_path ~/outputs/ego_v004/test.json \
-    --output_dir ~/analysis/ego_v004
+    --output_dir ~/analysis/ego_v004 \
+    --coordinate_frame world
