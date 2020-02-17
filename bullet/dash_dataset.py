@@ -79,7 +79,7 @@ class DashDataset:
             if o.img_id == img_id and o.oid == oid:
                 return o
         raise ValueError(
-            f"Could not local object with image ID {img_id} and object ID {oid}."
+            f"Could not locate object with image ID {img_id} and object ID {oid}."
         )
 
     def load_objects(

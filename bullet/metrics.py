@@ -1,9 +1,14 @@
 import argparse
 import numpy as np
+from tqdm import tqdm
 
 from bullet.dash_dataset import DashDataset
 import bullet.dash_object
 import bullet.util
+
+AXIS_NAMES = ["x", "y", "z"]
+MULTIPLIER = {"position": 100, "height": 100}
+UNITS = {"position": "cm", "up_vector": "L1", "height": "cm"}
 
 
 def main(args: argparse.Namespace):
@@ -19,7 +24,7 @@ def main(args: argparse.Namespace):
     }
     n_total = 0
 
-    for pred_dict in pred_dicts:
+    for pred_dict in tqdm(pred_dicts):
         o = dataset.load_object_for_img_id_and_oid(
             img_id=pred_dict["img_id"], oid=pred_dict["oid"]
         )
@@ -50,13 +55,16 @@ def main(args: argparse.Namespace):
 
     print(f"Regression Errors:")
     for k, v in reg_error.items():
+        if k in MULTIPLIER:
+            v *= MULTIPLIER[k]
+        units = UNITS[k]
         if type(v) == np.float64:
-            print(f"\t{k}: {v_i / n_total:.2f} ({v:.2f}/{n_total})")
+            print(f"\t{k} ({units}): {v / n_total:.2f} ({v:.2f}/{n_total})")
         elif type(v) == np.ndarray:
-            print(f"\t{k}:")
+            print(f"\t{k} ({units}):")
             for axis_i, v_i in enumerate(v):
                 print(
-                    f"\t\taxis {axis_i}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
+                    f"\t\t{AXIS_NAMES[axis_i]}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
                 )
 
 
