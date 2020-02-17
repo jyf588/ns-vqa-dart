@@ -27,7 +27,7 @@ def main(args: argparse.Namespace):
     print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     img_id2oid2pred_object = {}
-    for pred_dict in tqdm(pred_dicts[:10]):
+    for pred_dict in tqdm(pred_dicts[:200]):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
         y = pred_dict["pred"]
@@ -83,6 +83,45 @@ def main(args: argparse.Namespace):
             os.makedirs(img_dir, exist_ok=True)
             path = os.path.join(img_dir, f"{img_id:05}.png")
             imageio.imwrite(path, img)
+
+        # Create object masks.
+        oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
+        generate_obj_mask_and_captions(
+            img_id=img_id,
+            mask=mask,
+            oid2gt_objects=oid2gt_objects_world,
+            oid2pred_objects=oid2pred_object,
+        )
+
+
+def generate_obj_mask_and_captions(
+    img_id: int,
+    mask: np.ndarray,
+    oid2gt_objects: List[DashObject],
+    oid2pred_objects: List[DashObject],
+):
+    obj_masks_dir = os.path.join(args.output_dir, "obj_masks", f"{img_id:05}")
+    obj_caps_dir = os.path.join(
+        args.output_dir, "obj_captions", f"{img_id:05}"
+    )
+    os.makedirs(obj_masks_dir, exist_ok=True)
+    os.makedirs(obj_caps_dir, exist_ok=True)
+
+    for oid, pred_o in oid2pred_objects.items():
+        gt_o = oid2gt_objects[oid]
+
+        img = (mask == oid).astype(np.uint8) * 255
+        img_path = os.path.join(obj_masks_dir, f"{oid:02}.png")
+        imageio.imwrite(img_path, img)
+
+        captions = (
+            ["Ground truth:"]
+            + gt_o.to_caption()
+            + ["", "Predicted:"]
+            + pred_o.to_caption()
+        )
+        captions_path = os.path.join(obj_caps_dir, f"{oid:02}.json")
+        bullet.util.save_json(path=captions_path, data=captions)
 
 
 def create_visual(
