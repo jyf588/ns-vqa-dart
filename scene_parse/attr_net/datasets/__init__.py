@@ -21,6 +21,7 @@ def get_dataset(opt, split):
             use_position=opt.pred_position,
             use_up_vector=opt.pred_up_vector,
             use_height=opt.pred_height,
+            coordinate_frame=opt.coordinate_frame,
         )
 
     elif opt.dataset == "clevr":

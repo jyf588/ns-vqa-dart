@@ -21,6 +21,7 @@ class DashTorchDataset(Dataset):
         use_position: bool,
         use_up_vector: bool,
         use_height: bool,
+        coordinate_frame: str,
         min_img_id: Optional[int] = None,
         max_img_id: Optional[int] = None,
     ):
@@ -32,6 +33,8 @@ class DashTorchDataset(Dataset):
             use_position: Whether to use position in the label.
             use_up_vector: Whether to use the up vector in the label.
             use_height: Whether to use height in the label.
+            coordinate_frame: The coordinate frame to train on, either "world"
+                or "camera" coordinate frame.
             min_img_id: The minimum image ID to include in the dataset.
             max_img_id: The maximum image ID to include in the dataset.
         
@@ -46,6 +49,9 @@ class DashTorchDataset(Dataset):
         print(f"Initializing DashTorchDataset...")
         self.dataset = DashDataset(dataset_dir=dataset_dir)
 
+        print(f"min_img_id: {min_img_id}")
+        print(f"max_img_id: {max_img_id}")
+
         # Load object examples included in the image ID bounds.
         self.objects = self.dataset.load_objects(
             exclude_out_of_view=False,
@@ -57,6 +63,7 @@ class DashTorchDataset(Dataset):
         self.use_position = use_position
         self.use_up_vector = use_up_vector
         self.use_height = use_height
+        self.coordinate_frame = coordinate_frame
 
         self.normalize = [
             transforms.Normalize(
@@ -94,10 +101,10 @@ class DashTorchDataset(Dataset):
             use_position=self.use_position,
             use_up_vector=self.use_up_vector,
             use_height=self.use_height,
+            coordinate_frame=self.coordinate_frame,
         )
         data = transforms.Compose(self.transform)(data)
         data[:3] = transforms.Compose(self.normalize)(data[:3])
         data[3:6] = transforms.Compose(self.normalize)(data[3:6])
         y = torch.Tensor(y)
         return data, y, o.img_id, o.oid
-

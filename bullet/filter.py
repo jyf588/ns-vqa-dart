@@ -1,3 +1,7 @@
+"""Filters objects that are out of view (a.k.a., mask area is zero).
+Runtime for 22k objects: ~22 minutes.
+"""
+
 import argparse
 from tqdm import tqdm
 

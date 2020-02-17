@@ -1,6 +1,7 @@
 import os
 import json
 import torch
+import time
 
 
 class Trainer:
@@ -37,6 +38,7 @@ class Trainer:
         print("| start training, running in directory %s" % self.run_dir)
         t = 0 if self.checkpoint_t is None else self.checkpoint_t
         epoch = 0
+        start_time = time.time()
         while t < self.num_iters:
             epoch += 1
             for data, label, _, _ in self.train_loader:
@@ -45,23 +47,14 @@ class Trainer:
                 self.model.step()
                 loss = self.model.get_loss()
 
-                # old_loss = self.model.get_old_loss()
-                # rot_loss = self.model.get_rot_loss()
-
                 if t % self.display_every == 0:
                     self.stats["train_losses"].append(loss)
+                    avg_iter_time = (time.time() - start_time) / t
                     print(
-                        "| iteration %d / %d, epoch %d, loss %f\n"
-                        % (t, self.num_iters, epoch, loss),
+                        "| iteration %d / %d, epoch %d, loss %f, avg_iter_secs: %.2f\n"
+                        % (t, self.num_iters, epoch, loss, avg_iter_time),
                         end="",
                     )
-                    # if self.opt.with_rot:
-                    #     self.stats['old_losses'].append(old_loss)
-                    #     print(' ,ol %f' % old_loss, end = '')
-                    #     self.stats['rot_losses'].append(rot_loss)
-                    #     print(' ,rl %f' % rot_loss)
-                    # else:
-                    #     print("")
                     self.stats["train_losses_ts"].append(t)
 
                 if t % self.checkpoint_every == 0 or t >= self.num_iters:

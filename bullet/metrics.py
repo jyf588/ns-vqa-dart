@@ -20,11 +20,17 @@ def main(args: argparse.Namespace):
     n_total = 0
 
     for pred_dict in pred_dicts:
-        y_dict = bullet.dash_object.y_vec_to_dict(y=pred_dict["pred"])
-        o = dataset.load_object(
+        o = dataset.load_object_for_img_id_and_oid(
             img_id=pred_dict["img_id"], oid=pred_dict["oid"]
         )
         odict = o.to_json()
+
+        camera = dataset.load_camera_for_eid(eid=pred_dict["img_id"])
+        y_dict = bullet.dash_object.y_vec_to_dict(
+            y=pred_dict["pred"],
+            coordinate_frame=args.coordinate_frame,
+            camera=camera,
+        )
 
         for k in cls_correct.keys():
             if odict[k] == y_dict[k]:
@@ -67,6 +73,13 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The path to the predictions JSON.",
+    )
+    parser.add_argument(
+        "--coordinate_frame",
+        type=str,
+        required=True,
+        choices=["world", "camera"],
+        help="The coordinate frame that predictions are in.",
     )
     args = parser.parse_args()
     main(args)

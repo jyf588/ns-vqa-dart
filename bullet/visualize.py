@@ -24,15 +24,19 @@ def main(args: argparse.Namespace):
     dataset = DashDataset(dataset_dir=args.dataset_dir)
 
     # Load the predictions.
+    print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     img_id2oid2pred_object = {}
-    for pred_dict in pred_dicts:
+    for pred_dict in tqdm(pred_dicts):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
         y = pred_dict["pred"]
 
-        y_dict = bullet.dash_object.y_vec_to_dict(y=y)
-        gt_o = dataset.load_object(img_id=img_id, oid=oid)
+        camera = dataset.load_camera_for_eid(eid=img_id)
+        y_dict = bullet.dash_object.y_vec_to_dict(
+            y=y, coordinate_frame=args.coordinate_frame, camera=camera
+        )
+        gt_o = dataset.load_object_for_img_id_and_oid(img_id=img_id, oid=oid)
         o = bullet.dash_object.y_dict_to_object(
             y_dict=y_dict,
             img_id=img_id,
@@ -43,16 +47,23 @@ def main(args: argparse.Namespace):
             img_id2oid2pred_object[img_id] = {}
         img_id2oid2pred_object[img_id][oid] = o
 
+    pred_img_ids = list(img_id2oid2pred_object.keys())
+
     # For each example, load the rgb image and mask.
-    img_ids = dataset.load_example_ids()
-    for img_id in tqdm(img_ids):
-        gt_objects, camera, rgb, mask = dataset.load_example(eid=img_id)
+    for img_id in tqdm(pred_img_ids[:50]):
+        gt_objects_world, camera, rgb, mask = dataset.load_example(eid=img_id)
 
         # Convert the mask to an image.
         mask_img = convert_mask_to_img(mask=mask)
 
         # Rerender the scene from the GT labels.
-        rerendered_gt = rerender(objects=gt_objects, camera=camera)
+        rerendered_gt_world = rerender(objects=gt_objects_world, camera=camera)
+
+        # Rerender GT using world -> cam -> world.
+        gt_objects_cam = world2cam2world(
+            world_objects=gt_objects_world, camera=camera
+        )
+        rerendered_gt_cam = rerender(objects=gt_objects_cam, camera=camera)
 
         # Rerender the scene from the model predictions.
         oid2pred_object = img_id2oid2pred_object[img_id]
@@ -61,7 +72,7 @@ def main(args: argparse.Namespace):
 
         gt_objects_caption_text = []
         pred_objects_caption_text = []
-        for gt_o in gt_objects:
+        for gt_o in gt_objects_world:
             oid = gt_o.oid
             pred_o = oid2pred_object[oid]
 
@@ -71,8 +82,10 @@ def main(args: argparse.Namespace):
         name2caption_text = {
             "rgb": ["Model input"],
             "mask": ["Object masks"],
-            "gt": ["Ground truth rerendered", ""] + gt_objects_caption_text,
-            "pred": ["Predictions rerendered", ""] + pred_objects_caption_text,
+            "gt_world": ["Rerendered ground truth (world)", ""]
+            + gt_objects_caption_text,
+            "gt_cam": ["Rerendered ground truth (cam)"],
+            "pred": ["Rerendered predictions", ""] + pred_objects_caption_text,
         }
 
         # Combine the panels and save.
@@ -80,7 +93,8 @@ def main(args: argparse.Namespace):
             name2img={
                 "rgb": rgb,
                 "mask": mask_img,
-                "gt": rerendered_gt,
+                "gt_world": rerendered_gt_world,
+                "gt_cam": rerendered_gt_cam,
                 "pred": rerendered_pred,
             },
             name2caption_text=name2caption_text,
@@ -146,6 +160,35 @@ def rerender(objects: List[DashObject], camera: BulletCamera) -> np.ndarray:
     return rerendered
 
 
+def world2cam2world(
+    world_objects: List[DashObject], camera: BulletCamera
+) -> List[DashObject]:
+    cam_objects = []
+    for o in world_objects:
+        world_position = o.position
+        world_up_vector = o.compute_up_vector()
+
+        cam_position = bullet.util.world_to_cam(
+            xyz=world_position, camera=camera
+        )
+        cam_up_vector = bullet.util.world_to_cam(
+            xyz=world_up_vector, camera=camera
+        )
+
+        world_position = bullet.util.cam_to_world(
+            xyz=cam_position, camera=camera
+        )
+        world_up_vector = bullet.util.cam_to_world(
+            xyz=cam_up_vector, camera=camera
+        )
+
+        o.position = world_position
+        o.up_vector = world_up_vector
+
+        cam_objects.append(o)
+    return cam_objects
+
+
 def convert_mask_to_img(mask: np.ndarray):
     H, W = mask.shape
     mask_img = np.zeros((H, W, 3)).astype(np.uint8)
@@ -175,6 +218,13 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The directory to save the visualizations.",
+    )
+    parser.add_argument(
+        "--coordinate_frame",
+        type=str,
+        required=True,
+        choices=["world", "camera"],
+        help="The coordinate frame that predictions are in.",
     )
     args = parser.parse_args()
     main(args)

@@ -2,3 +2,5 @@ ego_001: single image, 2 objects per
 ego_v002: 20 images, 90 objects total
 ego_v003: 22000 images
 ego_v004: v003 with out-of-view objects filtered out
+ego_v005: A copy of v004. Separated for cleanliness. Difference is that the
+    outputs/analysis directories will be based on camera coordinates.

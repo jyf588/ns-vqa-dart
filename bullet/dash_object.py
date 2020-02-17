@@ -98,6 +98,8 @@ class DashObject:
         use_position: bool,
         use_up_vector: bool,
         use_height: bool,
+        coordinate_frame: str,
+        camera: BulletCamera,
     ) -> np.ndarray:
         """Constructs the label vector for an object.
 
@@ -106,6 +108,10 @@ class DashObject:
             use_position: Whether to use position in the label.
             use_up_vector: Whether to use the up vector in the label.
             use_height: Whether to use height in the label.
+            coordinate_frame: The coordinate frame to use, either "world" or
+                "camera" coordinate frame.
+            camera: The BulletCamera for computing values in camera coordinate 
+                frame.
         
         Returns:
             y: Labels for the example.
@@ -113,10 +119,23 @@ class DashObject:
         y = []
         if use_attr:
             y += list(self.construct_attr_vec())
-        if use_position:
-            y += self.position
-        if use_up_vector:
-            y += self.compute_up_vector()
+
+        if coordinate_frame == "world":
+            if use_position:
+                y += self.position
+            if use_up_vector:
+                y += self.compute_up_vector()
+            if use_height:
+                y += [self.compute_height()]
+        elif coordinate_frame == "camera":
+            if use_position:
+                y += bullet.util.world_to_cam(xyz=self.position, camera=camera)
+            if use_up_vector:
+                y += bullet.util.world_to_cam(
+                    xyz=self.compute_up_vector(), camera=camera
+                )
+        else:
+            raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
         if use_height:
             y += [self.compute_height()]
         return np.array(y)
@@ -192,11 +211,19 @@ class DashObject:
         return str_list
 
 
-def y_vec_to_dict(y: List[float]) -> Dict:
-    """Converts a y vector containing object labels into dictionary.
+def y_vec_to_dict(
+    y: List[float], coordinate_frame: str, camera: BulletCamera
+) -> Dict:
+    """Converts a y vector containing object labels into dictionary. Values are
+    converted back into global coordinate frame if `coordinate_frame` is 
+    `camera`.
 
     Args:
         y: A vector of labels.
+        coordinate_frame: The coordinate frame to use, either "world" or
+                "camera" coordinate frame.
+        camera: The BulletCamera for computing values in camera coordinate 
+            frame.
 
     Returns:
         y_dict: A dictionary representation of the y vector.
@@ -218,6 +245,13 @@ def y_vec_to_dict(y: List[float]) -> Dict:
     start = end
     y_dict["height"] = y[start]
 
+    if coordinate_frame == "world":
+        pass
+    elif coordinate_frame == "camera":
+        for k in ["position", "up_vector"]:
+            y_dict[k] = bullet.util.cam_to_world(xyz=y_dict[k], camera=camera)
+    else:
+        raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
     return y_dict
 
 

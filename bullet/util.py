@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from numpy.linalg import inv
 import pybullet
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
@@ -11,6 +12,46 @@ CONNECT_MODE2FLAG = {"direct": pybullet.DIRECT, "gui": pybullet.GUI}
 
 def create_bullet_client(mode: str) -> bc.BulletClient:
     return bc.BulletClient(connection_mode=CONNECT_MODE2FLAG[mode])
+
+
+""" Geometry """
+
+
+def world_to_cam(xyz: List[float], camera) -> List[float]:
+    """Converts xyz coordinates from world to camera coordinate frame.
+
+    Args:
+        xyz: The xyz point.
+        camera: A BulletCamera.
+    
+    Returns:
+        cam_xyz: The xyz point in camera coordinate frame.
+    """
+    view_mat = np.array(camera.view_mat)
+    view_mat = view_mat.reshape((4, 4))
+    world_vec = np.array(xyz + [1.0])
+    cam_vec = np.dot(view_mat, world_vec)
+    cam_xyz = list(cam_vec[:3])
+    return cam_xyz
+
+
+def cam_to_world(xyz: List[float], camera) -> List[float]:
+    """Converts xyz coordinates from camera to world coordinate frame.
+
+    Args:
+        xyz: The xyz point.
+        camera: A BulletCamera.
+    
+    Returns:
+        world_xyz: The xyz point in world coordinate frame.
+    """
+
+    view_mat = np.array(camera.view_mat)
+    view_mat = view_mat.reshape((4, 4))
+    cam_vec = np.array(xyz + [1.0])
+    world_vec = np.dot(inv(view_mat), cam_vec)
+    world_xyz = list(world_vec[:3])
+    return world_xyz
 
 
 def orientation_to_up(orientation: List[float]) -> List[float]:

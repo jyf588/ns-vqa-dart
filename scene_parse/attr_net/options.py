@@ -92,6 +92,12 @@ class BaseOptions:
             help="splitting index between train and val images",
         )
         self.parser.add_argument(
+            "--coordinate_frame",
+            required=True,
+            choices=["world", "camera"],
+            help="The coordinate frame to train on.",
+        )
+        self.parser.add_argument(
             "--batch_size", default=20, type=int, help="batch size"
         )
         self.parser.add_argument(

@@ -41,7 +41,7 @@ class DashDataset:
             rgb: The RGB image of the scene.
             mask: The mask of the scene.
         """
-        objects, camera = self.load_labels(eid=eid)
+        objects, camera = self.load_objects_and_camera_for_eid(eid=eid)
         rgb = self.load_rgb(eid=eid)
         mask = self.load_mask(eid=eid)
         return objects, camera, rgb, mask
@@ -70,8 +70,10 @@ class DashDataset:
 
     """ Objects. """
 
-    def load_object(self, img_id: int, oid: int) -> DashObject:
-        objects, camera = self.load_labels(eid=img_id)
+    def load_object_for_img_id_and_oid(
+        self, img_id: int, oid: int
+    ) -> DashObject:
+        objects, camera = self.load_objects_and_camera_for_eid(eid=img_id)
         debug = 0
         for o in objects:
             if o.img_id == img_id and o.oid == oid:
@@ -101,7 +103,7 @@ class DashDataset:
         scene_ids = self.load_example_ids(min_id=min_img_id, max_id=max_img_id)
         all_objects = []
         for sid in scene_ids:
-            objects, camera = self.load_labels(eid=sid)
+            objects, camera = self.load_objects_and_camera_for_eid(eid=sid)
             if exclude_out_of_view:
                 objects = self.filter_out_of_view_objects(objects=objects)
             all_objects += objects
@@ -148,6 +150,7 @@ class DashDataset:
         use_position: bool,
         use_up_vector: bool,
         use_height: bool,
+        coordinate_frame: str,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Loads xy data for a given object.
 
@@ -157,6 +160,8 @@ class DashDataset:
             use_position: Whether to use position in the label.
             use_up_vector: Whether to use the up vector in the label.
             use_height: Whether to use height in the label.
+            coordinate_frame: The coordinate frame to use, either "world" or
+                "camera" coordinate frame.
         
         Returns:
             data: The input data, which contains a cropped image of the object
@@ -167,12 +172,15 @@ class DashDataset:
         rgb = self.load_rgb(eid=o.img_id)
         mask = self.load_mask(eid=o.img_id)
         data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
+        objects, camera = self.load_objects_and_camera_for_eid(eid=o.img_id)
 
         y = o.to_y_vec(
             use_attr=use_attr,
             use_position=use_position,
             use_up_vector=use_up_vector,
             use_height=use_height,
+            coordinate_frame=coordinate_frame,
+            camera=camera,
         )
         return data, y
 
@@ -245,7 +253,9 @@ class DashDataset:
 
     """ Scene annotations. """
 
-    def load_labels(self, eid: int) -> Dict:
+    def load_objects_and_camera_for_eid(
+        self, eid: int
+    ) -> Tuple[List[DashObject], BulletCamera]:
         """Loads the ground truth labels for a single example.
 
         Args:
@@ -263,6 +273,21 @@ class DashDataset:
             objects.append(bullet.dash_object.from_json(odict))
         camera = bullet.camera.from_json(json_dict["camera"])
         return objects, camera
+
+    def load_camera_for_eid(self, eid: int) -> BulletCamera:
+        """Loads the camera for a single example.
+
+        Args:
+            eid: The example ID.
+
+        Returns:
+            camera: The BulletCamera for the example.
+        """
+        json_dict = bullet.util.load_json(
+            path=self.construct_path(key="json", eid=eid)
+        )
+        camera = bullet.camera.from_json(json_dict["camera"])
+        return camera
 
     def save_labels(
         self, objects: List[DashObject], camera: BulletCamera, eid: str

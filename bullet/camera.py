@@ -152,7 +152,19 @@ class BulletCamera:
 
 
 def from_json(json_dict: Dict) -> BulletCamera:
-    camera = BulletCamera(offset=json_dict["offset"])
+    """Create a BulletCamera from a JSON dictionary.
+
+    Note that the offset from the JSON dictionary is not used in the 
+    BulletCamera constructed here, because the position in the JSON dictionary
+    already includes the offset.
+
+    Args:
+        json_dict: The JSON dictionary.
+    
+    Returns:
+        camera: BulletCamera.
+    """
+    camera = BulletCamera()
     camera.set_pose(
         position=json_dict["position"], rotation=json_dict["rotation"]
     )
