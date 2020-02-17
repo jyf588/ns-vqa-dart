@@ -1,5 +1,7 @@
 """Visualizes images and labels for a particular dataset."""
+import cv2
 import imageio
+import json
 from matplotlib.pyplot import cm
 import numpy as np
 import os
@@ -25,7 +27,7 @@ def main(dataset_name: str):
 
     # Load the predictions.
     pred_dicts = bullet.util.load_json(path=pred_path)
-    img_id2pred_objects = {}
+    img_id2oid2pred_object = {}
     for pred_dict in pred_dicts:
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
@@ -34,12 +36,14 @@ def main(dataset_name: str):
         y_dict = bullet.dash_object.y_vec_to_dict(y=y)
         gt_o = dataset.load_object(img_id=img_id, oid=oid)
         o = bullet.dash_object.y_dict_to_object(
-            y_dict=y_dict, gt_orientation=gt_o.orientation
+            y_dict=y_dict,
+            img_id=img_id,
+            oid=oid,
+            gt_orientation=gt_o.orientation,
         )
-        if img_id not in img_id2pred_objects:
-            img_id2pred_objects[img_id] = []
-        img_id2pred_objects[img_id].append(o)
-    print(img_id2pred_objects)
+        if img_id not in img_id2oid2pred_object:
+            img_id2oid2pred_object[img_id] = {}
+        img_id2oid2pred_object[img_id][oid] = o
 
     # For each example, load the rgb image and mask.
     img_ids = dataset.load_example_ids()
@@ -53,13 +57,77 @@ def main(dataset_name: str):
         rerendered_gt = rerender(objects=gt_objects, camera=camera)
 
         # Rerender the scene from the model predictions.
-        pred_objects = img_id2pred_objects[img_id]
+        oid2pred_object = img_id2oid2pred_object[img_id]
+        pred_objects = list(oid2pred_object.values())
         rerendered_pred = rerender(objects=pred_objects, camera=camera)
 
+        gt_objects_caption_text = []
+        pred_objects_caption_text = []
+        for gt_o in gt_objects:
+            oid = gt_o.oid
+            pred_o = oid2pred_object[oid]
+
+            gt_objects_caption_text += gt_o.to_caption()
+            pred_objects_caption_text += pred_o.to_caption()
+
+        name2caption_text = {
+            "rgb": ["Model input"],
+            "mask": ["Object masks"],
+            "gt": ["Ground truth rerendered", ""] + gt_objects_caption_text,
+            "pred": ["Predictions rerendered", ""] + pred_objects_caption_text,
+        }
+
         # Combine the panels and save.
-        visual = np.hstack([rgb, mask_img, rerendered_gt])
+        visual = create_visual(
+            name2img={
+                "rgb": rgb,
+                "mask": mask_img,
+                "gt": rerendered_gt,
+                "pred": rerendered_pred,
+            },
+            name2caption_text=name2caption_text,
+        )
         path = os.path.join(output_dir, f"{img_id:05}.png")
         imageio.imwrite(path, visual)
+
+
+def create_visual(
+    name2img: Dict[str, np.ndarray], name2caption_text: Dict[str, str]
+) -> np.ndarray:
+    """Applies captions to each image, and combines into a single image.
+
+    Args:
+        name2img: A dictionary mapping from the name of each image to the image
+            itself.
+    
+    Returns:
+        visual: The final visual containing captions on all images combined.
+    """
+    name2captioned_img = {}
+    max_img_height = 0
+    line_height = 27
+    for k, img in name2img.items():
+        lines = name2caption_text[k]
+        H, W, _ = img.shape
+        caption = np.ones((500, W, 3)).astype(np.uint8) * 255
+        for line_i, line in enumerate(lines):
+            caption = cv2.putText(
+                caption,
+                str(line),
+                (5, 5 + line_height * (line_i + 1)),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.7,
+                color=(0, 0, 0),
+            )
+        captioned_img = np.vstack([img, caption])
+        print(f"captioned_img.shape: {captioned_img.shape}")
+        name2captioned_img[k] = captioned_img
+        H = captioned_img.shape[0]
+        if H > max_img_height:
+            max_img_height = H
+
+    visual = np.hstack(list(name2captioned_img.values()))
+    return visual
 
 
 def rerender(objects: List[DashObject], camera: BulletCamera) -> np.ndarray:

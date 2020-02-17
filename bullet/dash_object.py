@@ -171,6 +171,26 @@ class DashObject:
         }
         return json_dict
 
+    def to_caption(self) -> List[str]:
+        """Converts the DashObject into a list of strings. Useful for OpenCV
+        captioning.
+
+        Returns:
+            str_list: A list of strings.
+        """
+        str_list = []
+        json_dict = self.to_json()
+        for k, v in json_dict.items():
+            if type(v) == list:
+                v = [float(f"{v_i:.2f}") for v_i in v]
+            if k == "oid":
+                str_list.append(f"{k}: {v}")
+            elif k == "img_id":
+                continue
+            else:
+                str_list.append(f"  {k}: {v}")
+        return str_list
+
 
 def y_vec_to_dict(y: List[float]) -> Dict:
     """Converts a y vector containing object labels into dictionary.
@@ -202,7 +222,10 @@ def y_vec_to_dict(y: List[float]) -> Dict:
 
 
 def y_dict_to_object(
-    y_dict: Dict, gt_orientation: Optional[List[float]] = None
+    y_dict: Dict,
+    img_id: Optional[int] = None,
+    oid: Optional[int] = None,
+    gt_orientation: Optional[List[float]] = None,
 ) -> DashObject:
     """Converts a y dictionary to a DashObject.
 
@@ -231,6 +254,8 @@ def y_dict_to_object(
     orientation = bullet.util.rotation_to_quaternion(rotation=rotation)
 
     o = DashObject(
+        img_id=img_id,
+        oid=oid,
         shape=y_dict["shape"],
         size=y_dict["size"],
         color=y_dict["color"],
