@@ -82,6 +82,7 @@ class DashDataset:
 
     def load_objects(
         self,
+        exclude_out_of_view: bool,
         min_img_id: Optional[int] = None,
         max_img_id: Optional[int] = None,
     ) -> List[DashObject]:
@@ -89,18 +90,56 @@ class DashDataset:
         IDs.
 
         Args:
+            exclude_out_of_view: Whether to exclude objects that are out of
+                view (i.e., mask area is zero).
             min_img_id: The minimum image ID to include.
             max_img_id: The maximum image ID to include.
         
         Returns:
             objects: A list of DashObject's.
         """
-        scene_ids = self.load_example_ids()
+        scene_ids = self.load_example_ids(min_id=min_img_id, max_id=max_img_id)
         all_objects = []
         for sid in scene_ids:
             objects, camera = self.load_labels(eid=sid)
+            if exclude_out_of_view:
+                objects = self.filter_out_of_view_objects(objects=objects)
             all_objects += objects
         return all_objects
+
+    def filter_out_of_view_objects(
+        self, objects: List[DashObject]
+    ) -> List[DashObject]:
+        """Computes the mask for each object and excludes objects that are out
+        of view, aka zero mask area objects.
+
+        Args:
+            objects: A list of objects.
+        
+        Returns:
+            filtered_objects: The same list of objects with out-of-view ones
+                excluded.
+        """
+        filtered_objects = []
+        for o in objects:
+            if not self.object_out_of_view(o):
+                filtered_objects.append(o)
+        return filtered_objects
+
+    def object_out_of_view(self, o: DashObject) -> bool:
+        """Checks whether an object is out-of-view (a.k.a. its mask area is 
+        zero).
+
+        Args:
+            o: A DashObject.
+        
+        Returns:
+            is_out_of_view: True if it's out-of-view, false if it's in-view.
+        """
+        mask = self.load_mask(eid=o.img_id)
+        bbox = o.compute_bbox(mask=mask)
+        is_out_of_view = bbox is None
+        return is_out_of_view
 
     def load_object_xy(
         self,
@@ -168,14 +207,33 @@ class DashDataset:
 
     """ Image IDs. """
 
-    def load_example_ids(self) -> List[int]:
+    def load_example_ids(
+        self, min_id: Optional[int] = None, max_id: Optional[int] = None
+    ) -> List[int]:
         """Gets all of the example ids that exist in the dataset dir.
         
+        train: (None, 20000) -> 0 through 19999
+        test: (20000, None) -> 20000 through 21999
+
+        Args:
+            min_id: The minimum image ID, inclusive.
+            max_id: The maximum image ID, exclusive.
+
         Returns:
-            eids: A list of example IDs.
+            filtered_eids: A list of example IDs, optionally filtered to only
+                include IDs within the provided ID bounds.
         """
         eids = bullet.util.load_json(path=self.construct_path(key="eids"))
-        return eids
+        if min_id is None:
+            min_id = 0
+        if max_id is None:
+            max_id = len(eids)
+
+        filtered_eids = []
+        for eid in eids:
+            if min_id <= eid < max_id:
+                filtered_eids.append(eid)
+        return filtered_eids
 
     def save_example_ids(self, eids: List[int]):
         """Saves a list of example IDs that exist in the dataset.

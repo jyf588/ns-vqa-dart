@@ -43,13 +43,15 @@ class DashTorchDataset(Dataset):
             use_height: Whether to use height in the label.
             transforms: The transform to apply to the loaded images.
         """
+        print(f"Initializing DashTorchDataset...")
         self.dataset = DashDataset(dataset_dir=dataset_dir)
 
         # Load object examples included in the image ID bounds.
         self.objects = self.dataset.load_objects(
-            min_img_id=min_img_id, max_img_id=max_img_id
+            exclude_out_of_view=False,
+            min_img_id=min_img_id,
+            max_img_id=max_img_id,
         )
-        print("Note: min and max img_id is not implemented.")
 
         self.use_attr = use_attr
         self.use_position = use_position
@@ -62,6 +64,7 @@ class DashTorchDataset(Dataset):
             )
         ]
         self.transform = [transforms.ToTensor()]
+        print(f"Initialized DashTorchDataset containing {len(self)} examples.")
 
     def __len__(self) -> int:
         """Gets the total number of examples in the dataset.
