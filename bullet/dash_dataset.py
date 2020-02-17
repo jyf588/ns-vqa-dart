@@ -100,7 +100,7 @@ class DashDataset:
         for sid in scene_ids:
             objects, camera = self.load_labels(eid=sid)
             all_objects += objects
-        return objects
+        return all_objects
 
     def load_object_xy(
         self,
@@ -156,7 +156,7 @@ class DashDataset:
         data = np.zeros((480, 480, 6)).astype(np.uint8)
         if bbox is None:
             pass
-            print("Bbox is None")
+            print(f"Bbox is None. Object: {o.to_json()}")
         else:
             x, y, w, h = bbox
             seg = rgb[y : y + h, x : x + w, :].copy()

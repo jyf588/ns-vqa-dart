@@ -20,7 +20,7 @@ def main(args: argparse.Namespace):
     n_total = 0
 
     for pred_dict in pred_dicts:
-        y_dict = bullet.dash_object.from_y_vec(y=pred_dict["pred"])
+        y_dict = bullet.dash_object.y_vec_to_dict(y=pred_dict["pred"])
         o = dataset.load_object(
             img_id=pred_dict["img_id"], oid=pred_dict["oid"]
         )

@@ -1,4 +1,5 @@
 """Visualizes images and labels for a particular dataset."""
+import argparse
 import cv2
 import imageio
 import json
@@ -16,17 +17,14 @@ from bullet.renderer import BulletRenderer
 import bullet.util
 
 
-def main(dataset_name: str):
-    dataset_dir = f"/home/michelle/datasets/{dataset_name}"
-    pred_path = f"/home/michelle/outputs/{dataset_name}/test.json"
-    output_dir = f"/home/michelle/analysis/{dataset_name}"
-    os.makedirs(output_dir, exist_ok=True)
+def main(args: argparse.Namespace):
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # Create an instance of a DashDataset.
-    dataset = DashDataset(dataset_dir=dataset_dir)
+    dataset = DashDataset(dataset_dir=args.dataset_dir)
 
     # Load the predictions.
-    pred_dicts = bullet.util.load_json(path=pred_path)
+    pred_dicts = bullet.util.load_json(path=args.pred_path)
     img_id2oid2pred_object = {}
     for pred_dict in pred_dicts:
         img_id = pred_dict["img_id"]
@@ -87,7 +85,7 @@ def main(dataset_name: str):
             },
             name2caption_text=name2caption_text,
         )
-        path = os.path.join(output_dir, f"{img_id:05}.png")
+        path = os.path.join(args.output_dir, f"{img_id:05}.png")
         imageio.imwrite(path, visual)
 
 
@@ -120,7 +118,6 @@ def create_visual(
                 color=(0, 0, 0),
             )
         captioned_img = np.vstack([img, caption])
-        print(f"captioned_img.shape: {captioned_img.shape}")
         name2captioned_img[k] = captioned_img
         H = captioned_img.shape[0]
         if H > max_img_height:
@@ -160,5 +157,24 @@ def convert_mask_to_img(mask: np.ndarray):
 
 
 if __name__ == "__main__":
-    dataset_name = "ego_001"
-    main(dataset_name=dataset_name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset_dir",
+        type=str,
+        required=True,
+        help="The directory containing the dataset.",
+    )
+    parser.add_argument(
+        "--pred_path",
+        type=str,
+        required=True,
+        help="The path to the predictions JSON.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        required=True,
+        help="The directory to save the visualizations.",
+    )
+    args = parser.parse_args()
+    main(args)

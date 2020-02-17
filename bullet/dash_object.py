@@ -318,7 +318,7 @@ class DashRobot:
         self.robot_id = self.render_robot()
 
         # The robot's head camera.
-        self.camera = BulletCamera(p=p, offset=cam_offset)
+        self.camera = BulletCamera(offset=cam_offset)
 
         self.axis2joint_name = {
             "roll": head_roll_joint_name,
