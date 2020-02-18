@@ -65,8 +65,10 @@ class RandomSceneGenerator:
             robot: The DashRobot for egocentric views.
             camera: A BulletCamera for generating images in non-egocentric mode.
         """
-        # Set the seed for numpy's random number generator.
+        # Set the seed for random number generators.
         np.random.seed(seed)
+        random.seed(seed)
+
         self.obj_dist_thresh = obj_dist_thresh
         self.max_retries = max_retries
 
@@ -79,7 +81,8 @@ class RandomSceneGenerator:
         if self.egocentric:
             self.robot = DashRobot(p=self.p)
         else:
-            self.camera = BulletCamera(p=self.p)
+            self.camera = BulletCamera()
+            self.camera.set_default_camera()
 
         # Initialize the dataset generator.
         self.dataset = DashDataset(dataset_dir=dataset_dir)
@@ -109,8 +112,9 @@ class RandomSceneGenerator:
         for _ in tqdm(range(n)):
             objects = self.generate_scene()
             rgb, mask = self.generate_image()
+            camera = self.robot.camera if self.egocentric else self.camera
             self.dataset.save_example(
-                objects=objects, camera=self.robot.camera, rgb=rgb, mask=mask
+                objects=objects, camera=camera, rgb=rgb, mask=mask
             )
             self.remove_objects(objects=objects)
 
@@ -154,6 +158,7 @@ class RandomSceneGenerator:
             ]
             if any(close_arr):
                 n_tries += 1
+                print("retry")
             else:
                 oid = self.renderer.render_object(o, fix_base=True)
                 o.oid = oid
@@ -178,7 +183,10 @@ class RandomSceneGenerator:
             )
             rgb, mask = self.robot.camera.get_rgb_and_mask(p=self.p)
         else:
-            raise NotImplementedError
+            print(
+                f"Warning: Updating the pose for non-egocentric camera is currently not supported."
+            )
+            rgb, mask = self.camera.get_rgb_and_mask(p=self.p)
         return rgb, mask
 
     def generate_object(self) -> DashObject:

@@ -37,7 +37,7 @@ class BulletCamera:
         self.rotation = None
         self.offset = offset
 
-        self.cam_target_pos = [0.0, 0.0, 0.0]
+        self.target_position = [0.0, 0.0, 0.0]
         self.up_vector = [0.0, 0.0, 1.0]
 
         self.view_mat = None
@@ -59,6 +59,20 @@ class BulletCamera:
             -0.020002000033855438,
             0.0,
         ]
+
+    def set_default_camera(self):
+        """Sets the camera to the default pose, which is behind the robot arm
+        and centered.
+        """
+        self.target_position = [0.25, 0.0, 0.0]
+        self.view_mat = self.p.computeViewMatrixFromYawPitchRoll(
+            cameraTargetPosition=self.target_position,
+            distance=0.81,
+            yaw=270.0,
+            pitch=-30.0,
+            roll=0.0,
+            upAxisIndex=2,
+        )
 
     def set_pose(self, position: List[float], rotation: List[float]):
         """Sets the camera pose, including all the camera attributes related to

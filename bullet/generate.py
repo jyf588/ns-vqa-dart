@@ -18,8 +18,8 @@ def main(args: argparse.Namespace):
         render_mode="direct",
         egocentric=True,
         dataset_dir=args.dataset_dir,
-        n_objs_bounds=(3, 7),
-        obj_dist_thresh=0.25,
+        n_objs_bounds=(10, 10),  # (3, 7),
+        obj_dist_thresh=0.15,  # 0.25,
         max_retries=50,
         shapes=["box", "cylinder"],
         sizes=["small", "large"],
@@ -27,9 +27,9 @@ def main(args: argparse.Namespace):
         x_bounds=(0.0, 0.4),
         y_bounds=(-0.5, 0.5),
         z_bounds=(0.0, 0.0),
-        roll_bounds=(-5.0, 5.0),
-        tilt_bounds=(35.0, 55.0),
-        pan_bounds=(-5.0, 5.0),
+        roll_bounds=(0.0, 0.0),  # (-5.0, 5.0),
+        tilt_bounds=(50.0, 50.0),  # (35.0, 55.0),
+        pan_bounds=(0.0, 0.0),  # (-5.0, 5.0),
         degrees=True,
     )
     generator.generate_scenes(n=args.n_examples)

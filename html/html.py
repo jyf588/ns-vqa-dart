@@ -15,7 +15,7 @@ END = "</tbody></table></body></html>"
 def main():
     with open(f"html/index.html", "w") as f:
         f.write(START)
-        for i in tqdm(range(20000, 20049)):
+        for i in tqdm(range(20000, 20121)):
             obj_mask_paths, obj_mask_captions = get_obj_mask_info(i=i)
 
             panel_labels = [

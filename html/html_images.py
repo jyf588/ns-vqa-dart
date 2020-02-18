@@ -27,7 +27,7 @@ def main(args: argparse.Namespace):
     print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     img_id2oid2pred_object = {}
-    for pred_dict in tqdm(pred_dicts[:200]):
+    for pred_dict in tqdm(pred_dicts[:500]):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
         y = pred_dict["pred"]
