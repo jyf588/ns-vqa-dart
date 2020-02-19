@@ -25,7 +25,6 @@ class BulletRenderer:
         # self.p = bc.BulletClient(connection_mode=pybullet.DIRECT)
         self.p = p
         self.urdf_dir = urdf_dir
-        self.camera = BulletCamera()
 
         # Note: z position is defined by the top of the table.
         self.table_attr = {

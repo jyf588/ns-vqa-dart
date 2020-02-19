@@ -8,10 +8,11 @@ import bullet.util
 
 
 class BulletCamera:
-    def __init__(self, offset=[0.0, 0.0, 0.0]):
+    def __init__(self, use_default_camera: bool, offset=[0.0, 0.0, 0.0]):
         """
         Args:
             p: The pybullet client.
+            use_default_camera: Whether to use the default camera.
             offset: The position offset to apply.
 
         Attributes:
@@ -60,7 +61,11 @@ class BulletCamera:
             0.0,
         ]
 
-    def set_default_camera(self):
+        self.use_default_camera = use_default_camera
+        if use_default_camera:
+            self.setup_default_camera()
+
+    def setup_default_camera(self):
         """Sets the camera to the default pose, which is behind the robot arm
         and centered.
         """
@@ -152,6 +157,7 @@ class BulletCamera:
 
     def to_json(self) -> Dict:
         json_dict = {
+            "use_default_camera": self.use_default_camera,
             "H": self.H,
             "W": self.W,
             "position": self.position,
@@ -178,8 +184,10 @@ def from_json(json_dict: Dict) -> BulletCamera:
     Returns:
         camera: BulletCamera.
     """
-    camera = BulletCamera()
-    camera.set_pose(
-        position=json_dict["position"], rotation=json_dict["rotation"]
-    )
+    use_default_camera = json_dict["use_default_camera"]
+    camera = BulletCamera(use_default_camera=use_default_camera)
+    if not use_default_camera:
+        camera.set_pose(
+            position=json_dict["position"], rotation=json_dict["rotation"]
+        )
     return camera

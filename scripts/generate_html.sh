@@ -3,3 +3,5 @@ python html/html_images.py \
 	--pred_path ~/outputs/ego_v005/test.json \
     --output_dir ~/analysis/ego_v005 \
     --coordinate_frame camera
+
+python html/html.py

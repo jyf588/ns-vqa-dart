@@ -1,3 +1,3 @@
 python bullet/generate.py \
     --dataset_dir ~/datasets/lego \
-    --n_examples 1
+    --n_examples 2000

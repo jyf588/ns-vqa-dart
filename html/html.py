@@ -1,4 +1,5 @@
 """Generates the HTML page for visualization."""
+import argparse
 import os
 from tqdm import tqdm
 from typing import *
@@ -6,43 +7,45 @@ from typing import *
 from bullet.dash_dataset import DashDataset
 import bullet.util
 
-DATASET = "ego_v005"
-DATASET_DIR = f"/home/michelle/datasets/{DATASET}"
 START = "<html><head><style>* {font-size: 15px;}</style></head><body><table><tbody>"
 END = "</tbody></table></body></html>"
 
 
-def main():
+def main(args: argparse.Namespace):
+    dataset_dir = f"/home/michelle/datasets/{args.dataset}"
+
     with open(f"html/index.html", "w") as f:
         f.write(START)
-        for i in tqdm(range(20000, 20121)):
-            obj_mask_paths, obj_mask_captions = get_obj_mask_info(i=i)
+        for i in tqdm(range(0, 1)):
+            obj_mask_paths, obj_mask_captions = get_obj_mask_info(
+                dataset=args.dataset, i=i
+            )
 
             panel_labels = [
                 f"{i:05}",
                 "Input RGB",
+                # "Rerendered GT (world)",
+                # "Rerendered GT (camera)",
+                "Rerendered Pred",
                 "Mask",
-                "Rerendered GT (world)",
-                "Rerendered GT (camera)",
-                "Rerendered Pred (camera)",
             ]
             captions = ["" for _ in range(len(panel_labels))] + [
                 "<br>".join(captions) for captions in obj_mask_captions
             ]
 
             f.write(get_caption_row(i, panel_labels))
-            f.write(get_img_row(i, obj_mask_paths))
+            f.write(get_img_row(args.dataset, i, obj_mask_paths))
             f.write(get_caption_row(i, captions))
         f.write(END)
 
 
-def get_img_row(i: int, obj_mask_paths: List[str]) -> str:
+def get_img_row(dataset: str, i: int, obj_mask_paths: List[str]) -> str:
     paths = [
-        f"datasets/{DATASET}/rgb/{i}.png",
-        f"analysis/{DATASET}/mask/{i}.png",
-        f"analysis/{DATASET}/gt_world/{i}.png",
-        f"analysis/{DATASET}/gt_cam/{i}.png",
-        f"analysis/{DATASET}/pred/{i}.png",
+        f"datasets/{dataset}/rgb/{i:05}.png",
+        f"analysis/{dataset}/pred/{i:05}.png",
+        f"analysis/{dataset}/mask/{i:05}.png",
+        # f"analysis/{dataset}/gt_world/{i:05}.png",
+        # f"analysis/{dataset}/gt_cam/{i:05}.png",
     ] + obj_mask_paths
 
     td_elems = "\n".join(
@@ -69,18 +72,15 @@ def get_caption_row(i: int, captions: List[str]) -> str:
     return row
 
 
-def get_obj_mask_info(i: int):
+def get_obj_mask_info(dataset: str, i: int):
     paths = []
     captions = []
 
-    dataset = DashDataset(dataset_dir=DATASET_DIR)
-    obj_masks_dir_abs = f"/home/michelle/analysis/{DATASET}/obj_masks/{i}"
-    obj_masks_dir_rel = f"analysis/{DATASET}/obj_masks/{i}"
-    obj_caps_dir_abs = f"/home/michelle/analysis/{DATASET}/obj_captions/{i}"
+    obj_masks_dir_abs = f"/home/michelle/analysis/{dataset}/obj_masks/{i:05}"
+    obj_masks_dir_rel = f"analysis/{dataset}/obj_masks/{i:05}"
+    obj_caps_dir_abs = f"/home/michelle/analysis/{dataset}/obj_captions/{i:05}"
     for obj_mask_fname in os.listdir(obj_masks_dir_abs):
         oid = int(obj_mask_fname[:-4])
-        # o = dataset.load_object_for_img_id_and_oid(img_id=i, oid=oid)
-        # captions.append(o.to_caption())
         paths.append(os.path.join(obj_masks_dir_rel, obj_mask_fname))
         caption_path = os.path.join(obj_caps_dir_abs, f"{oid:02}.json")
         caption = bullet.util.load_json(path=caption_path)
@@ -90,4 +90,9 @@ def get_obj_mask_info(i: int):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset", type=str, required=True, help="The name of the dataset."
+    )
+    args = parser.parse_args()
+    main(args)

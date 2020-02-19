@@ -22,6 +22,7 @@ class DashTorchDataset(Dataset):
         use_up_vector: bool,
         use_height: bool,
         coordinate_frame: str,
+        split: str,
         min_img_id: Optional[int] = None,
         max_img_id: Optional[int] = None,
     ):
@@ -37,6 +38,7 @@ class DashTorchDataset(Dataset):
                 or "camera" coordinate frame.
             min_img_id: The minimum image ID to include in the dataset.
             max_img_id: The maximum image ID to include in the dataset.
+            split: The name of the split (i.e., train, val, or test)
         
         Attributes:
             objects: A list of DashObjects.
@@ -45,6 +47,8 @@ class DashTorchDataset(Dataset):
             use_up_vector: Whether to use the up vector in the label.
             use_height: Whether to use height in the label.
             transforms: The transform to apply to the loaded images.
+            exclude_y: Whether to exclude loading y labels. Currently this is
+                true if the split is "test".
         """
         print(f"Initializing DashTorchDataset...")
         self.dataset = DashDataset(dataset_dir=dataset_dir)
@@ -71,6 +75,9 @@ class DashTorchDataset(Dataset):
             )
         ]
         self.transform = [transforms.ToTensor()]
+
+        self.exclude_y = split == "test"
+
         print(f"Initialized DashTorchDataset containing {len(self)} examples.")
 
     def __len__(self) -> int:
@@ -102,6 +109,7 @@ class DashTorchDataset(Dataset):
             use_up_vector=self.use_up_vector,
             use_height=self.use_height,
             coordinate_frame=self.coordinate_frame,
+            exclude_y=self.exclude_y,
         )
         data = transforms.Compose(self.transform)(data)
         data[:3] = transforms.Compose(self.normalize)(data[:3])

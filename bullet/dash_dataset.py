@@ -103,7 +103,7 @@ class DashDataset:
         scene_ids = self.load_example_ids(min_id=min_img_id, max_id=max_img_id)
         all_objects = []
         for sid in scene_ids:
-            objects, camera = self.load_objects_and_camera_for_eid(eid=sid)
+            objects = self.load_objects_for_eid(eid=sid)
             if exclude_out_of_view:
                 objects = self.filter_out_of_view_objects(objects=objects)
             all_objects += objects
@@ -151,6 +151,7 @@ class DashDataset:
         use_up_vector: bool,
         use_height: bool,
         coordinate_frame: str,
+        exclude_y: bool,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Loads xy data for a given object.
 
@@ -162,6 +163,8 @@ class DashDataset:
             use_height: Whether to use height in the label.
             coordinate_frame: The coordinate frame to use, either "world" or
                 "camera" coordinate frame.
+            exclude_y: Whether to exclude loading the object y. Currently used
+                when in the dataloader is running the test split.
         
         Returns:
             data: The input data, which contains a cropped image of the object
@@ -172,16 +175,18 @@ class DashDataset:
         rgb = self.load_rgb(eid=o.img_id)
         mask = self.load_mask(eid=o.img_id)
         data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
-        objects, camera = self.load_objects_and_camera_for_eid(eid=o.img_id)
-
-        y = o.to_y_vec(
-            use_attr=use_attr,
-            use_position=use_position,
-            use_up_vector=use_up_vector,
-            use_height=use_height,
-            coordinate_frame=coordinate_frame,
-            camera=camera,
-        )
+        camera = self.load_camera_for_eid(eid=o.img_id)
+        if exclude_y:
+            y = np.array([])
+        else:
+            y = o.to_y_vec(
+                use_attr=use_attr,
+                use_position=use_position,
+                use_up_vector=use_up_vector,
+                use_height=use_height,
+                coordinate_frame=coordinate_frame,
+                camera=camera,
+            )
         return data, y
 
     def compute_data_from_rgb_and_mask(
@@ -273,6 +278,25 @@ class DashDataset:
             objects.append(bullet.dash_object.from_json(odict))
         camera = bullet.camera.from_json(json_dict["camera"])
         return objects, camera
+
+    def load_objects_for_eid(
+        self, eid: int
+    ) -> Tuple[List[DashObject], BulletCamera]:
+        """Loads the ground truth labels for a single example.
+
+        Args:
+            eid: The example ID.
+
+        Returns:
+            objects: A list of DashObject's.
+        """
+        json_dict = bullet.util.load_json(
+            path=self.construct_path(key="json", eid=eid)
+        )
+        objects = []
+        for odict in json_dict["objects"]:
+            objects.append(bullet.dash_object.from_json(odict))
+        return objects
 
     def load_camera_for_eid(self, eid: int) -> BulletCamera:
         """Loads the camera for a single example.

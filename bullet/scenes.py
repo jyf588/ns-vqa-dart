@@ -81,8 +81,7 @@ class RandomSceneGenerator:
         if self.egocentric:
             self.robot = DashRobot(p=self.p)
         else:
-            self.camera = BulletCamera()
-            self.camera.set_default_camera()
+            self.camera = BulletCamera(use_default_camera=not self.egocentric)
 
         # Initialize the dataset generator.
         self.dataset = DashDataset(dataset_dir=dataset_dir)

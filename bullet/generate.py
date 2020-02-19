@@ -44,7 +44,7 @@ def main(args: argparse.Namespace):
         sizes=["small", "large"],
         colors=["red", "blue", "yellow", "green"],
         x_bounds=(0.0, 0.4),
-        y_bounds=(-0.5, 0.5),
+        y_bounds=(-0.4, 0.4),
         z_bounds=(0.0, 0.0),
         roll_bounds=(-5.0, 5.0),
         tilt_bounds=(50.0, 50.0),
