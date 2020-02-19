@@ -91,6 +91,7 @@ def main(args: argparse.Namespace):
             mask=mask,
             oid2gt_objects=oid2gt_objects_world,
             oid2pred_objects=oid2pred_object,
+            camera=camera,
         )
 
 
@@ -99,6 +100,7 @@ def generate_obj_mask_and_captions(
     mask: np.ndarray,
     oid2gt_objects: List[DashObject],
     oid2pred_objects: List[DashObject],
+    camera: BulletCamera,
 ):
     obj_masks_dir = os.path.join(args.output_dir, "obj_masks", f"{img_id:05}")
     obj_caps_dir = os.path.join(
@@ -110,14 +112,15 @@ def generate_obj_mask_and_captions(
     for oid, pred_o in oid2pred_objects.items():
         gt_o = oid2gt_objects[oid]
 
-        img = (mask == oid).astype(np.uint8) * 255
+        # img = (mask == oid).astype(np.uint8) * 255
+        img = rerender(objects=[pred_o], camera=camera)
         img_path = os.path.join(obj_masks_dir, f"{oid:02}.png")
         imageio.imwrite(img_path, img)
 
         captions = (
-            ["Ground truth:"]
+            ["Ground truth (world):"]
             + gt_o.to_caption()
-            + ["", "Predicted:"]
+            + ["", "Predicted (world):"]
             + pred_o.to_caption()
         )
         captions_path = os.path.join(obj_caps_dir, f"{oid:02}.json")

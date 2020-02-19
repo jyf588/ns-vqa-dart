@@ -16,7 +16,7 @@ def main(args: argparse.Namespace):
 
     with open(f"html/index.html", "w") as f:
         f.write(START)
-        for i in tqdm(range(0, 1)):
+        for i in tqdm(range(args.start_img_id, args.end_img_id)):
             obj_mask_paths, obj_mask_captions = get_obj_mask_info(
                 dataset=args.dataset, i=i
             )
@@ -93,6 +93,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset", type=str, required=True, help="The name of the dataset."
+    )
+    parser.add_argument(
+        "--start_img_id", type=int, required=True, help="The start image id."
+    )
+    parser.add_argument(
+        "--end_img_id", type=int, required=True, help="The end image id."
     )
     args = parser.parse_args()
     main(args)

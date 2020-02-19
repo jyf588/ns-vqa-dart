@@ -5,4 +5,6 @@ python html/html_images.py \
     --coordinate_frame camera
 
 python html/html.py \
-    --dataset lego
+    --dataset lego \
+    --start_img_id 0 \
+    --end_img_id 30
