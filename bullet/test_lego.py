@@ -10,7 +10,23 @@ def main():
 
     physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
-    boxId = p.loadURDF("bullet/assets/lego.urdf")
+    oid = p.loadURDF("bullet/assets/lego_small.urdf")
+    oid = p.loadURDF("bullet/assets/box_small.urdf")
+    """
+    x2.35
+    7.2
+    Lego: 
+        (-0.017, 0.017)
+        (-0.017, 0.017)
+        (-0.0125, 0.0125)
+    Box:
+        (-0.04, 0.04)
+        (-0.04, 0.04)
+        (-0.09, 0.09)
+    """
+    min_aabb, max_aabb = p.getAABB(oid)
+    print(min_aabb)
+    print(max_aabb)
     for _ in range(10000):
         time.sleep(1 / 240)
     p.disconnect()

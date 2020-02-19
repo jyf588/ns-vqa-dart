@@ -27,7 +27,7 @@ def main(args: argparse.Namespace):
     print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     img_id2oid2pred_object = {}
-    for pred_dict in tqdm(pred_dicts[:500]):
+    for pred_dict in tqdm(pred_dicts[: args.n_examples]):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
         y = pred_dict["pred"]
@@ -249,6 +249,12 @@ if __name__ == "__main__":
         required=True,
         choices=["world", "camera"],
         help="The coordinate frame that predictions are in.",
+    )
+    parser.add_argument(
+        "--n_examples",
+        type=int,
+        required=True,
+        help="Number of examples to generate images for.",
     )
     args = parser.parse_args()
     main(args)

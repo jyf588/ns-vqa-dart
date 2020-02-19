@@ -41,7 +41,7 @@ def main(args: argparse.Namespace):
         obj_dist_thresh=0.25,
         max_retries=50,
         shapes=["lego"],
-        sizes=["small", "large"],
+        sizes=["large"],
         colors=["red", "blue", "yellow", "green"],
         x_bounds=(0.0, 0.4),
         y_bounds=(-0.4, 0.4),
