@@ -1,54 +1,84 @@
+"""
+https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/createMultiBodyLinks.py
+"""
+
 import numpy as np
 import pybullet as p
+import time
+from typing import *
 
 
-def create_prim_2_grasp(shape, dim, init_xyz):
-    # shape: p.GEOM_SPHERE or p.GEOM_BOX or p.GEOM_CYLINDER
-    # dim: halfExtents (vec3) for box, (radius, length)vec2 for cylinder
-    # init_xyz vec3 of obj location
-    id = None
-    if shape == p.GEOM_BOX:
-        visualShapeId = p.createVisualShape(shapeType=shape, halfExtents=dim)
+SHAPE2GEOM = {
+    "box": p.GEOM_BOX,
+    "cylinder": p.GEOM_CYLINDER,
+    "sphere": p.GEOM_SPHERE,
+}
+
+SHAPE2MULTIPLIER = {
+    "box": {"width": 0.8, "height": 1.0},
+    "cylinder": {"width": 1.0, "height": 2.0},
+    "sphere": {"width": 1.0, "height": 1.0},
+}
+
+
+def create_prim_2_grasp(geom, dim: List[float], position: List[float]):
+    """Creates a primitive object.
+
+    Args:
+        geom: The pybullet shape type.
+        dim: A list of dimensions, of variable length / contents depending on
+            the shape.
+        position: The (x, y, z) position of the COM.
+    """
+    if geom == p.GEOM_BOX:
+        visualShapeId = p.createVisualShape(shapeType=geom, halfExtents=dim)
         collisionShapeId = p.createCollisionShape(
-            shapeType=shape, halfExtents=dim
+            shapeType=geom, halfExtents=dim
         )
-        id = p.createMultiBody(
-            baseMass=3.5,
-            baseInertialFramePosition=[0, 0, 0],
-            baseCollisionShapeIndex=collisionShapeId,
-            baseVisualShapeIndex=visualShapeId,
-            basePosition=init_xyz,
-        )
-    elif shape == p.GEOM_CYLINDER:
-        visualShapeId = p.createVisualShape(shape, dim[0], [1, 1, 1], dim[1])
+    elif geom == p.GEOM_CYLINDER:
+        visualShapeId = p.createVisualShape(geom, dim[0], [1, 1, 1], dim[1])
         collisionShapeId = p.createCollisionShape(
-            shape, dim[0], [1, 1, 1], dim[1]
+            geom, dim[0], [1, 1, 1], dim[1]
         )
-        id = p.createMultiBody(
-            baseMass=3.5,
-            baseInertialFramePosition=[0, 0, 0],
-            baseCollisionShapeIndex=collisionShapeId,
-            baseVisualShapeIndex=visualShapeId,
-            basePosition=init_xyz,
-        )
-    elif shape == p.GEOM_SPHERE:
-        pass  # TODO
-    return id
+
+    elif geom == p.GEOM_SPHERE:
+        visualShapeId = p.createCollisionShape(shapeType=geom, radius=dim[0])
+        collisionShapeId = p.createCollisionShape(geom, radius=dim[0])
+
+    p.createMultiBody(
+        baseMass=3.5,
+        baseInertialFramePosition=[0, 0, 0],
+        baseCollisionShapeIndex=collisionShapeId,
+        baseVisualShapeIndex=visualShapeId,
+        basePosition=position,
+    )
 
 
 def main():
-    is_box = True
-    shape = "box"
+    p.connect(p.GUI)
+
+    shapes = ["box", "cylinder", "sphere"]
+    # shapes = ["sphere"]
+
     half_height = np.random.uniform(low=0.055, high=0.09)
     half_width = np.random.uniform(low=0.03, high=0.05)  # aka radius
-    xyz = [0, 0, 0]
 
-    if shape == "box":
-        dim = [half_width * 0.8, half_width * 0.8, half_height]
-        obj_id = create_prim_2_grasp(p.GEOM_BOX, dim, xyz)
-    elif shape == "cylinder":
-        dim = [half_width, half_height * 2.0]  # TODO
-        obj_id = create_prim_2_grasp(p.GEOM_CYLINDER, dim, xyz)
+    for i, shape in enumerate(shapes):
+        half_width *= SHAPE2MULTIPLIER[shape]["width"]
+        half_height *= SHAPE2MULTIPLIER[shape]["height"]
+        if shape == "box":
+            dim = [half_width, half_width, half_height]
+        elif shape == "cylinder":
+            dim = [half_width, half_height]
+        elif shape == "sphere":
+            dim = [half_width]
+        print(f"width: {half_width}")
+        print(f"height: {half_height}")
+        obj_id = create_prim_2_grasp(SHAPE2GEOM[shape], dim, [0, 0.1 * i, 0])
+
+    for _ in range(10000):
+        p.stepSimulation()
+        time.sleep(1 / 240)
 
 
 if __name__ == "__main__":
