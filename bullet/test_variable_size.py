@@ -1,7 +1,8 @@
 """
+https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/createVisualShape.py
 https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/createMultiBodyLinks.py
 """
-
+import inspect
 import numpy as np
 import pybullet as p
 import time
@@ -15,36 +16,51 @@ SHAPE2GEOM = {
 }
 
 SHAPE2MULTIPLIER = {
-    "box": {"width": 0.8, "height": 1.0},
-    "cylinder": {"width": 1.0, "height": 2.0},
-    "sphere": {"width": 1.0, "height": 1.0},
+    "box": {"r": 0.8},
+    "cylinder": {"r": 1.0},
+    "sphere": {"r": 1.0},
 }
 
 
-def create_prim_2_grasp(geom, dim: List[float], position: List[float]):
+def generate_primitive_shape(
+    shape: str, position: List[float], r: float, h: Optional[float] = None
+):
     """Creates a primitive object.
 
     Args:
-        geom: The pybullet shape type.
+        shape: The name of the shape to generate.
+        r: The radius of the object.
+        h: The height of the object. Unused for sphere.
         dim: A list of dimensions, of variable length / contents depending on
-            the shape.
-        position: The (x, y, z) position of the COM.
+            the shape:
+                box: [radius, radius, height]
+                cylinder: [radius, half_height]
+                sphere: [radius]
+        position: The (x, y, z) position of the COM, in world coordinates.
     """
+    geom = SHAPE2GEOM[shape]
+    half_extents = [r, r, h / 2]
+    # print(inspect.signature(p.createVisualShape))
     if geom == p.GEOM_BOX:
-        visualShapeId = p.createVisualShape(shapeType=geom, halfExtents=dim)
+        visualShapeId = p.createVisualShape(
+            shapeType=geom, halfExtents=half_extents
+        )
         collisionShapeId = p.createCollisionShape(
-            shapeType=geom, halfExtents=dim
+            shapeType=geom, halfExtents=half_extents
         )
     elif geom == p.GEOM_CYLINDER:
-        visualShapeId = p.createVisualShape(geom, dim[0], [1, 1, 1], dim[1])
-        collisionShapeId = p.createCollisionShape(
-            geom, dim[0], [1, 1, 1], dim[1]
-        )
-
+        half_extents = [1, 1, 1]
     elif geom == p.GEOM_SPHERE:
-        visualShapeId = p.createCollisionShape(shapeType=geom, radius=dim[0])
-        collisionShapeId = p.createCollisionShape(geom, radius=dim[0])
+        half_extents = [1, 1, 1]
+    else:
+        raise ValueError(f"Invalid geometry: {geom} for shape: {shape}.")
 
+    visualShapeId = p.createVisualShape(
+        shapeType=geom, radius=r, halfExtents=half_extents, length=h
+    )
+    collisionShapeId = p.createCollisionShape(
+        shapeType=geom, radius=r, halfExtents=half_extents, height=h
+    )
     p.createMultiBody(
         baseMass=3.5,
         baseInertialFramePosition=[0, 0, 0],
@@ -58,23 +74,72 @@ def main():
     p.connect(p.GUI)
 
     shapes = ["box", "cylinder", "sphere"]
-    # shapes = ["sphere"]
+    """
+    box:
+        Small: (xy=0.05, h=0.13)
+        Large: (xy=0.08, h=0.18)
+    cylinder:
+        Small: (r=0.04, h=0.13)
+        Large: (r=0.05, h=0.18)
+    """
+    orig_shapes = [
+        {"shape": "cylinder", "r": 0.04, "h": 0.13, "urdf": "cylinder"},
+        {"shape": "box", "r": 0.04, "h": 0.18, "urdf": "box"},
+        {"shape": "cylinder", "r": 0.05, "h": 0.18, "urdf": "cylinder_small"},
+        {"shape": "box", "r": 0.025, "h": 0.13, "urdf": "box_small"},
+    ]
 
-    half_height = np.random.uniform(low=0.055, high=0.09)
-    half_width = np.random.uniform(low=0.03, high=0.05)  # aka radius
+    h_min, h_max = 0.11, 0.18
+    r_min, r_max = 0.03, 0.05
 
-    for i, shape in enumerate(shapes):
-        half_width *= SHAPE2MULTIPLIER[shape]["width"]
-        half_height *= SHAPE2MULTIPLIER[shape]["height"]
-        if shape == "box":
-            dim = [half_width, half_width, half_height]
-        elif shape == "cylinder":
-            dim = [half_width, half_height]
-        elif shape == "sphere":
-            dim = [half_width]
-        print(f"width: {half_width}")
-        print(f"height: {half_height}")
-        obj_id = create_prim_2_grasp(SHAPE2GEOM[shape], dim, [0, 0.1 * i, 0])
+    h = np.random.uniform(low=0.11, high=0.18)
+    r = np.random.uniform(low=0.03, high=0.05)
+
+    h_interval = (h_max - h_min) / 5
+    r_interval = (r_max - r_min) / 5
+
+    y = 0
+    for shape in shapes:
+        print(f"Shape: {shape}")
+        for i in range(6):
+            h = h_min + i * h_interval
+            r = r_min + i * r_interval
+
+            print(f"h: {h}")
+            print(f"r: {r}")
+
+            r *= SHAPE2MULTIPLIER[shape]["r"]
+
+            z = r if shape == "sphere" else h / 2
+            generate_primitive_shape(shape=shape, r=r, h=h, position=[0, y, z])
+            y += 0.1
+
+    print(f"***Original shapes***")
+
+    y = -0.2
+    for shape_dict in orig_shapes:
+        # shape = shape_dict["shape"]
+        # r = shape_dict["r"]
+        # h = shape_dict["h"]
+        # z = h / 2
+        # generate_primitive_shape(shape=shape, r=r, h=h, position=[0, y, z])
+        # y -= 0.15
+        # print(f"Shape: {shape}")
+        # print(f"h: {h}")
+        # print(f"r: {r}")
+
+        urdf = shape_dict["urdf"]
+        oid = p.loadURDF(
+            f"bullet/assets/{urdf}.urdf",
+            basePosition=[0.0, y, 0],
+            useFixedBase=True,
+        )
+        p.changeVisualShape(oid, -1, rgbaColor=[0.8, 0.8, 0.0, 1.0])
+        y -= 0.15
+
+    # p.loadURDF(
+    #     "bullet/assets/box.urdf", basePosition=[0.3, 0, 0], useFixedBase=True
+    # )
 
     for _ in range(10000):
         p.stepSimulation()
