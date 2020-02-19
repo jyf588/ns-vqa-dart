@@ -40,31 +40,6 @@ class BulletRenderer:
             "quaternion": [0, 0, 0, 1],
         }
 
-    # def render_scene(self, pose_dict, oid2attr):
-    #     self.p.resetSimulation()
-    #     for oid, pose in pose_dict.items():
-    #         pose.update(oid2attr[oid])
-    #         self.render_object(
-    #             position=pose["position"],
-    #             quaternion=pose["quaternion"],
-    #             size=oid2attr[oid]["size"],
-    #             shape=oid2attr[oid]["shape"],
-    #             color=oid2attr[oid]["color"],
-    #         )
-    #     self.render_table()
-    #     rgb, mask = self.camera.get_rgb_and_mask()
-    #     return rgb
-
-    # def render_table(self):
-    #     self.render_object(
-    #         position=self.table_attr["position"],
-    #         quaternion=self.table_attr["quaternion"],
-    #         size=self.table_attr["size"],
-    #         shape=self.table_attr["shape"],
-    #         color=self.table_attr["color"],
-    #         fix_base=True,
-    #     )
-
     def render_object(self, o: DashObject, fix_base=False):
         # We set the pose in resetBasePositionAndOrientation instead of
         # loadURDF because loadURDF sets the pose at the base, while

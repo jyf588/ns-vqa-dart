@@ -1,3 +1,3 @@
 python bullet/generate.py \
-    --dataset_dir ~/datasets/ego_extreme \
+    --dataset_dir ~/datasets/lego \
     --n_examples 1
