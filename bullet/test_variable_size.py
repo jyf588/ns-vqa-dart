@@ -40,21 +40,6 @@ def generate_primitive_shape(
     """
     geom = SHAPE2GEOM[shape]
     half_extents = [r, r, h / 2]
-    # print(inspect.signature(p.createVisualShape))
-    if geom == p.GEOM_BOX:
-        visualShapeId = p.createVisualShape(
-            shapeType=geom, halfExtents=half_extents
-        )
-        collisionShapeId = p.createCollisionShape(
-            shapeType=geom, halfExtents=half_extents
-        )
-    elif geom == p.GEOM_CYLINDER:
-        half_extents = [1, 1, 1]
-    elif geom == p.GEOM_SPHERE:
-        half_extents = [1, 1, 1]
-    else:
-        raise ValueError(f"Invalid geometry: {geom} for shape: {shape}.")
-
     visualShapeId = p.createVisualShape(
         shapeType=geom, radius=r, halfExtents=half_extents, length=h
     )
