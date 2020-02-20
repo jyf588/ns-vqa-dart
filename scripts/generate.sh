@@ -1,3 +1,3 @@
 python bullet/generate.py \
     --dataset_dir ~/datasets/ego_v006 \
-    --n_examples 22000
+    --n_examples 100

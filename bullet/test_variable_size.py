@@ -92,7 +92,7 @@ def main():
             h = h_min + i * h_interval
             r = r_min + i * r_interval
 
-            r *= SHAPE2MULTIPLIER[shape]["r"]
+            # r *= SHAPE2MULTIPLIER[shape]["r"]
 
             z = r if shape == "sphere" else h / 2
             generate_primitive_shape(shape=shape, r=r, h=h, position=[0, y, z])

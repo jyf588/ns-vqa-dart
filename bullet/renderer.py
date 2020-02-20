@@ -7,9 +7,17 @@ import numpy as np
 import os
 import pybullet
 import pybullet_utils.bullet_client as bc
+from typing import *
 
 from bullet.camera import BulletCamera
-from bullet.dash_object import DashObject
+from bullet.dash_object import DashObject, DashTable
+
+
+SHAPE2GEOM = {
+    "box": pybullet.GEOM_BOX,
+    "cylinder": pybullet.GEOM_CYLINDER,
+    "sphere": pybullet.GEOM_SPHERE,
+}
 
 COLOR2RGBA = {
     "red": [0.8, 0.0, 0.0, 1.0],
@@ -26,38 +34,114 @@ class BulletRenderer:
         self.p = p
         self.urdf_dir = urdf_dir
 
-        # Note: z position is defined by the top of the table.
-        self.table_attr = {
-            "shape": "tabletop",
-            "color": "grey",
-            "size": None,
-            "position": [
-                0.25,
-                0.2,
-                0.0,  # 0.0,
-            ],  # ],  # This is COM, base is [0.25, 0.2, 0.0]
-            "quaternion": [0, 0, 0, 1],
-        }
+    def render_table(self, o: DashTable) -> int:
+        """Renders a DashTable.
 
-    def render_object(self, o: DashObject, fix_base=False):
-        # We set the pose in resetBasePositionAndOrientation instead of
-        # loadURDF because loadURDF sets the pose at the base, while
-        # resetBasePositionAndOrientation sets the pose at the COM. We want COM
-        # because the attributes were stored using the
-        # getBasePositionAndOrientation function, which returns COM
-        # coordinates.
+        Returns:
+            oid: The ID of the table.
+        """
         oid = self.p.loadURDF(
-            fileName=self.construct_urdf_path(o=o),
+            fileName=self.construct_urdf_path(o),
             basePosition=o.position,
             baseOrientation=o.orientation,
-            useFixedBase=fix_base,
         )
+        self.color_object(oid=oid, color=o.color)
+        return oid
+
+    def render_object(
+        self, o: DashObject, check_sizes: Optional[bool] = True
+    ) -> Optional[int]:
+        """Renders a DashObject.
+
+        Args:
+            o: A DashObject.
+            check_sizes: Whether to check sizes of the object.
+        
+        Returns:
+            oid: The object ID.
+        """
+        oid = self.generate_primitive_shape(
+            shape=o.shape,
+            position=o.position,
+            r=o.radius,
+            h=o.height,
+            check_sizes=check_sizes,
+        )
+        if oid is not None:
+            self.color_object(oid=oid, color=o.color)
+        return oid
+
+    def color_object(self, oid: int, color: str):
+        """Colors an object.
+
+        Args:
+            oid: The ID of the object.
+            color: The color to color the object.
+        """
         self.p.changeVisualShape(
-            objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[o.color]
+            objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[color]
+        )
+
+    def generate_primitive_shape(
+        self,
+        shape: str,
+        position: List[float],
+        r: float,
+        h: Optional[float] = None,
+        check_sizes: Optional[bool] = True,
+    ) -> Optional[int]:
+        """Creates a primitive object.
+
+        Args:
+            shape: The name of the shape to generate.
+            position: The (x, y, z) position of the center of the base, in
+                world coordinates.
+            r: The radius of the object.
+            h: The height of the object. This should be 2*r for sphere.
+            check_sizes: Whether to check that the sizes are valid for various
+                shapes.
+
+        Returns:
+            If the object creation is successful:
+                oid: The object ID.
+            If the dimensions of the object are invalid:
+                None
+        """
+        if check_sizes and shape == "sphere":
+            assert h == 2 * r
+
+        geom = SHAPE2GEOM[shape]
+        half_extents = [r, r, h / 2]
+
+        # Update the position to be defined for the COM, since that's what
+        # PyBullet expects.
+        position[2] = h / 2
+
+        # Create the shape.
+        try:
+            visualShapeId = self.p.createVisualShape(
+                shapeType=geom, radius=r, halfExtents=half_extents, length=h
+            )
+        except pybullet.error as e:
+            # print(e)
+            # print(
+            #     f"Invalid object. Shape: {shape}\tRadius: {r}\tHeight: {h}\tHalf_extents: {half_extents}"
+            # )
+            return None
+
+        collisionShapeId = self.p.createCollisionShape(
+            shapeType=geom, radius=r, halfExtents=half_extents, height=h
+        )
+        oid = self.p.createMultiBody(
+            baseMass=3.5,
+            baseInertialFramePosition=[0, 0, 0],
+            baseCollisionShapeIndex=collisionShapeId,
+            baseVisualShapeIndex=visualShapeId,
+            basePosition=position,
         )
         return oid
 
-    def construct_urdf_path(self, o: DashObject) -> str:
+    def construct_urdf_path(self, o: DashTable) -> str:
         """Constructs the URDF path based on object attributes.
         
         Args:
@@ -67,12 +151,5 @@ class BulletRenderer:
             urdf_path: The path to the urdf file matching the attributes of the
                 DashObject.
         """
-        if o.size in [None, "large"]:
-            urdf_name = o.shape
-        elif o.size == "small":
-            urdf_name = f"{o.shape}_{o.size}"
-        else:
-            raise ValueError(f"Unsupported size: {o.size}.")
-
-        urdf_path = os.path.join(self.urdf_dir, f"{urdf_name}.urdf")
+        urdf_path = os.path.join(self.urdf_dir, f"{o.shape}.urdf")
         return urdf_path

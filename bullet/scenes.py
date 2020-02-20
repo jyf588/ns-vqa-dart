@@ -22,8 +22,9 @@ class RandomSceneGenerator:
         obj_dist_thresh: float,
         max_retries: int,
         shapes: List[str],
-        sizes: List[str],
         colors: List[str],
+        radius_bounds: Tuple[float],
+        height_bounds: Tuple[float],
         x_bounds: Tuple[float],
         y_bounds: Tuple[float],
         z_bounds: Tuple[float],
@@ -50,6 +51,8 @@ class RandomSceneGenerator:
             shapes: A list of shapes to sample from.
             sizes: A list of sizes to sample from.
             colors: A list of colors to sample from.
+            radius_bounds: 2-tuple of the min and max bounds for shape radius.
+            height_bounds: 2-tuple of the min and max bounds for shape height.
             x_bounds: 2-tuple of the min and max bounds for the x position.
             y_bounds: 2-tuple of the min and max bounds for the y position.
             z_bounds: 2-tuple of the min and max bounds for the z position.
@@ -87,13 +90,14 @@ class RandomSceneGenerator:
         self.dataset = DashDataset(dataset_dir=dataset_dir)
 
         # Initialize the tabletop which is constant throughout the scenes.
-        self.renderer.render_object(DashTable())
+        self.renderer.render_table(DashTable())
 
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds
         self.shapes = shapes
-        self.sizes = sizes
         self.colors = colors
+        self.radius_bounds = radius_bounds
+        self.height_bounds = height_bounds
         self.x_bounds = x_bounds
         self.y_bounds = y_bounds
         self.z_bounds = z_bounds
@@ -109,7 +113,7 @@ class RandomSceneGenerator:
             n: The number of scenes to generate.
         """
         for _ in tqdm(range(n)):
-            objects = self.generate_scene()
+            objects = self.generate_tabletop_objects()
             rgb, mask = self.generate_image()
             camera = self.robot.camera if self.egocentric else self.camera
             self.dataset.save_example(
@@ -127,10 +131,12 @@ class RandomSceneGenerator:
             assert o.oid is not None
             self.p.removeBody(o.oid)
 
-    def generate_scene(self) -> List[DashObject]:
-        """Generates a single random scene."""
-        # self.p.resetSimulation()
-
+    def generate_tabletop_objects(self) -> List[DashObject]:
+        """Generates a single random scene.
+        
+        Returns:
+            objects: A list of DashObjects generated in the scene.
+        """
         # Randomly select the number of objects to generate.
         # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
         # inclusive, so that's why we subtract one from the max.
@@ -157,9 +163,8 @@ class RandomSceneGenerator:
             ]
             if any(close_arr):
                 n_tries += 1
-                print("retry")
             else:
-                oid = self.renderer.render_object(o, fix_base=True)
+                oid = self.renderer.render_object(o)
                 o.oid = oid
                 objects.append(o)
         return objects
@@ -173,7 +178,7 @@ class RandomSceneGenerator:
             mask: The mask of the scene, where values represent the object ID
                 that is present at each pixel.
         """
-        roll, tilt, pan = self.generate_xyz(
+        roll, tilt, pan = self.generate_random_xyz(
             self.roll_bounds, self.tilt_bounds, self.pan_bounds
         )
         if self.egocentric:
@@ -194,23 +199,46 @@ class RandomSceneGenerator:
         Returns:
             o: The randomly generated DashObject.
         """
-
+        shape = random.choice(self.shapes)
+        radius, height = self.generate_random_size(shape=shape)
+        color = random.choice(self.colors)
+        position = self.generate_random_xyz(
+            self.x_bounds, self.y_bounds, self.z_bounds
+        )
         o = DashObject(
-            shape=random.choice(self.shapes),
-            size=random.choice(self.sizes),
-            color=random.choice(self.colors),
-            position=self.generate_xyz(
-                self.x_bounds, self.y_bounds, self.z_bounds
-            ),
+            shape=shape,
+            radius=radius,
+            height=height,
+            color=color,
+            position=position,
             orientation=[0.0, 0.0, 0.0, 1.0],
         )
         return o
 
-    def generate_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:
+    def generate_random_size(self, shape: str) -> Tuple[float, float]:
+        """Generates a random radius and height.
+
+        Args:
+            shape: The shape we are generating a size for.
+
+        Returns:
+            radius: The radius of the object.
+            height: The height of the object. This is 2*r for sphere.
+        """
+        min_r, max_r = self.radius_bounds
+        min_h, max_h = self.height_bounds
+        radius = np.random.uniform(low=min_r, high=max_r)
+        if shape == "sphere":
+            height = radius * 2
+        else:
+            height = np.random.uniform(low=min_h, high=max_h)
+        return radius, height
+
+    def generate_random_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:
         """Generates a random xyz based on axis bounds.
 
         Returns:
-            position: The randomly generated xyz position.
+            xyz: The randomly generated xyz values.
         """
         xyz = []
         for (axis_min, axis_max) in [x_bounds, y_bounds, z_bounds]:

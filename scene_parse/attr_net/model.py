@@ -27,17 +27,23 @@ class AttributeNetwork:
             self.net.load_state_dict(checkpoint["model_state"])
         else:
             print("| creating new model")
-            label2dim = {"attr": 9, "position": 3, "up_vector": 3, "height": 1}
+            label2dim = {
+                "attr": 7,
+                "size": 2,
+                "position": 3,
+                "up_vector": 3,
+                "height": 1,
+            }
             if opt.dataset in ["dash", "clevr_dart"]:
                 output_dim = 0
                 if opt.pred_attr:
                     output_dim += label2dim["attr"]
+                if opt.pred_size:
+                    output_dim += label2dim["size"]
                 if opt.pred_position:
                     output_dim += label2dim["position"]
                 if opt.pred_up_vector:
                     output_dim += label2dim["up_vector"]
-                if opt.pred_height:
-                    output_dim += label2dim["height"]
                 assert output_dim > 0
                 self.output_dim = output_dim
             elif opt.dataset == "clevr":

@@ -12,7 +12,6 @@ import bullet.util
 # Note: order matters!
 ATTR_NAME2LIST = {
     "shape": ["box", "cylinder", "sphere"],
-    "size": ["small", "large"],
     "color": ["red", "yellow", "green", "blue"],
 }
 ATTR2IDX = {}
@@ -22,15 +21,14 @@ for name, attr_list in ATTR_NAME2LIST.items():
         ATTR2IDX[label] = idx
         idx += 1
 
-SIZE2HEIGHT = {"small": 0.13, "large": 0.18}
-
 
 class DashObject:
     def __init__(
         self,
         shape: str,
-        size: str,
         color: str,
+        radius: float,
+        height: float,
         position: List[float],
         orientation: List[float],
         oid: Optional[int] = None,
@@ -39,10 +37,11 @@ class DashObject:
         """
         Args:
             shape: The shape of the object.
-            size: The size of the object.
             color: The color of the object.
-            position: The xyz position of the object, in world coordinate 
-                frame.
+            radius: The radius of the object.
+            height: The height of the object.
+            position: The xyz position of the center of the object's base, in 
+                world coordinate frame.
             orientation: The orientation of the object, expressed as a 
                 [x, y, z, w] quaternion, in world coordinate frame.     
             oid: PyBullet object ID that comes from p.loadURDF.
@@ -50,18 +49,22 @@ class DashObject:
 
         Attributes:
             shape: The shape of the object.
-            size: The size of the object.
             color: The color of the object.
-            position: The xyz position of the object, in world coordinate 
-                frame.
+            radius: The radius of the object.
+            height: The height of the object.
+            position: The xyz position of the center of the object's base, in 
+                world coordinate frame.
             orientation: The orientation of the object, expressed as a 
                 [x, y, z, w] quaternion, in world coordinate frame.     
             oid: PyBullet object ID that comes from p.loadURDF.
             img_id: The image ID associated with the object.      
         """
+        assert len(position) == 3
+
         self.shape = shape
-        self.size = size
         self.color = color
+        self.radius = radius
+        self.height = height
         self.position = position
         self.orientation = orientation
         self.oid = oid
@@ -95,19 +98,21 @@ class DashObject:
     def to_y_vec(
         self,
         use_attr: bool,
+        use_size: bool,
         use_position: bool,
         use_up_vector: bool,
-        use_height: bool,
         coordinate_frame: str,
         camera: BulletCamera,
     ) -> np.ndarray:
         """Constructs the label vector for an object.
 
         Args:
-            use_attr: Whether to use attributes in the label.
-            use_position: Whether to use position in the label.
-            use_up_vector: Whether to use the up vector in the label.
-            use_height: Whether to use height in the label.
+            use_attr: Whether to include attributes in the label.
+            use_size: Whether to include the size (radius, height) in the 
+                label.
+            use_position: Whether to include position in the label.
+            use_up_vector: Whether to include the up vector in the label.
+            use_height: Whether to include height in the label.
             coordinate_frame: The coordinate frame to use, either "world" or
                 "camera" coordinate frame.
             camera: The BulletCamera for computing values in camera coordinate 
@@ -120,13 +125,14 @@ class DashObject:
         if use_attr:
             y += list(self.construct_attr_vec())
 
+        if use_size:
+            y += list([self.radius, self.height])
+
         if coordinate_frame == "world":
             if use_position:
                 y += self.position
             if use_up_vector:
                 y += self.compute_up_vector()
-            if use_height:
-                y += [self.compute_height()]
         elif coordinate_frame == "camera":
             if use_position:
                 y += bullet.util.world_to_cam(xyz=self.position, camera=camera)
@@ -136,8 +142,6 @@ class DashObject:
                 )
         else:
             raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
-        if use_height:
-            y += [self.compute_height()]
         return np.array(y)
 
     def construct_attr_vec(self) -> np.ndarray:
@@ -147,8 +151,8 @@ class DashObject:
             attr_vec: The attributes vector, which is a binary vector that 
                 assigns 1 to owned attributes and 0 everywhere else.
         """
-        attr_vec = np.zeros((9,))
-        for attr in [self.shape, self.size, self.color]:
+        attr_vec = np.zeros((len(ATTR2IDX),))
+        for attr in [self.shape, self.color]:
             shape_idx = ATTR2IDX[attr]
             attr_vec[shape_idx] = 1
         return attr_vec
@@ -162,15 +166,6 @@ class DashObject:
         up_vector = bullet.util.orientation_to_up(self.orientation)
         return up_vector
 
-    def compute_height(self) -> float:
-        """Computes the height of the object.
-
-        Returns:
-            height: The height of the object.
-        """
-        height = SIZE2HEIGHT[self.size]
-        return height
-
     def to_json(self) -> Dict[str, Any]:
         """Converts the current DashObject into a JSON dictionary.
 
@@ -181,12 +176,12 @@ class DashObject:
             "oid": self.oid,
             "img_id": self.img_id,
             "shape": self.shape,
-            "size": self.size,
             "color": self.color,
+            "radius": self.radius,
+            "height": self.height,
             "position": self.position,
             "orientation": self.orientation,
             "up_vector": self.compute_up_vector(),
-            "height": self.compute_height(),
         }
         return json_dict
 
@@ -236,13 +231,15 @@ def y_vec_to_dict(
         label = attr_list[attr_idx]
         y_dict[name] = label
 
+    y_dict["radius"] = y[start]
+    start += 1
+    y_dict["height"] = y[start]
+    start += 1
     end = start + 3
     y_dict["position"] = y[start:end]
     start = end
     end = start + 3
     y_dict["up_vector"] = y[start:end]
-    start = end
-    y_dict["height"] = y[start]
 
     if coordinate_frame == "world":
         pass
@@ -290,8 +287,9 @@ def y_dict_to_object(
         img_id=img_id,
         oid=oid,
         shape=y_dict["shape"],
-        size=y_dict["size"],
         color=y_dict["color"],
+        radius=y_dict["radius"],
+        height=y_dict["height"],
         position=y_dict["position"],
         orientation=orientation,
     )
@@ -303,8 +301,9 @@ def from_json(json_dict: Dict) -> DashObject:
         oid=json_dict["oid"],
         img_id=json_dict["img_id"],
         shape=json_dict["shape"],
-        size=json_dict["size"],
         color=json_dict["color"],
+        radius=json_dict["radius"],
+        height=json_dict["height"],
         position=json_dict["position"],
         orientation=json_dict["orientation"],
     )

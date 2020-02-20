@@ -68,7 +68,12 @@ class BaseOptions:
         self.parser.add_argument(
             "--pred_attr",
             action="store_true",
-            help="If true, predicts the object attributes (shape, size, color) in world coordinates.",
+            help="If true, predicts the object attributes (shape, size, color).",
+        )
+        self.parser.add_argument(
+            "--pred_size",
+            action="store_true",
+            help="If true, predicts the size (radius and height) of objects.",
         )
         self.parser.add_argument(
             "--pred_position",
@@ -79,11 +84,6 @@ class BaseOptions:
             "--pred_up_vector",
             action="store_true",
             help="If true, predicts the z direction vector in world coordinates.",
-        )
-        self.parser.add_argument(
-            "--pred_height",
-            action="store_true",
-            help="If true, predicts the z size in world coordinates.",
         )
         self.parser.add_argument(
             "--split_id",

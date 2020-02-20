@@ -147,9 +147,9 @@ class DashDataset:
         self,
         o: DashObject,
         use_attr: bool,
+        use_size: bool,
         use_position: bool,
         use_up_vector: bool,
-        use_height: bool,
         coordinate_frame: str,
         exclude_y: bool,
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -159,6 +159,7 @@ class DashDataset:
             o: The DashObject.
             use_attr: Whether to use attributes in the label.
             use_position: Whether to use position in the label.
+            use_size: Whether to use size in the label.
             use_up_vector: Whether to use the up vector in the label.
             use_height: Whether to use height in the label.
             coordinate_frame: The coordinate frame to use, either "world" or
@@ -181,9 +182,9 @@ class DashDataset:
         else:
             y = o.to_y_vec(
                 use_attr=use_attr,
+                use_size=use_size,
                 use_position=use_position,
                 use_up_vector=use_up_vector,
-                use_height=use_height,
                 coordinate_frame=coordinate_frame,
                 camera=camera,
             )

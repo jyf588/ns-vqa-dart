@@ -18,9 +18,9 @@ class DashTorchDataset(Dataset):
         self,
         dataset_dir: str,
         use_attr: bool,
+        use_size: bool,
         use_position: bool,
         use_up_vector: bool,
-        use_height: bool,
         coordinate_frame: str,
         split: str,
         min_img_id: Optional[int] = None,
@@ -30,10 +30,10 @@ class DashTorchDataset(Dataset):
 
         Args:
             dataset_dir: The directory to load data from.
-            use_attr: Whether to use attributes in the label.
-            use_position: Whether to use position in the label.
-            use_up_vector: Whether to use the up vector in the label.
-            use_height: Whether to use height in the label.
+            use_attr: Whether to include attributes in the label.
+            use_size: Whether to include size (radius and height) in the label.
+            use_position: Whether to include position in the label.
+            use_up_vector: Whether to include the up vector in the label.
             coordinate_frame: The coordinate frame to train on, either "world"
                 or "camera" coordinate frame.
             min_img_id: The minimum image ID to include in the dataset.
@@ -42,10 +42,10 @@ class DashTorchDataset(Dataset):
         
         Attributes:
             objects: A list of DashObjects.
-            use_attr: Whether to use attributes in the label.
-            use_position: Whether to use position in the label.
-            use_up_vector: Whether to use the up vector in the label.
-            use_height: Whether to use height in the label.
+            use_attr: Whether to include attributes in the label.
+            use_size: Whether to include size (radius and height) in the label.
+            use_position: Whether to include position in the label.
+            use_up_vector: Whether to include the up vector in the label.
             transforms: The transform to apply to the loaded images.
             exclude_y: Whether to exclude loading y labels. Currently this is
                 true if the split is "test".
@@ -64,9 +64,9 @@ class DashTorchDataset(Dataset):
         )
 
         self.use_attr = use_attr
+        self.use_size = use_size
         self.use_position = use_position
         self.use_up_vector = use_up_vector
-        self.use_height = use_height
         self.coordinate_frame = coordinate_frame
 
         self.normalize = [
@@ -105,9 +105,9 @@ class DashTorchDataset(Dataset):
         data, y = self.dataset.load_object_xy(
             o=o,
             use_attr=self.use_attr,
+            use_size=self.use_size,
             use_position=self.use_position,
             use_up_vector=self.use_up_vector,
-            use_height=self.use_height,
             coordinate_frame=self.coordinate_frame,
             exclude_y=self.exclude_y,
         )

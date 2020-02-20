@@ -7,8 +7,14 @@ import bullet.dash_object
 import bullet.util
 
 AXIS_NAMES = ["x", "y", "z"]
-MULTIPLIER = {"position": 100, "height": 100}
-UNITS = {"position": "cm", "up_vector": "L1", "height": "cm"}
+MULTIPLIER = {"radius": 100, "height": 100, "position": 100, "height": 100}
+UNITS = {
+    "radius": "cm",
+    "height": "cm",
+    "position": "cm",
+    "up_vector": "L1",
+    "height": "cm",
+}
 
 
 def main(args: argparse.Namespace):
@@ -16,8 +22,10 @@ def main(args: argparse.Namespace):
     dataset = DashDataset(args.dataset_dir)
     pred_dicts = bullet.util.load_json(path=args.pred_path)
 
-    cls_correct = {k: 0 for k in ["shape", "size", "color"]}
+    cls_correct = {k: 0 for k in ["shape", "color"]}
     reg_error = {
+        "radius": 0,
+        "height": 0,
         "position": np.zeros((3,)),
         "up_vector": np.zeros((3,)),
         "height": 0,
