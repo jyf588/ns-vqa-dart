@@ -227,11 +227,11 @@ class RandomSceneGenerator:
         """
         min_r, max_r = self.radius_bounds
         min_h, max_h = self.height_bounds
-        radius = np.random.uniform(low=min_r, high=max_r)
+        radius = self.uniform_sample(low=min_r, high=max_r)
         if shape == "sphere":
             height = radius * 2
         else:
-            height = np.random.uniform(low=min_h, high=max_h)
+            height = self.uniform_sample(low=min_h, high=max_h)
         return radius, height
 
     def generate_random_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:
@@ -242,16 +242,20 @@ class RandomSceneGenerator:
         """
         xyz = []
         for (axis_min, axis_max) in [x_bounds, y_bounds, z_bounds]:
-            if axis_min == axis_max:  # No randomization.
-                axis_value = axis_min
-            elif axis_min < axis_max:
-                axis_value = np.random.uniform(axis_min, axis_max)
-            else:
-                raise ValueError(
-                    f"Invalid axis bounds: ({axis_min}, {axis_max})"
-                )
+            axis_value = self.uniform_sample(low=axis_min, high=axis_max)
             xyz.append(axis_value)
         return xyz
+
+    def uniform_sample(self, low: float, high: float) -> float:
+        if low == high:  # No randomization.
+            value = low
+        elif low < high:
+            value = np.random.uniform(low=low, high=high)
+        else:
+            raise ValueError(
+                f"Invalid bounds for uniform sample: ({low}, {high})"
+            )
+        return value
 
     def is_close(self, ax: float, ay: float, bx: float, by: float) -> bool:
         """Checks whether two (x, y) points are within a certain threshold 

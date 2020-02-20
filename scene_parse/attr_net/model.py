@@ -81,9 +81,6 @@ class AttributeNetwork:
         self.pred = self.net(self.input)
         if self.label is not None:
             self.loss = self.criterion(self.pred, self.label)
-            # if self.opt.with_rot:
-            #     self.old_loss = self.criterion(self.pred[:-9], self.label[:-9])
-            #     self.rot_loss = self.criterion(self.pred[-9:], self.label[-9:])
 
     def get_loss(self):
         # print(PYTORCH_VER)
@@ -91,22 +88,6 @@ class AttributeNetwork:
             return self.loss.data.item()
         else:
             return self.loss.data[0]
-
-    def get_old_loss(self):
-        if not self.opt.with_rot:
-            return None
-        if PYTORCH_VER.startswith("1."):  # TODO
-            return self.old_loss.data.item()
-        else:
-            return self.old_loss.data[0]
-
-    def get_rot_loss(self):
-        if not self.opt.with_rot:
-            return None
-        if PYTORCH_VER.startswith("1."):  # TODO
-            return self.rot_loss.data.item()
-        else:
-            return self.rot_loss.data[0]
 
     def get_pred(self):
         return self.pred.data.cpu().numpy()

@@ -60,13 +60,23 @@ class BulletRenderer:
         Returns:
             oid: The object ID.
         """
-        oid = self.generate_primitive_shape(
-            shape=o.shape,
-            position=o.position,
-            r=o.radius,
-            h=o.height,
-            check_sizes=check_sizes,
-        )
+        if o.shape == "lego":
+            # Modify the position because currently origin of lego is at left
+            # back corner on base.
+            position = o.position
+            position[0] -= 0.04
+            position[1] -= 0.04
+            oid = self.p.loadURDF(
+                os.path.join(self.urdf_dir, "lego.urdf"), basePosition=position
+            )
+        else:
+            oid = self.generate_primitive_shape(
+                shape=o.shape,
+                position=o.position,
+                r=o.radius,
+                h=o.height,
+                check_sizes=check_sizes,
+            )
         if oid is not None:
             self.color_object(oid=oid, color=o.color)
         return oid

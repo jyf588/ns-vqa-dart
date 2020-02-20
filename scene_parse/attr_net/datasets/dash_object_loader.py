@@ -17,6 +17,8 @@ class DashTorchDataset(Dataset):
     def __init__(
         self,
         dataset_dir: str,
+        # img_height: int,
+        # img_width: int,
         use_attr: bool,
         use_size: bool,
         use_position: bool,
@@ -30,6 +32,8 @@ class DashTorchDataset(Dataset):
 
         Args:
             dataset_dir: The directory to load data from.
+            img_height: The height to resize the image to.
+            img_width: The width to resize the image to.
             use_attr: Whether to include attributes in the label.
             use_size: Whether to include size (radius and height) in the label.
             use_position: Whether to include position in the label.
@@ -41,6 +45,9 @@ class DashTorchDataset(Dataset):
             split: The name of the split (i.e., train, val, or test)
         
         Attributes:
+            dataset: The DashDataset for loading objects.
+            img_height: The height to resize the image to.
+            img_width: The width to resize the image to.
             objects: A list of DashObjects.
             use_attr: Whether to include attributes in the label.
             use_size: Whether to include size (radius and height) in the label.
@@ -69,12 +76,16 @@ class DashTorchDataset(Dataset):
         self.use_up_vector = use_up_vector
         self.coordinate_frame = coordinate_frame
 
-        self.normalize = [
+        self.transform_to_tensor = [transforms.ToTensor()]
+        self.transforms = [
+            # transforms.ToPILImage(),
+            # transforms.Resize((img_height, img_width)),
+            # transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.5, 0.5, 0.5], std=[0.225, 0.225, 0.225]
             )
         ]
-        self.transform = [transforms.ToTensor()]
+        self.normalize = []
 
         self.exclude_y = split == "test"
 
@@ -111,8 +122,8 @@ class DashTorchDataset(Dataset):
             coordinate_frame=self.coordinate_frame,
             exclude_y=self.exclude_y,
         )
-        data = transforms.Compose(self.transform)(data)
-        data[:3] = transforms.Compose(self.normalize)(data[:3])
-        data[3:6] = transforms.Compose(self.normalize)(data[3:6])
+        data = transforms.Compose(self.transform_to_tensor)(data)
+        data[:3] = transforms.Compose(self.transforms)(data[:3])
+        data[3:6] = transforms.Compose(self.transforms)(data[3:6])
         y = torch.Tensor(y)
         return data, y, o.img_id, o.oid
