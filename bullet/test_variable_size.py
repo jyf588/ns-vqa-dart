@@ -74,11 +74,10 @@ def main():
         {"shape": "box", "r": 0.025, "h": 0.13, "urdf": "box_small"},
     ]
 
-    h_min, h_max = 0.11, 0.18
-    r_min, r_max = 0.03, 0.05
-
-    h = np.random.uniform(low=0.11, high=0.18)
-    r = np.random.uniform(low=0.03, high=0.05)
+    # h_min, h_max = 0.11, 0.18
+    # r_min, r_max = 0.03, 0.05
+    h_min, h_max = 0.05, 0.20
+    r_min, r_max = 0.01, 0.07
 
     h_interval = (h_max - h_min) / 5
     r_interval = (r_max - r_min) / 5
@@ -87,17 +86,17 @@ def main():
     for shape in shapes:
         print(f"Shape: {shape}")
         for i in range(6):
+            # h = np.random.uniform(low=h_min, high=h_max)
+            # r = np.random.uniform(low=r_min, high=r_max)
+
             h = h_min + i * h_interval
             r = r_min + i * r_interval
-
-            print(f"h: {h}")
-            print(f"r: {r}")
 
             r *= SHAPE2MULTIPLIER[shape]["r"]
 
             z = r if shape == "sphere" else h / 2
             generate_primitive_shape(shape=shape, r=r, h=h, position=[0, y, z])
-            y += 0.1
+            y += 0.15
 
     print(f"***Original shapes***")
 
