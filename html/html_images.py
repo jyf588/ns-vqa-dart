@@ -77,7 +77,6 @@ def main(args: argparse.Namespace):
         )
 
         name2img = {
-            # "rgb": rgb,
             "mask": mask_img,
             "gt_world": rerendered_gt_world,
             "gt_cam": rerendered_gt_cam,

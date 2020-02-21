@@ -1,4 +1,5 @@
 import argparse
+import copy
 import numpy as np
 from tqdm import tqdm
 
@@ -23,12 +24,17 @@ def main(args: argparse.Namespace):
     pred_dicts = bullet.util.load_json(path=args.pred_path)
 
     cls_correct = {k: 0 for k in ["shape", "color"]}
-    reg_error = {
+    errors = {
         "radius": 0,
         "height": 0,
         "position": np.zeros((3,)),
         "up_vector": np.zeros((3,)),
         "height": 0,
+    }
+    reg_error = {
+        "pos": copy.deepcopy(errors),
+        "neg": copy.deepcopy(errors),
+        "abs": copy.deepcopy(errors),
     }
     n_total = 0
 
@@ -49,9 +55,24 @@ def main(args: argparse.Namespace):
             if odict[k] == y_dict[k]:
                 cls_correct[k] += 1
 
-        for k in reg_error.keys():
-            l1 = np.abs(np.array(odict[k]) - np.array(y_dict[k]))
-            reg_error[k] += l1
+        for k in errors.keys():
+            diff = np.array(y_dict[k]) - np.array(odict[k])
+            pos_diff = diff.copy()
+            neg_diff = diff.copy()
+
+            if type(diff) == np.float64:
+                pos_diff = diff if diff >= 0.0 else 0.0
+                neg_diff = diff if diff <= 0.0 else 0.0
+            elif type(diff) == np.ndarray:
+                pos_diff[pos_diff < 0] = 0.0
+                neg_diff[neg_diff > 0] = 0.0
+            else:
+                raise ValueError(f"Invalid type: {type(diff)}")
+
+            l1 = np.abs(diff)
+            reg_error["pos"][k] += pos_diff
+            reg_error["neg"][k] += neg_diff
+            reg_error["abs"][k] += l1
 
         n_total += 1
 
@@ -62,18 +83,26 @@ def main(args: argparse.Namespace):
         print(f"\t{k}: {v / n_total * 100:.2f} ({v}/{n_total})")
 
     print(f"Regression Errors:")
-    for k, v in reg_error.items():
-        if k in MULTIPLIER:
-            v *= MULTIPLIER[k]
-        units = UNITS[k]
-        if type(v) == np.float64:
-            print(f"\t{k} ({units}): {v / n_total:.2f} ({v:.2f}/{n_total})")
-        elif type(v) == np.ndarray:
-            print(f"\t{k} ({units}):")
-            for axis_i, v_i in enumerate(v):
+    for k in errors.keys():
+        for err_type in reg_error.keys():
+            v = reg_error[err_type][k]
+
+            # Multiply by multiplier for the key if specified.
+            if k in MULTIPLIER:
+                v *= MULTIPLIER[k]
+            units = UNITS[k]
+
+            # Print out the results.
+            if type(v) == np.float64:
                 print(
-                    f"\t\t{AXIS_NAMES[axis_i]}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
+                    f"\t{k} {err_type} ({units}): {v / n_total:.2f} ({v:.2f}/{n_total})"
                 )
+            elif type(v) == np.ndarray:
+                print(f"\t{k} {err_type} ({units}):")
+                for axis_i, v_i in enumerate(v):
+                    print(
+                        f"\t\t{AXIS_NAMES[axis_i]}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
+                    )
 
 
 if __name__ == "__main__":
