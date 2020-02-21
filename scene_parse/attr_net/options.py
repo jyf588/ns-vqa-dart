@@ -86,16 +86,21 @@ class BaseOptions:
             help="If true, predicts the z direction vector in world coordinates.",
         )
         self.parser.add_argument(
-            "--split_id",
-            default=18500,
-            type=int,
-            help="splitting index between train and val images",
-        )
-        self.parser.add_argument(
             "--coordinate_frame",
             required=True,
             choices=["world", "camera"],
             help="The coordinate frame to train on.",
+        )
+        self.parser.add_argument(
+            "--fp16",
+            action="store_true",
+            help="Whether to use FP 16. Note: Only inference supported.",
+        )
+        self.parser.add_argument(
+            "--split_id",
+            default=18500,
+            type=int,
+            help="splitting index between train and val images",
         )
         self.parser.add_argument(
             "--batch_size", default=20, type=int, help="batch size"

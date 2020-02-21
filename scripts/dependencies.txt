@@ -1,0 +1,41 @@
+wget http://developer.download.nvidia.com/compute/cuda/10.2/Prod/local_installers/cuda_10.2.89_440.33.01_linux.run
+sh cuda_10.2.89_440.33.01_linux.run
+
+Continue
+Accept
+Disable everything except the toolkit
+In Options > Library install path > /home/michelle/opt/cuda-10.2
+Go to toolkit line and press A for advanced Options
+Deselct everything, and change the toolkit path
+
+conda create --name pytorch1.4 python=3.7.4
+conda activate pytorch1.4
+conda install numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing
+conda install -c pytorch magma-cuda102
+
+cd pytorch
+git checkout v1.4.0
+git submodule sync
+git submodule update --init --recursive
+
+export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+
+export PATH="/home/michelle/opt/cuda-10.2/bin:$PATH"
+export LD_LIBRARY_PATH="/home/michelle/opt/cuda-10.2/lib64"
+
+export CUDA_NVCC_EXECUTABLE="/home/michelle/opt/cuda-10.2/bin/nvcc"
+export CUDA_HOME="/home/michelle/opt/cuda-10.2"
+export CUDNN_INCLUDE_PATH="/home/michelle/opt/cuda-10.2/include/"
+export CUDNN_LIBRARY_PATH="/home/michelle/opt/cuda-10.2/lib64/"
+export LIBRARY_PATH="/home/michelle/opt/cuda-10.2/lib64"
+
+python setup.py clean
+python setup.py install
+
+
+Binary version:
+conda create --name bullet-vision-inference
+conda activate bullet-vision-inference
+conda install pytorch==1.1.0 torchvision==0.3.0 -c pytorch
+conda install cython numpy scipy opencv pillow=6.1 imageio -y
+pip install pybullet pycocotools tqdm

@@ -11,6 +11,7 @@ import torchvision.transforms as transforms
 
 sys.path.append("/home/michelle/workspace/ns-vqa-dart")
 from bullet.dash_dataset import DashDataset
+from bullet.profiler import Profiler
 
 
 class DashTorchDataset(Dataset):
@@ -90,6 +91,8 @@ class DashTorchDataset(Dataset):
         self.exclude_y = split == "test"
 
         print(f"Initialized DashTorchDataset containing {len(self)} examples.")
+
+        self.profiler = Profiler()
 
     def __len__(self) -> int:
         """Gets the total number of examples in the dataset.

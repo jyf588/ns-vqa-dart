@@ -1,14 +1,26 @@
+import argparse
+import time
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torchvision.models as models
+import sys
+
+sys.path.append("/home/michelle/workspace/ns-vqa-dart")
+from bullet.profiler import Profiler
 
 
 PYTORCH_VER = torch.__version__
 
 
 class AttributeNetwork:
-    def __init__(self, opt):
+    def __init__(self, opt: argparse.Namespace):
+        """
+        Args:
+            opt: Various options to the network.
+        """
+        self.profiler = Profiler()
+
         if opt.concat_img:
             if opt.with_depth:
                 self.input_channels = 8
@@ -63,22 +75,40 @@ class AttributeNetwork:
             self.net.cuda(opt.gpu_ids[0])
 
         self.opt = opt
-
         self.input, self.label = None, None
 
     def set_input(self, x, y=None):
+        """Stores x and y.
+
+        Args:
+            x: The input data to the network.
+            y: The labels to train on.
+        """
         self.input = self._to_var(x)
         if y is not None:
             self.label = self._to_var(y)
+        if self.opt.fp16:
+            self.input = self.input.half()
 
     def step(self):
         self.optimizer.zero_grad()
         self.forward()
         self.loss.backward()
+        self.net.float()
         self.optimizer.step()
 
     def forward(self):
+        if self.opt.fp16:
+            self.net.half()
+
+            # https://medium.com/@dwightfoster03/fp16-in-pytorch-a042e9967f7e
+            for layer_i, layer in enumerate(self.net.modules()):
+                if isinstance(layer, nn.BatchNorm2d):
+                    layer.float()
+
         self.pred = self.net(self.input)
+        if self.opt.fp16:
+            self.pred = self.pred.float()
         if self.label is not None:
             self.loss = self.criterion(self.pred, self.label)
 
@@ -108,10 +138,19 @@ class AttributeNetwork:
         if self.use_cuda:
             self.net.cuda(self.gpu_ids[0])
 
-    def _to_var(self, x):
+    def _to_var(self, x: torch.Tensor) -> Variable:
+        """Converts a tensor into a variable.
+
+        Args:
+            x: A tensor.
+        
+        Returns:
+            A variable.
+        """
         if self.use_cuda:
             x = x.cuda()
-        return Variable(x)
+        var = Variable(x)
+        return var
 
 
 class _Net(nn.Module):
@@ -138,19 +177,12 @@ class _Net(nn.Module):
         )
 
         self.main = nn.Sequential(*layers)
-        # self.fc1 = nn.Linear(512, 256)
-        # self.fc2 = nn.Linear(256, output_dim)
-
         self.fc1 = nn.Linear(512, output_dim)
 
     def forward(self, x):
         x = self.main(x)
-        x = x.view(x.size(0), -1)
-        # import torch.nn.functional as F
-        # x = F.relu(self.fc1(x))
-        # output = self.fc2(x)
-
-        output = self.fc1(x)
+        x = x.view(x.size(0), -1)  # Reshape to (B, -1)
+        output = self.fc1(x)  # Get the final outputs.
         return output
 
 
