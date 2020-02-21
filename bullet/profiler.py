@@ -18,23 +18,20 @@ class Profiler:
         iter_secs = time.time() - self.start_time
         self.times.append(iter_secs)
 
-    def compute_stats(self) -> Tuple[float, float]:
-        avg = np.mean(self.times)
-        std = np.std(self.times)
+    def compute_stats(self, vec: List[float]) -> Tuple[float, float]:
+        avg = np.mean(vec)
+        std = np.std(vec)
         return avg, std
 
     def __str__(self):
-        avg, std = self.compute_stats()
-        return f"""
-            {self.name} Profiler Results:
-            \tFirst iteration: {to_str(self.times[0])}
-            \tAverage: {to_str(avg)}
-            \tStd: {to_str(std)}
-            """
-        print(f"{self.name} Profiler Results:")
-        print(f"\tFirst iteration: {to_str(self.times[0])}")
-        print(f"\tAverage: {to_str(avg)}")
-        print(f"\tStd: {to_str(std)}")
+        avg, std = self.compute_stats(self.times)
+        avg_excl_first, std_excl_first = self.compute_stats(self.times[1:])
+        return f"""{self.name} Profiler Results:
+            First iteration: {to_str(self.times[0])}
+            Average (excl first): {to_str(avg_excl_first)}
+            Std (excl first): {to_str(std_excl_first)}
+            Average: {to_str(avg)}
+            Std: {to_str(std)}"""
 
 
 def to_str(time: float) -> str:

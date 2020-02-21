@@ -20,6 +20,7 @@ class AttributeNetwork:
             opt: Various options to the network.
         """
         self.profiler = Profiler()
+        self.mode = None
 
         if opt.concat_img:
             if opt.with_depth:
@@ -64,6 +65,9 @@ class AttributeNetwork:
                 raise ValueError(f"Unsupported dataset: {opt.dataset}")
             self.net = _Net(self.output_dim, self.input_channels)
 
+        if opt.fp16:
+            self.half_net()
+
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(
             self.net.parameters(), lr=opt.learning_rate
@@ -85,31 +89,26 @@ class AttributeNetwork:
             y: The labels to train on.
         """
         self.input = self._to_var(x)
-        if y is not None:
-            self.label = self._to_var(y)
         if self.opt.fp16:
             self.input = self.input.half()
 
+        if y is not None:
+            self.label = self._to_var(y)
+
     def step(self):
         self.optimizer.zero_grad()
+        if self.opt.fp16:
+            self.half_net()
         self.forward()
         self.loss.backward()
         self.net.float()
         self.optimizer.step()
 
     def forward(self):
-        if self.opt.fp16:
-            self.net.half()
-
-            # https://medium.com/@dwightfoster03/fp16-in-pytorch-a042e9967f7e
-            for layer_i, layer in enumerate(self.net.modules()):
-                if isinstance(layer, nn.BatchNorm2d):
-                    layer.float()
-
         self.pred = self.net(self.input)
-        if self.opt.fp16:
-            self.pred = self.pred.float()
         if self.label is not None:
+            if self.opt.fp16:
+                self.pred = self.pred.float()
             self.loss = self.criterion(self.pred, self.label)
 
     def get_loss(self):
@@ -123,10 +122,20 @@ class AttributeNetwork:
         return self.pred.data.cpu().numpy()
 
     def eval_mode(self):
+        if self.opt.fp16:
+            self.half_net()
         self.net.eval()
 
     def train_mode(self):
         self.net.train()
+
+    def half_net(self):
+        self.net.half()
+
+        # https://medium.com/@dwightfoster03/fp16-in-pytorch-a042e9967f7e
+        # for layer_i, layer in enumerate(self.net.modules()):
+        #     if isinstance(layer, nn.BatchNorm2d):
+        #         layer.float()
 
     def save_checkpoint(self, save_path):
         checkpoint = {

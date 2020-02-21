@@ -11,4 +11,7 @@ time python run_test.py \
     --pred_size \
     --pred_position \
     --pred_up_vector \
-    --coordinate_frame camera
+    --coordinate_frame camera \
+    --batch_size 7 \
+    --num_workers 8 \
+    --fp16

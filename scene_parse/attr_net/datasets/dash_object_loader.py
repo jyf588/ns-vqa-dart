@@ -128,5 +128,8 @@ class DashTorchDataset(Dataset):
         data = transforms.Compose(self.transform_to_tensor)(data)
         data[:3] = transforms.Compose(self.transforms)(data[:3])
         data[3:6] = transforms.Compose(self.transforms)(data[3:6])
-        y = torch.Tensor(y)
-        return data, y, o.img_id, o.oid
+        if self.exclude_y:
+            return data, o.img_id, o.oid
+        else:
+            y = torch.Tensor(y)
+            return data, y, o.img_id, o.oid
