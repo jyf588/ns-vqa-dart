@@ -27,6 +27,7 @@ class Profiler:
         avg, std = self.compute_stats(self.times)
         avg_excl_first, std_excl_first = self.compute_stats(self.times[1:])
         return f"""{self.name} Profiler Results:
+            N iterations: {len(self.times)}
             First iteration: {to_str(self.times[0])}
             Average (excl first): {to_str(avg_excl_first)}
             Std (excl first): {to_str(std_excl_first)}

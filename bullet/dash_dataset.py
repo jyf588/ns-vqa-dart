@@ -9,8 +9,9 @@ from typing import *
 from bullet.camera import BulletCamera
 import bullet.dash_object
 from bullet.dash_object import DashObject
+from bullet.profiler import Profiler
 
-KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json"}
+KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json", "input_data": "npy"}
 
 
 class DashDataset:
@@ -27,10 +28,11 @@ class DashDataset:
         self.dataset_dir = dataset_dir
         self.eid = 0
         self.eids = []
+        self.profiler = Profiler()
 
     """ Scene examples. """
 
-    def load_example(self, eid: str) -> Tuple[Any]:
+    def load_example_for_eid(self, eid: str) -> Tuple[Any]:
         """Loads data for a specified example.
 
         Args:
@@ -69,24 +71,6 @@ class DashDataset:
         self.eids.append(self.eid)
         self.save_example_ids(eids=self.eids)
         self.eid += 1
-
-    def save_input_data(
-        eid: int, objects: List[DashObject], rgb: np.ndarray, mask: np.ndarray
-    ):
-        """Save the data that will be used as input to the network.
-
-        Args:
-            eid: The example_id.
-            objects: A list of DashObjects in the scene.
-            rgb: The RGB image.
-            mask: The mask of the scene.
-        """
-        input_data_dir = os.path.join(
-            self.dataset_dir, "input_data", f"{eid:05}"
-        )
-        for o in objects:
-            data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
-            np.save()
 
     """ Objects. """
 
@@ -163,7 +147,16 @@ class DashDataset:
         is_out_of_view = bbox is None
         return is_out_of_view
 
-    def load_object_xy(
+    def load_object_x(self, o: DashObject) -> np.ndarray:
+        """Loads the x data for an object.
+
+        Returns:
+            data: The x data.
+        """
+        data = self.load_input_data(o=o)
+        return data
+
+    def load_object_y(
         self,
         o: DashObject,
         use_attr: bool,
@@ -173,7 +166,7 @@ class DashDataset:
         coordinate_frame: str,
         exclude_y: bool,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Loads xy data for a given object.
+        """Loads y data for a given object.
 
         Args:
             o: The DashObject.
@@ -184,31 +177,46 @@ class DashDataset:
             use_height: Whether to use height in the label.
             coordinate_frame: The coordinate frame to use, either "world" or
                 "camera" coordinate frame.
-            exclude_y: Whether to exclude loading the object y. Currently used
-                when in the dataloader is running the test split.
-        
+
         Returns:
-            data: The input data, which contains a cropped image of the object
-                concatenated with the original image of the scene, with the
-                object cropped out. (RGB, HWC)
             y: Labels for the example.
         """
-        rgb = self.load_rgb(eid=o.img_id)
-        mask = self.load_mask(eid=o.img_id)
-        data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
         camera = self.load_camera_for_eid(eid=o.img_id)
-        if exclude_y:
-            y = np.array([])
-        else:
-            y = o.to_y_vec(
-                use_attr=use_attr,
-                use_size=use_size,
-                use_position=use_position,
-                use_up_vector=use_up_vector,
-                coordinate_frame=coordinate_frame,
-                camera=camera,
-            )
-        return data, y
+        y = o.to_y_vec(
+            use_attr=use_attr,
+            use_size=use_size,
+            use_position=use_position,
+            use_up_vector=use_up_vector,
+            coordinate_frame=coordinate_frame,
+            camera=camera,
+        )
+        return y
+
+    def load_input_data(self, o: DashObject) -> np.ndarray:
+        """Loads the input data for a given object.
+
+        Args:
+            o: A DashObject.
+        
+        Returns:
+            data: The input data for the object.
+        """
+        data = np.load(self.construct_object_path(o=o, key="input_data"))
+        return data
+
+    def save_input_data(
+        self, objects: List[DashObject], rgb: np.ndarray, mask: np.ndarray
+    ):
+        """Save the data that will be used as input to the network.
+
+        Args:
+            objects: A list of DashObjects in the scene.
+            rgb: The RGB image.
+            mask: The mask of the scene.
+        """
+        for o in objects:
+            data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
+            np.save(self.construct_object_path(o=o, key="input_data"), data)
 
     def compute_data_from_rgb_and_mask(
         self,
@@ -302,7 +310,9 @@ class DashDataset:
             filtered_eids: A list of example IDs, optionally filtered to only
                 include IDs within the provided ID bounds.
         """
-        eids = bullet.util.load_json(path=self.construct_path(key="eids"))
+        eids = bullet.util.load_json(
+            path=self.construct_scene_path(key="eids")
+        )
         if min_id is None:
             min_id = 0
         if max_id is None:
@@ -320,7 +330,9 @@ class DashDataset:
         Args:
             eids: A list of example IDs to save.
         """
-        bullet.util.save_json(path=self.construct_path(key="eids"), data=eids)
+        bullet.util.save_json(
+            path=self.construct_scene_path(key="eids"), data=eids
+        )
 
     """ Scene annotations. """
 
@@ -337,7 +349,7 @@ class DashDataset:
             camera: A BulletCamera.
         """
         json_dict = bullet.util.load_json(
-            path=self.construct_path(key="json", eid=eid)
+            path=self.construct_scene_path(key="json", eid=eid)
         )
         objects = []
         for odict in json_dict["objects"]:
@@ -357,7 +369,7 @@ class DashDataset:
             objects: A list of DashObject's.
         """
         json_dict = bullet.util.load_json(
-            path=self.construct_path(key="json", eid=eid)
+            path=self.construct_scene_path(key="json", eid=eid)
         )
         objects = []
         for odict in json_dict["objects"]:
@@ -374,7 +386,7 @@ class DashDataset:
             camera: The BulletCamera for the example.
         """
         json_dict = bullet.util.load_json(
-            path=self.construct_path(key="json", eid=eid)
+            path=self.construct_scene_path(key="json", eid=eid)
         )
         camera = bullet.camera.from_json(json_dict["camera"])
         return camera
@@ -397,7 +409,7 @@ class DashDataset:
             json_dict["objects"].append(o.to_json())
 
         bullet.util.save_json(
-            path=self.construct_path(key="json", eid=eid), data=json_dict
+            path=self.construct_scene_path(key="json", eid=eid), data=json_dict
         )
 
     """ RGB functions. """
@@ -411,7 +423,7 @@ class DashDataset:
         Returns:
             rgb: The RGB image for the example.
         """
-        rgb = imageio.imread(self.construct_path(key="rgb", eid=eid))
+        rgb = imageio.imread(self.construct_scene_path(key="rgb", eid=eid))
         return rgb
 
     def save_rgb(self, rgb: np.ndarray, eid: int):
@@ -421,7 +433,7 @@ class DashDataset:
             rgb: The RGB image to save.
             eid: The example ID.
         """
-        imageio.imwrite(self.construct_path(key="rgb", eid=eid), rgb)
+        imageio.imwrite(self.construct_scene_path(key="rgb", eid=eid), rgb)
 
     """ Mask functions. """
 
@@ -434,7 +446,7 @@ class DashDataset:
         Returns:
             mask: The mask for the example.
         """
-        return np.load(self.construct_path(key="mask", eid=eid))
+        return np.load(self.construct_scene_path(key="mask", eid=eid))
 
     def save_mask(self, mask: np.ndarray, eid: str):
         """Saves a mask under an example ID.
@@ -443,11 +455,11 @@ class DashDataset:
             mask: The mask to save.
             eid: The example ID.
         """
-        np.save(self.construct_path(key="mask", eid=eid), mask)
+        np.save(self.construct_scene_path(key="mask", eid=eid), mask)
 
     """ Path construction. """
 
-    def construct_path(self, key: str, eid: Optional[int] = None) -> str:
+    def construct_scene_path(self, key: str, eid: Optional[int] = None) -> str:
         """Constructs the filepath for a given key and example.
 
         Args:
@@ -465,3 +477,17 @@ class DashDataset:
             path = os.path.join(key_dir, f"{eid:05}.{KEY2EXT[key]}")
         return path
 
+    def construct_object_path(self, o: DashObject, key: str) -> str:
+        """Constructs the path to the input data for the object.
+
+        Args:
+            o: The DashObject.
+            key: The key of the file type, e.g., "input_data".
+
+        Returns:
+            path: The object path.
+        """
+        path_dir = os.path.join(self.dataset_dir, key, f"{o.img_id:05}")
+        os.makedirs(path_dir, exist_ok=True)
+        path = os.path.join(path_dir, f"{o.oid:02}.{KEY2EXT[key]}")
+        return path

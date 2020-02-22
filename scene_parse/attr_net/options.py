@@ -50,6 +50,12 @@ class BaseOptions:
             type=str,
             help="The dataset directory",
         )
+        self.parser.add_argument(
+            "--height", required=True, type=int, help="The image height."
+        )
+        self.parser.add_argument(
+            "--width", required=True, type=int, help="The image width"
+        )
         # self.parser.add_argument('--clevr_mini_img_dir', default='../../data/raw/CLEVR_mini/images', type=str, help='clevr-mini image directory')
         # self.parser.add_argument('--clevr_mini_ann_path', default='../../data/attr_net/objects/clevr_mini_objs.json', type=str, help='clevr-mini objects annotation file')
 

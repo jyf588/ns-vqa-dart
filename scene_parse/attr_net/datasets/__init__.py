@@ -15,6 +15,8 @@ def get_dataset(opt, split):
             raise ValueError("Invalid dataset split: %s" % split)
         ds = DashTorchDataset(
             dataset_dir=opt.dataset_dir,
+            height=opt.height,
+            width=opt.width,
             min_img_id=min_img_id,
             max_img_id=max_img_id,
             use_attr=opt.pred_attr,

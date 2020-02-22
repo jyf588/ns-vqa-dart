@@ -13,6 +13,7 @@ import bullet.util
 
 sys.path.append("/home/michelle/workspace/ns-vqa-dart")
 from bullet.profiler import Profiler
+import bullet.metrics
 
 
 def main():
@@ -61,6 +62,14 @@ def main():
     print("| saving annotation file to %s" % opt.output_path)
     bullet.util.save_json(path=opt.output_path, data=preds)
 
+    print("Computing metrics:")
+    bullet.metrics.compute_metrics(
+        dataset_dir=opt.dataset_dir,
+        pred_dicts=preds,
+        coordinate_frame=opt.coordinate_frame,
+    )
+
 
 if __name__ == "__main__":
     main()
+

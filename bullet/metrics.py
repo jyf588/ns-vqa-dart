@@ -2,6 +2,7 @@ import argparse
 import copy
 import numpy as np
 from tqdm import tqdm
+from typing import *
 
 from bullet.dash_dataset import DashDataset
 import bullet.dash_object
@@ -19,9 +20,16 @@ UNITS = {
 
 
 def main(args: argparse.Namespace):
-
-    dataset = DashDataset(args.dataset_dir)
     pred_dicts = bullet.util.load_json(path=args.pred_path)
+    compute_metrics(
+        pred_dicts=pred_dicts, coordinate_frame=args.coordinate_frame
+    )
+
+
+def compute_metrics(
+    dataset_dir: str, pred_dicts: List[Dict], coordinate_frame: str
+):
+    dataset = DashDataset(dataset_dir=dataset_dir)
 
     cls_correct = {k: 0 for k in ["shape", "color"]}
     errors = {
@@ -47,7 +55,7 @@ def main(args: argparse.Namespace):
         camera = dataset.load_camera_for_eid(eid=pred_dict["img_id"])
         y_dict = bullet.dash_object.y_vec_to_dict(
             y=pred_dict["pred"],
-            coordinate_frame=args.coordinate_frame,
+            coordinate_frame=coordinate_frame,
             camera=camera,
         )
 

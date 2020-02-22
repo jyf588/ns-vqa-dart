@@ -44,5 +44,5 @@ python html/html_images.py \
 
 python html/html.py \
     --dataset ego_v008 \
-    --start_img_id 0 \
-    --end_img_id 100
+    --start_img_id 20000 \
+    --end_img_id 20025
