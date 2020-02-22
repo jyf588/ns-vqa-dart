@@ -122,7 +122,11 @@ def load_json(path: str) -> Any:
         data: The JSON data.
     """
     with open(path, "r") as f:
-        data = json.load(f)
+        try:
+            data = json.load(f)
+        except json.decoder.JSONDecodeError as e:
+            print(f"JSONDecodeError for file: {path}")
+            raise (e)
         return data
 
 

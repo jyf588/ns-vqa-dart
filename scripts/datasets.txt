@@ -5,3 +5,7 @@ ego_v004: v003 with out-of-view objects filtered out
 ego_v005: A copy of v004. Separated for cleanliness. Difference is that the
     outputs/analysis directories will be based on camera coordinates.
 ego_v006: Same as ego_v005, but with variable radius and height.
+ego_v007: Same as ego v5 and 6, but with inputs that are:
+    seg instead of bbox
+    aspect ratio maintained
+    replicate padding instead of zero padding.

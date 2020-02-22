@@ -199,6 +199,8 @@ class DashObject:
                 continue
             if type(v) == list:
                 v = [float(f"{v_i:.2f}") for v_i in v]
+            elif type(v) == float:
+                v = f"{v:.2f}"
             if k in ["img_id", "orientation"]:
                 continue
             str_list.append(f"{k}: {v}")

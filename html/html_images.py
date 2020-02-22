@@ -27,7 +27,7 @@ def main(args: argparse.Namespace):
     print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     print(f"Number of total predictions: {len(pred_dicts)}")
-    print(f"Number of examples to visualize: {args.n_examples}")
+    print(f"Number of objects to visualize: {args.n_examples}")
     img_id2oid2pred_object = {}
     if args.n_examples is not None:
         pred_dicts = pred_dicts[: args.n_examples]
@@ -83,6 +83,7 @@ def main(args: argparse.Namespace):
             "pred": rerendered_pred,
         }
 
+        # Write the scene-level information.
         for k, img in name2img.items():
             img_dir = os.path.join(args.output_dir, k)
             os.makedirs(img_dir, exist_ok=True)
@@ -91,45 +92,62 @@ def main(args: argparse.Namespace):
 
         # Create object masks.
         oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
-        generate_obj_mask_and_captions(
-            img_id=img_id,
-            mask=mask,
-            oid2gt_objects=oid2gt_objects_world,
-            oid2pred_objects=oid2pred_object,
-            camera=camera,
-        )
+        for oid in oid2pred_object.keys():
+            pred_o = oid2pred_object[oid]
+            gt_o = oid2gt_objects_world[oid]
+            data = dataset.compute_data_from_rgb_and_mask(
+                o=gt_o, rgb=rgb, mask=mask
+            )
+
+            input_seg = data[:, :, :3]
+            input_rgb = data[:, :, 3:6]
+
+            save_obj_results(
+                oid=oid,
+                img_id=img_id,
+                input_seg=input_seg,
+                # new_seg=new_seg,
+                # seg_black=seg_black,
+                input_rgb=input_rgb,
+                # input_rgb_seg=input_rgb_seg,
+                gt_o=gt_o,
+                pred_o=pred_o,
+                camera=camera,
+            )
 
 
-def generate_obj_mask_and_captions(
+def save_obj_results(
+    oid: int,
     img_id: int,
-    mask: np.ndarray,
-    oid2gt_objects: List[DashObject],
-    oid2pred_objects: List[DashObject],
+    input_seg: np.ndarray,
+    # new_seg: np.ndarray,
+    # seg_black: np.ndarray,
+    input_rgb: np.ndarray,
+    # input_rgb_seg: np.ndarray,
+    gt_o: DashObject,
+    pred_o: DashObject,
     camera: BulletCamera,
 ):
-    obj_masks_dir = os.path.join(args.output_dir, "obj_masks", f"{img_id:05}")
-    obj_caps_dir = os.path.join(
-        args.output_dir, "obj_captions", f"{img_id:05}"
+    gt_img = rerender(objects=[gt_o], camera=camera, check_sizes=False)
+    pred_img = rerender(objects=[pred_o], camera=camera, check_sizes=False)
+
+    obj_dir = os.path.join(
+        args.output_dir, f"{img_id:05}", "objs", f"{oid:02}"
     )
-    os.makedirs(obj_masks_dir, exist_ok=True)
-    os.makedirs(obj_caps_dir, exist_ok=True)
+    os.makedirs(obj_dir, exist_ok=True)
 
-    for oid, pred_o in oid2pred_objects.items():
-        gt_o = oid2gt_objects[oid]
+    imageio.imwrite(os.path.join(obj_dir, f"input_seg.png"), input_seg)
+    # imageio.imwrite(os.path.join(obj_dir, f"new_seg.png"), new_seg)
+    # imageio.imwrite(os.path.join(obj_dir, f"seg_black.png"), seg_black)
+    imageio.imwrite(os.path.join(obj_dir, f"input_rgb.png"), input_rgb)
+    # imageio.imwrite(os.path.join(obj_dir, f"input_rgb_seg.png"), input_rgb_seg)
+    imageio.imwrite(os.path.join(obj_dir, f"gt.png"), gt_img)
+    imageio.imwrite(os.path.join(obj_dir, f"pred.png"), pred_img)
 
-        # img = (mask == oid).astype(np.uint8) * 255
-        img = rerender(objects=[pred_o], camera=camera, check_sizes=False)
-        img_path = os.path.join(obj_masks_dir, f"{oid:02}.png")
-        imageio.imwrite(img_path, img)
-
-        captions = (
-            ["Ground truth (world):"]
-            + gt_o.to_caption()
-            + ["", "Predicted (world):"]
-            + pred_o.to_caption()
-        )
-        captions_path = os.path.join(obj_caps_dir, f"{oid:02}.json")
-        bullet.util.save_json(path=captions_path, data=captions)
+    # gt_cap_path = os.path.join(gt_cap_dir, f"{oid:02}.json")
+    # pred_cap_path = os.path.join(pred_cap_dir, f"{oid:02}.json")
+    # bullet.util.save_json(path=gt_cap_path, data=gt_o.to_caption())
+    # bullet.util.save_json(path=pred_cap_path, data=pred_o.to_caption())
 
 
 def create_visual(

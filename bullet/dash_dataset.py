@@ -191,7 +191,12 @@ class DashDataset:
         return data, y
 
     def compute_data_from_rgb_and_mask(
-        self, o: DashObject, rgb: np.ndarray, mask: np.ndarray
+        self,
+        o: DashObject,
+        rgb: np.ndarray,
+        mask: np.ndarray,
+        data_height=480,
+        data_width=480,
     ) -> np.ndarray:
         """Constructs the data tensor for an object.
 
@@ -205,18 +210,62 @@ class DashDataset:
                 concatenated with the original image of the scene, with the
                 object cropped out. (RGB, HWC)
         """
+        rgb = rgb.copy()
         bbox = o.compute_bbox(mask)
         data = np.zeros((480, 480, 6)).astype(np.uint8)
+        input_rgb = rgb.copy()
         if bbox is None:
-            pass
             print(f"Bbox is None. Object: {o.to_json()}")
         else:
             x, y, w, h = bbox
-            seg = rgb[y : y + h, x : x + w, :].copy()
-            rgb[y : y + h, x : x + w, :] = 0.0
-            seg = cv2.resize(seg, (480, 480), interpolation=cv2.INTER_AREA)
+
+            # Set the object seg to zeros in the original RGB image.
+            input_rgb[mask == o.oid] = 0.0
+
+            # Create the segmentation image (maintain aspect ratio, use
+            # replicate padding).
+            # First, zero out everything in the RGB image except for the object
+            # segmentation.
+            rgb_with_only_seg = rgb.copy()
+            rgb_with_only_seg[mask != o.oid] = 0.0
+
+            # Crop the segmentation out using its bbox.
+            seg = rgb_with_only_seg[y : y + h, x : x + w, :]
+
+            # Compute the new dimensions to resize the segmentation to.
+            H, W, _ = seg.shape
+            if H > W:
+                aspect_ratio = H / W
+                resize_dims = (data_height, int(data_width / aspect_ratio))
+            else:
+                aspect_ratio = W / H
+                resize_dims = (int(data_height / aspect_ratio), data_width)
+            H_, W_ = resize_dims
+
+            # Resize the segmentation while maintaining aspect ratio.
+            seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
+
+            # Use replicate padding to make the seg image match the desired
+            # input data dimensions.
+            top_pad = (data_height - H_) // 2
+            left_pad = (data_width - W_) // 2
+            seg = cv2.copyMakeBorder(
+                src=seg,
+                top=top_pad,
+                bottom=data_height - H_ - top_pad,
+                left=left_pad,
+                right=data_width - W_ - left_pad,
+                borderType=cv2.BORDER_REPLICATE,
+            )
             data[:, :, :3] = seg
-        data[80:400, :, 3:6] = rgb
+
+            # input_rgb[y : y + h, x : x + w, :] = 0.0
+            # seg = rgb[y : y + h, x : x + w, :].copy()
+
+            # rgb_seg = rgb.copy()
+            # rgb_seg[mask != o.oid] = 0.0
+
+        data[80:400, :, 3:6] = input_rgb
         return data
 
     """ Image IDs. """

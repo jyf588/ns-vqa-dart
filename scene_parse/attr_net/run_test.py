@@ -24,7 +24,7 @@ def main():
     forward_prof = Profiler("forward")
     get_pred_prof = Profiler("get_pred")
 
-    print(f"Warning: Predictions are not currently being saved.")
+    # print(f"Warning: Predictions are not currently being saved.")
 
     count = 0
     preds = []
