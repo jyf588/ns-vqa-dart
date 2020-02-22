@@ -3,6 +3,7 @@ import imageio
 import json
 import numpy as np
 import os
+import time
 from typing import *
 
 from bullet.camera import BulletCamera
@@ -63,10 +64,29 @@ class DashDataset:
         """
         self.save_rgb(rgb=rgb, eid=self.eid)
         self.save_mask(mask=mask, eid=self.eid)
+        self.save_input_data(eid=self.eid, objects=objects, rgb=rgb, mask=mask)
         self.save_labels(objects=objects, camera=camera, eid=self.eid)
         self.eids.append(self.eid)
         self.save_example_ids(eids=self.eids)
         self.eid += 1
+
+    def save_input_data(
+        eid: int, objects: List[DashObject], rgb: np.ndarray, mask: np.ndarray
+    ):
+        """Save the data that will be used as input to the network.
+
+        Args:
+            eid: The example_id.
+            objects: A list of DashObjects in the scene.
+            rgb: The RGB image.
+            mask: The mask of the scene.
+        """
+        input_data_dir = os.path.join(
+            self.dataset_dir, "input_data", f"{eid:05}"
+        )
+        for o in objects:
+            data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
+            np.save()
 
     """ Objects. """
 
@@ -233,38 +253,34 @@ class DashDataset:
             seg = rgb_with_only_seg[y : y + h, x : x + w, :]
 
             # Compute the new dimensions to resize the segmentation to.
-            H, W, _ = seg.shape
-            if H > W:
-                aspect_ratio = H / W
+            if h > w:
+                aspect_ratio = h / w
                 resize_dims = (data_height, int(data_width / aspect_ratio))
             else:
-                aspect_ratio = W / H
+                aspect_ratio = w / h
                 resize_dims = (int(data_height / aspect_ratio), data_width)
             H_, W_ = resize_dims
 
             # Resize the segmentation while maintaining aspect ratio.
             seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
+            seg_padded = np.zeros((data_height, data_width, 3), dtype=np.uint8)
+            top_pad = (data_height - H_) // 2
+            left_pad = (data_width - W_) // 2
+            seg_padded[top_pad : top_pad + H_, left_pad : left_pad + W_] = seg
 
             # Use replicate padding to make the seg image match the desired
             # input data dimensions.
-            top_pad = (data_height - H_) // 2
-            left_pad = (data_width - W_) // 2
-            seg = cv2.copyMakeBorder(
-                src=seg,
-                top=top_pad,
-                bottom=data_height - H_ - top_pad,
-                left=left_pad,
-                right=data_width - W_ - left_pad,
-                borderType=cv2.BORDER_REPLICATE,
-            )
-            data[:, :, :3] = seg
-
-            # input_rgb[y : y + h, x : x + w, :] = 0.0
-            # seg = rgb[y : y + h, x : x + w, :].copy()
-
-            # rgb_seg = rgb.copy()
-            # rgb_seg[mask != o.oid] = 0.0
-
+            # top_pad = (data_height - H_) // 2
+            # left_pad = (data_width - W_) // 2
+            # seg = cv2.copyMakeBorder(
+            #     src=seg,
+            #     top=top_pad,
+            #     bottom=data_height - H_ - top_pad,
+            #     left=left_pad,
+            #     right=data_width - W_ - left_pad,
+            #     borderType=cv2.BORDER_REPLICATE,
+            # )
+            data[:, :, :3] = seg_padded
         data[80:400, :, 3:6] = input_rgb
         return data
 
