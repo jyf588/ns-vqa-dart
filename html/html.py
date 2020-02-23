@@ -14,7 +14,8 @@ END = "</tbody></table></body></html>"
 def main(args: argparse.Namespace):
     with open(f"html/index.html", "w") as f:
         f.write(START)
-        scene_captions = [f"Input RGB", "Rerendered Pred", "Mask", "Scene RGB"]
+        # scene_captions = [f"Input RGB", "Rerendered Pred", "Mask", "Scene RGB"]
+        scene_captions = [f"Input RGB", "Rerendered Pred"]
         f.write(create_caption_row(scene_captions))
 
         for i in tqdm(range(args.start_img_id, args.end_img_id)):
@@ -32,13 +33,13 @@ def main(args: argparse.Namespace):
             pred_path = f"{args.analysis_dir}/pred/{i:05}.png"
             mask_path = f"{args.analysis_dir}/mask/{i:05}.png"
 
-            # scene_paths = [
-            #     rgb_path,
-            #     pred_path,
-            #     mask_path,
-            #     rgb_path,
-            # ] + oid2paths[first_oid]
-            scene_paths = [rgb_path, pred_path, mask_path, rgb_path]
+            scene_paths = [
+                rgb_path,
+                pred_path,
+                # mask_path,
+                # rgb_path,
+            ] + oid2paths[first_oid]
+            # scene_paths = [rgb_path, pred_path, mask_path, rgb_path]
 
             # captions = ["" for _ in range(len(panel_labels))] + [
             #     "<br>".join(captions) for captions in obj_mask_captions
@@ -47,11 +48,10 @@ def main(args: argparse.Namespace):
             # f.write(get_caption_row(i, panel_labels))
             rows.append(create_img_row(paths=scene_paths))
 
-            # for oid in later_oids:
-            #     paths = [
-            #         f"datasets/{args.dataset}/rgb/{i:05}.png"
-            #     ] + oid2paths[oid]
-            #     rows.append(create_img_row(paths=[""] * 3 + paths))
+            for oid in later_oids:
+                # paths = [f"{args.dataset_dir}/rgb/{i:05}.png"] + oid2paths[oid]
+                # paths =
+                rows.append(create_img_row(paths=[""] * 2 + oid2paths[oid]))
 
             # for obj_i in range(len(gt_obj_paths)):
             #     gt_path = gt_obj_paths[obj_i]

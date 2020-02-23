@@ -82,7 +82,7 @@ class BulletRenderer:
                 h=o.height,
                 check_sizes=check_sizes,
             )
-        if oid is not None:
+        if oid is not None and o.color is not None:
             self.color_object(oid=oid, color=o.color)
         return oid
 

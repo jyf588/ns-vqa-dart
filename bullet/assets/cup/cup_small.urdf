@@ -13,7 +13,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-				<mesh filename="Cup/textured-0008192.obj" scale="1.0 1.0 1.0"/>
+				<mesh filename="Cup/textured-0008192.obj" scale="1.5 1.5 1.5"/>
       </geometry>
        <material name="white">
         <color rgba="1 1 1 1"/>

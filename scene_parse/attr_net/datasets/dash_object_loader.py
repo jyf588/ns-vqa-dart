@@ -82,10 +82,10 @@ class DashTorchDataset(Dataset):
         self.coordinate_frame = coordinate_frame
 
         self.transform_to_tensor = [transforms.ToTensor()]
-        # self.transforms = [
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
-        # ]
+        self.normalize = [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
+        ]
 
         self.resize_and_normalize = [
             transforms.ToPILImage(),
@@ -123,11 +123,14 @@ class DashTorchDataset(Dataset):
         """
         o = self.objects[idx]
 
+        # data = self.dataset.load_object_x(o=o)
+        # data = transforms.Compose(self.transform_to_tensor)(data)
+        # x = torch.zeros(6, self.height, self.width)
+        # x[:3] = transforms.Compose(self.resize_and_normalize)(data[:3])
+        # x[3:6] = transforms.Compose(self.resize_and_normalize)(data[3:6])
+
         data = self.dataset.load_object_x(o=o)
-        data = transforms.Compose(self.transform_to_tensor)(data)
-        x = torch.zeros(6, self.height, self.width)
-        x[:3] = transforms.Compose(self.resize_and_normalize)(data[:3])
-        x[3:6] = transforms.Compose(self.resize_and_normalize)(data[3:6])
+        x = transforms.Compose(self.normalize)(data)
 
         # x = np.zeros((self.height, self.width, 6), dtype=np.float32)
         # x = transforms.Compose(self.transforms)(x)
