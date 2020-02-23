@@ -66,7 +66,12 @@ class DashDataset:
         """
         self.save_rgb(rgb=rgb, eid=self.eid)
         self.save_mask(mask=mask, eid=self.eid)
-        self.save_input_data(eid=self.eid, objects=objects, rgb=rgb, mask=mask)
+
+        for o in objects:
+            # Associate each object with the image ID.
+            o.img_id = self.eid
+
+        self.save_input_data(objects=objects, rgb=rgb, mask=mask)
         self.save_labels(objects=objects, camera=camera, eid=self.eid)
         self.eids.append(self.eid)
         self.save_example_ids(eids=self.eids)
@@ -164,7 +169,6 @@ class DashDataset:
         use_position: bool,
         use_up_vector: bool,
         coordinate_frame: str,
-        exclude_y: bool,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Loads y data for a given object.
 
@@ -404,8 +408,6 @@ class DashDataset:
         json_dict = {"camera": camera.to_json(), "objects": []}
 
         for o in objects:
-            # Store the image ID that the object corresponds to.
-            o.img_id = eid
             json_dict["objects"].append(o.to_json())
 
         bullet.util.save_json(

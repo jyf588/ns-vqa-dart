@@ -55,7 +55,9 @@ def main(args: argparse.Namespace):
 
     # For each example, load the rgb image and mask.
     for img_id in tqdm(pred_img_ids):
-        gt_objects_world, camera, rgb, mask = dataset.load_example(eid=img_id)
+        gt_objects_world, camera, rgb, mask = dataset.load_example_for_eid(
+            eid=img_id
+        )
 
         # Convert the mask to an image.
         mask_img = convert_mask_to_img(mask=mask)

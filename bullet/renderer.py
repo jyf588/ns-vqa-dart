@@ -69,6 +69,11 @@ class BulletRenderer:
             oid = self.p.loadURDF(
                 os.path.join(self.urdf_dir, "lego.urdf"), basePosition=position
             )
+        elif o.shape == "cup":
+            oid = self.p.loadURDF(
+                os.path.join(self.urdf_dir, "cup/cup_small.urdf"),
+                basePosition=o.position,
+            )
         else:
             oid = self.generate_primitive_shape(
                 shape=o.shape,

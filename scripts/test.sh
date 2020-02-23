@@ -7,8 +7,8 @@ time python run_test.py \
     --output_path ~/outputs/ego_v008/test.json \
     --load_checkpoint_path ~/outputs/ego_v008/checkpoint_best.pt \
     --split_id 20000 \
-    --height 224 \
-    --width 224 \
+    --height 320 \
+    --width 320 \
     --pred_attr \
     --pred_size \
     --pred_position \

@@ -12,8 +12,6 @@ END = "</tbody></table></body></html>"
 
 
 def main(args: argparse.Namespace):
-    dataset_dir = f"/home/michelle/datasets/{args.dataset}"
-
     with open(f"html/index.html", "w") as f:
         f.write(START)
         scene_captions = [f"Input RGB", "Rerendered Pred", "Mask", "Scene RGB"]
@@ -22,7 +20,7 @@ def main(args: argparse.Namespace):
         for i in tqdm(range(args.start_img_id, args.end_img_id)):
             rows = []
 
-            oid2paths = get_object_results(dataset=args.dataset, i=i)
+            oid2paths = get_object_results(analysis_dir=args.analysis_dir, i=i)
             oids = list(oid2paths.keys())
             first_oid = oids[0]
             later_oids = oids[1:]
@@ -30,9 +28,9 @@ def main(args: argparse.Namespace):
             #     label_type="pred", dataset=args.dataset, i=i
             # )
 
-            rgb_path = f"datasets/{args.dataset}/rgb/{i:05}.png"
-            pred_path = f"analysis/{args.dataset}/pred/{i:05}.png"
-            mask_path = f"analysis/{args.dataset}/mask/{i:05}.png"
+            rgb_path = f"{args.dataset_dir}/rgb/{i:05}.png"
+            pred_path = f"{args.analysis_dir}/pred/{i:05}.png"
+            mask_path = f"{args.analysis_dir}/mask/{i:05}.png"
 
             # scene_paths = [
             #     rgb_path,
@@ -80,7 +78,7 @@ def create_img_row(paths: List[str]) -> str:
         row: The HTML code for the row.
     """
     td_elems = "\n".join(
-        [f'<td><img width="256" src={path}></td>' for path in paths]
+        [f'<td><img width="224" src={path}></td>' for path in paths]
     )
 
     row = f"""
@@ -114,12 +112,11 @@ def create_caption_row(captions: List[str]) -> str:
     return row
 
 
-def get_object_results(dataset: str, i: int):
+def get_object_results(analysis_dir: str, i: int):
     """Gets individual object results.
 
     Args:
-        label_type: Either pred or gt.
-        dataset: The name of the dataset.
+        analysis_dir: The directory containing the analysis images.
         i: The image ID.
     
     Returns:
@@ -141,8 +138,8 @@ def get_object_results(dataset: str, i: int):
                 pred_caption.json
     """
     oid2paths = {}
-    objs_dir_rel = f"analysis/{dataset}/{i:05}/objs"
-    objs_dir_abs = f"/home/michelle/analysis/{dataset}/{i:05}/objs"
+    objs_dir_rel = f"{analysis_dir}/{i:05}/objs"
+    objs_dir_abs = f"/home/michelle/{analysis_dir}/{i:05}/objs"
     for oid in os.listdir(objs_dir_abs):
         oid_dir = os.path.join(objs_dir_rel, oid)
 
@@ -175,7 +172,16 @@ def get_object_results(dataset: str, i: int):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", type=str, required=True, help="The name of the dataset."
+        "--dataset_dir",
+        type=str,
+        required=True,
+        help="The directory of the dataset images. Directory should be relative to the home directory.",
+    )
+    parser.add_argument(
+        "--analysis_dir",
+        type=str,
+        required=True,
+        help="The directory of the analysis images. Directory should be relative to the home directory.",
     )
     parser.add_argument(
         "--start_img_id", type=int, required=True, help="The start image id."

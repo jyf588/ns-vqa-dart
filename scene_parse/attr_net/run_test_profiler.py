@@ -33,7 +33,7 @@ def main():
     count = 0
     preds = []
     start = time.time()
-    for batch_iter, data in enumerate(tqdm(test_loader)):
+    for batch_iter, (data, _, _) in enumerate(tqdm(test_loader)):
         # for batch_iter in tqdm(range(n_batches)):
         #     data = np.zeros((7, 6, 480, 480), dtype=np.float32)
         #     # data = (data - 0.5) / 0.225
