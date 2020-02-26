@@ -18,7 +18,7 @@ import bullet.util
 
 
 def main(args: argparse.Namespace):
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.html_dir, exist_ok=True)
 
     # Create an instance of a DashDataset.
     dataset = DashDataset(dataset_dir=args.dataset_dir)
@@ -54,13 +54,13 @@ def main(args: argparse.Namespace):
     pred_img_ids = list(img_id2oid2pred_object.keys())
 
     # For each example, load the rgb image and mask.
+    img_id2paths = {}
     for img_id in tqdm(pred_img_ids):
+        img_id2paths[img_id] = {}
+
         gt_objects_world, camera, rgb, mask = dataset.load_example_for_eid(
             eid=img_id
         )
-
-        # Convert the mask to an image.
-        mask_img = convert_mask_to_img(mask=mask)
 
         # Rerender the scene from the GT labels.
         rerendered_gt_world = rerender(objects=gt_objects_world, camera=camera)
@@ -79,43 +79,50 @@ def main(args: argparse.Namespace):
         )
 
         name2img = {
-            "mask": mask_img,
+            "rgb": rgb,
+            "mask": convert_mask_to_img(mask=mask),
             "gt_world": rerendered_gt_world,
             "gt_cam": rerendered_gt_cam,
             "pred": rerendered_pred,
         }
 
+        rel_img_dir = os.path.join("images", f"{img_id:05}")
+        abs_img_dir = os.path.join(args.html_dir, rel_img_dir)
+        os.makedirs(abs_img_dir, exist_ok=True)
+
         # Write the scene-level information.
         for k, img in name2img.items():
-            img_dir = os.path.join(args.output_dir, k)
-            os.makedirs(img_dir, exist_ok=True)
-            path = os.path.join(img_dir, f"{img_id:05}.png")
-            imageio.imwrite(path, img)
+            rel_path = os.path.join(rel_img_dir, f"{k}.png")
+            abs_path = os.path.join(abs_img_dir, f"{k}.png")
+            imageio.imwrite(abs_path, img)
+            img_id2paths[img_id][k] = rel_path
 
-        # Create object masks.
+        # Write object-level images.
+        object_paths = {}
         oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
-        for oid in oid2pred_object.keys():
-            pred_o = oid2pred_object[oid]
-            gt_o = oid2gt_objects_world[oid]
-            data = dataset.compute_data_from_rgb_and_mask(
-                o=gt_o, rgb=rgb, mask=mask
-            )
+        for oid, o in oid2gt_objects_world.items():
+            data = dataset.load_object_x(o=o)
 
-            input_seg = data[:, :, :3]
-            input_rgb = data[:, :, 3:6]
+            name2img = {
+                "input_seg": data[:, :, :3],
+                "input_rgb": data[:, :, 3:6],
+            }
 
-            save_obj_results(
-                oid=oid,
-                img_id=img_id,
-                input_seg=input_seg,
-                # new_seg=new_seg,
-                # seg_black=seg_black,
-                input_rgb=input_rgb,
-                # input_rgb_seg=input_rgb_seg,
-                gt_o=gt_o,
-                pred_o=pred_o,
-                camera=camera,
-            )
+            rel_obj_dir = os.path.join(rel_img_dir, "objects", f"{oid:02}")
+            abs_obj_dir = os.path.join(abs_img_dir, "objects", f"{oid:02}")
+            os.makedirs(abs_obj_dir, exist_ok=True)
+            object_paths[oid] = {}
+            for k, img in name2img.items():
+                rel_path = os.path.join(rel_obj_dir, f"{k}.png")
+                abs_path = os.path.join(abs_obj_dir, f"{k}.png")
+                imageio.imwrite(abs_path, img)
+                object_paths[oid][k] = rel_path
+
+        img_id2paths[img_id]["objects"] = object_paths
+
+    # Save the paths.
+    path = os.path.join(args.html_dir, "paths.json")
+    bullet.util.save_json(path=path, data=img_id2paths)
 
 
 def save_obj_results(
@@ -272,10 +279,10 @@ if __name__ == "__main__":
         help="The path to the predictions JSON.",
     )
     parser.add_argument(
-        "--output_dir",
+        "--html_dir",
         type=str,
         required=True,
-        help="The directory to save the visualizations.",
+        help="The directory to run the HTML page from.",
     )
     parser.add_argument(
         "--coordinate_frame",

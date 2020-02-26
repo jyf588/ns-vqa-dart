@@ -81,18 +81,18 @@ class DashTorchDataset(Dataset):
         self.use_up_vector = use_up_vector
         self.coordinate_frame = coordinate_frame
 
-        self.transform_to_tensor = [transforms.ToTensor()]
+        # self.transform_to_tensor = [transforms.ToTensor()]
         self.normalize = [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
         ]
 
-        self.resize_and_normalize = [
-            transforms.ToPILImage(),
-            transforms.Resize((self.height, self.width)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5] * 3, std=[0.225] * 3),
-        ]
+        # self.resize_and_normalize = [
+        #     transforms.ToPILImage(),
+        #     transforms.Resize((self.height, self.width)),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(mean=[0.5] * 3, std=[0.225] * 3),
+        # ]
 
         self.exclude_y = split == "test"
 
@@ -123,17 +123,8 @@ class DashTorchDataset(Dataset):
         """
         o = self.objects[idx]
 
-        # data = self.dataset.load_object_x(o=o)
-        # data = transforms.Compose(self.transform_to_tensor)(data)
-        # x = torch.zeros(6, self.height, self.width)
-        # x[:3] = transforms.Compose(self.resize_and_normalize)(data[:3])
-        # x[3:6] = transforms.Compose(self.resize_and_normalize)(data[3:6])
-
         data = self.dataset.load_object_x(o=o)
         x = transforms.Compose(self.normalize)(data)
-
-        # x = np.zeros((self.height, self.width, 6), dtype=np.float32)
-        # x = transforms.Compose(self.transforms)(x)
 
         if self.exclude_y:
             return x, o.img_id, o.oid

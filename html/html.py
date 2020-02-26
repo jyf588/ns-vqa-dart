@@ -1,4 +1,16 @@
-"""Generates the HTML page for visualization."""
+"""Generates the HTML page for visualization.
+
+Structure:
+    <args.html_dir>/
+        paths.json
+        index.html
+        images/
+            <img_id>/
+                <img_name>.png
+                objs/
+                    <oid>/
+                        <img_name>.png
+"""
 import argparse
 import os
 from tqdm import tqdm
@@ -7,38 +19,55 @@ from typing import *
 from bullet.dash_dataset import DashDataset
 import bullet.util
 
-START = "<html><head><style>* {font-size: 15px;}</style></head><body><table><tbody>"
-END = "</tbody></table></body></html>"
+HEADER = "<html><head><style>* {font-size: 15px;}</style></head><body><table><tbody>"
+FOOTER = "</tbody></table></body></html>"
 
 
 def main(args: argparse.Namespace):
-    with open(f"html/index.html", "w") as f:
-        f.write(START)
+    path = os.path.join(args.html_dir, "paths.json")
+    img_id2paths = bullet.util.load_json(path=path)
+
+    index_path = os.path.join(args.html_dir, "index.html")
+
+    with open(index_path, "w") as f:
+        f.write(HEADER)
         # scene_captions = [f"Input RGB", "Rerendered Pred", "Mask", "Scene RGB"]
-        scene_captions = [f"Input RGB", "Rerendered Pred"]
-        f.write(create_caption_row(scene_captions))
+        scene_tags = ["rgb", "pred"]
+        object_tags = ["input_seg", "input_rgb"]
+        f.write(create_caption_row(scene_tags))
 
-        for i in tqdm(range(args.start_img_id, args.end_img_id)):
+        for img_id, paths in img_id2paths.items():
             rows = []
+            rows.append(create_img_row(paths=[paths[t] for t in scene_tags]))
 
-            oid2paths = get_object_results(analysis_dir=args.analysis_dir, i=i)
-            oids = list(oid2paths.keys())
-            first_oid = oids[0]
-            later_oids = oids[1:]
+            object_paths = paths["objects"]
+            for oid, paths in object_paths.items():
+                rows.append(
+                    create_img_row(
+                        paths=[""] * 2 + [paths[t] for t in object_tags]
+                    )
+                )
+
+            # oid2paths = get_object_results(
+            #     analysis_dir=args.analysis_dir, i=img_id
+            # )
+            # oids = list(oid2paths.keys())
+            # first_oid = oids[0]
+            # later_oids = oids[1:]
             # pred_obj_paths, pred_obj_captions = get_object_results(
             #     label_type="pred", dataset=args.dataset, i=i
             # )
 
-            rgb_path = f"{args.dataset_dir}/rgb/{i:05}.png"
-            pred_path = f"{args.analysis_dir}/pred/{i:05}.png"
-            mask_path = f"{args.analysis_dir}/mask/{i:05}.png"
+            # rgb_path = f"{args.analysis_dir}/rgb/{i:05}.png"
+            # pred_path = f"{args.analysis_dir}/pred/{i:05}.png"
+            # mask_path = f"{args.analysis_dir}/mask/{i:05}.png"
 
-            scene_paths = [
-                rgb_path,
-                pred_path,
-                # mask_path,
-                # rgb_path,
-            ] + oid2paths[first_oid]
+            # scene_paths = [
+            #     rgb_path,
+            #     pred_path,
+            #     # mask_path,
+            #     # rgb_path,
+            # ] + oid2paths[first_oid]
             # scene_paths = [rgb_path, pred_path, mask_path, rgb_path]
 
             # captions = ["" for _ in range(len(panel_labels))] + [
@@ -46,12 +75,11 @@ def main(args: argparse.Namespace):
             # ]
 
             # f.write(get_caption_row(i, panel_labels))
-            rows.append(create_img_row(paths=scene_paths))
 
-            for oid in later_oids:
-                # paths = [f"{args.dataset_dir}/rgb/{i:05}.png"] + oid2paths[oid]
-                # paths =
-                rows.append(create_img_row(paths=[""] * 2 + oid2paths[oid]))
+            # for oid in later_oids:
+            #     # paths = [f"{args.dataset_dir}/rgb/{i:05}.png"] + oid2paths[oid]
+            #     # paths =
+            #     rows.append(create_img_row(paths=[""] * 2 + oid2paths[oid]))
 
             # for obj_i in range(len(gt_obj_paths)):
             #     gt_path = gt_obj_paths[obj_i]
@@ -65,7 +93,7 @@ def main(args: argparse.Namespace):
 
             for row in rows:
                 f.write(row)
-        f.write(END)
+        f.write(FOOTER)
 
 
 def create_img_row(paths: List[str]) -> str:
@@ -172,22 +200,10 @@ def get_object_results(analysis_dir: str, i: int):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset_dir",
+        "--html_dir",
         type=str,
         required=True,
-        help="The directory of the dataset images. Directory should be relative to the home directory.",
-    )
-    parser.add_argument(
-        "--analysis_dir",
-        type=str,
-        required=True,
-        help="The directory of the analysis images. Directory should be relative to the home directory.",
-    )
-    parser.add_argument(
-        "--start_img_id", type=int, required=True, help="The start image id."
-    )
-    parser.add_argument(
-        "--end_img_id", type=int, required=True, help="The end image id."
+        help="The directory to run the HTML page from.",
     )
     args = parser.parse_args()
     main(args)

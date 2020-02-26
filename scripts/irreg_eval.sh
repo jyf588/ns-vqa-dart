@@ -3,7 +3,7 @@ cd scene_parse/attr_net
 time python run_test.py \
     --dataset dash \
     --run_dir ~/outputs/cup \
-    --dataset_dir ~/datasets/cup \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
     --output_path ~/outputs/cup/test.json \
     --load_checkpoint_path ~/outputs/ego_v008/checkpoint_best.pt \
     --split_id 0 \
@@ -19,14 +19,12 @@ time python run_test.py \
 cd ../..
 
 python html/html_images.py \
-    --dataset_dir ~/datasets/cup \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
 	--pred_path ~/outputs/cup/test.json \
-    --output_dir ~/analysis/cup \
+    --html_dir ~/analysis/cup \
     --coordinate_frame camera \
     --n_examples 10
 
 python html/html.py \
-    --dataset_dir datasets/cup \
-    --analysis_dir analysis/cup \
-    --start_img_id 0 \
-    --end_img_id 10
+    --html_dir ~/analysis/cup
+    
