@@ -1,18 +1,10 @@
 import pybullet as p
 import pybullet_data
 
-draw = 1
-printtext = 1
-
-if draw:
-    p.connect(p.GUI)
-else:
-    p.connect(p.DIRECT)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
-r2d2 = p.loadURDF("r2d2.urdf")
-
 
 def drawAABB(aabb):
+    aabbMin = aabb[0]
+    aabbMax = aabb[1]
     f = [aabbMin[0], aabbMin[1], aabbMin[2]]
     t = [aabbMax[0], aabbMin[1], aabbMin[2]]
     p.addUserDebugLine(f, t, [1, 0, 0])
@@ -58,17 +50,18 @@ def drawAABB(aabb):
     p.addUserDebugLine(f, t, [1, 1, 1])
 
 
-aabb = p.getAABB(r2d2)
-aabbMin = aabb[0]
-aabbMax = aabb[1]
-if printtext:
-    print(aabbMin)
-    print(aabbMax)
-if draw == 1:
-    drawAABB(aabb)
+def main():
+    draw = 1
+    printtext = 1
 
-for i in range(p.getNumJoints(r2d2)):
-    aabb = p.getAABB(r2d2, i)
+    if draw:
+        p.connect(p.GUI)
+    else:
+        p.connect(p.DIRECT)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
+    r2d2 = p.loadURDF("r2d2.urdf")
+
+    aabb = p.getAABB(r2d2)
     aabbMin = aabb[0]
     aabbMax = aabb[1]
     if printtext:
@@ -77,7 +70,20 @@ for i in range(p.getNumJoints(r2d2)):
     if draw == 1:
         drawAABB(aabb)
 
-while 1:
-    a = 0
-    p.stepSimulation()
+    for i in range(p.getNumJoints(r2d2)):
+        aabb = p.getAABB(r2d2, i)
+        aabbMin = aabb[0]
+        aabbMax = aabb[1]
+        if printtext:
+            print(aabbMin)
+            print(aabbMax)
+        if draw == 1:
+            drawAABB(aabb)
 
+    while 1:
+        a = 0
+        p.stepSimulation()
+
+
+if __name__ == '__main__':
+    main()
