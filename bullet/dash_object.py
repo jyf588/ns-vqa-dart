@@ -225,7 +225,7 @@ class DashObject:
                 v = [float(f"{v_i:.2f}") for v_i in v]
             elif type(v) == float:
                 v = f"{v:.2f}"
-            if k in ["img_id", "orientation", "up_vector"]:
+            if k in ["img_id", "orientation", "up_vector", "oid"]:
                 continue
             str_list.append(f"{k}: {v}")
         return str_list

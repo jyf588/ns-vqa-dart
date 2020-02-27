@@ -1,6 +1,6 @@
 python bullet/generate.py \
     --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
-    --n_examples 15
+    --n_examples 2
 
 cd scene_parse/attr_net
 
@@ -11,7 +11,7 @@ time python run_test.py \
     --output_path ~/outputs/cup/test.json \
     --load_checkpoint_path ~/outputs/ego_v008/checkpoint_best.pt \
     --start_id 0 \
-    --end_id 14 \
+    --end_id 1 \
     --height 480 \
     --width 480 \
     --pred_attr \
