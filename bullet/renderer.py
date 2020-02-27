@@ -61,13 +61,9 @@ class BulletRenderer:
             oid: The object ID.
         """
         if o.shape == "lego":
-            # Modify the position because currently origin of lego is at left
-            # back corner on base.
-            position = o.position
-            position[0] -= 0.04
-            position[1] -= 0.04
             oid = self.p.loadURDF(
-                os.path.join(self.urdf_dir, "lego.urdf"), basePosition=position
+                os.path.join(self.urdf_dir, "lego.urdf"),
+                basePosition=o.position,
             )
         elif o.shape == "cup":
             oid = self.p.loadURDF(

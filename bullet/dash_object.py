@@ -221,13 +221,11 @@ class DashObject:
         str_list = []
         json_dict = self.to_json()
         for k, v in json_dict.items():
-            if k == "orientation":
-                continue
             if type(v) == list:
                 v = [float(f"{v_i:.2f}") for v_i in v]
             elif type(v) == float:
                 v = f"{v:.2f}"
-            if k in ["img_id", "orientation"]:
+            if k in ["img_id", "orientation", "up_vector"]:
                 continue
             str_list.append(f"{k}: {v}")
         return str_list
