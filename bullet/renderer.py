@@ -61,13 +61,9 @@ class BulletRenderer:
             oid: The object ID.
         """
         if o.shape == "lego":
-            # Modify the position because currently origin of lego is at left
-            # back corner on base.
-            position = o.position
-            position[0] -= 0.04
-            position[1] -= 0.04
             oid = self.p.loadURDF(
-                os.path.join(self.urdf_dir, "lego.urdf"), basePosition=position
+                os.path.join(self.urdf_dir, "lego.urdf"),
+                basePosition=o.position,
             )
         elif o.shape == "cup":
             oid = self.p.loadURDF(
@@ -109,8 +105,7 @@ class BulletRenderer:
 
         Args:
             shape: The name of the shape to generate.
-            position: The (x, y, z) position of the center of the base, in
-                world coordinates.
+            com_position: The (x, y, z) position of the COM, in world coordinates.
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
             check_sizes: Whether to check that the sizes are valid for various
@@ -152,7 +147,7 @@ class BulletRenderer:
             baseInertialFramePosition=[0, 0, 0],
             baseCollisionShapeIndex=collisionShapeId,
             baseVisualShapeIndex=visualShapeId,
-            basePosition=position,
+            basePosition=position,  # Pybullet expects COM.
         )
         return oid
 

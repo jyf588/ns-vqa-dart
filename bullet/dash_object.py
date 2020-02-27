@@ -221,13 +221,11 @@ class DashObject:
         str_list = []
         json_dict = self.to_json()
         for k, v in json_dict.items():
-            if k == "orientation":
-                continue
             if type(v) == list:
                 v = [float(f"{v_i:.2f}") for v_i in v]
             elif type(v) == float:
                 v = f"{v:.2f}"
-            if k in ["img_id", "orientation"]:
+            if k in ["img_id", "orientation", "up_vector", "oid"]:
                 continue
             str_list.append(f"{k}: {v}")
         return str_list
@@ -378,7 +376,7 @@ class DashRobot:
         self.robot_id = self.render_robot()
 
         # The robot's head camera.
-        self.camera = BulletCamera(use_default_camera=False, offset=cam_offset)
+        self.camera = BulletCamera(offset=cam_offset)
 
         self.axis2joint_name = {
             "roll": head_roll_joint_name,

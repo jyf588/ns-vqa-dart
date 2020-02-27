@@ -49,6 +49,8 @@ def main(args: argparse.Namespace):
         colors=["red"],
         radius_bounds=(0.04, 0.04),
         height_bounds=(0.18, 0.18),
+        # x_bounds=(0.0, 0.4),
+        # y_bounds=(-0.5, 0.5),
         x_bounds=(0.2, 0.2),
         y_bounds=(0.0, 0.0),
         z_bounds=(0.0, 0.0),

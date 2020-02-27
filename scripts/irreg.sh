@@ -30,5 +30,5 @@ python bullet/html_images.py \
     --coordinate_frame camera
 
 python bullet/html.py \
-    --html_dir ~/html/cup
-    
+    --html_dir ~/html/cup \
+    --show_objects

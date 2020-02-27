@@ -8,12 +8,16 @@ import bullet.util
 
 
 class BulletCamera:
-    def __init__(self, use_default_camera: bool, offset=[0.0, 0.0, 0.0]):
+    def __init__(
+        self,
+        offset: Optional[List[float]] = [0.0, 0.0, 0.0],
+        init_type: Optional[str] = None,
+    ):
         """
         Args:
             p: The pybullet client.
-            use_default_camera: Whether to use the default camera.
             offset: The position offset to apply.
+            init_type: The type of camera to initialize with.
 
         Attributes:
             p: The pybullet client.
@@ -61,9 +65,11 @@ class BulletCamera:
             0.0,
         ]
 
-        self.use_default_camera = use_default_camera
-        if use_default_camera:
+        self.init_type = init_type
+        if init_type == "default":
             self.setup_default_camera()
+        elif init_type == "z_axis":
+            self.setup_axis_camera(axis="z")
 
     def setup_default_camera(self):
         """Sets the camera to the default pose, which is behind the robot arm
@@ -75,6 +81,24 @@ class BulletCamera:
             distance=0.81,
             yaw=270.0,
             pitch=-30.0,
+            roll=0.0,
+            upAxisIndex=2,
+        )
+
+    def setup_axis_camera(self, axis: str):
+        """Sets the camera to be axis-aligned with a user-specified axis.
+
+        Args:
+            axis: The axis to align with.
+        """
+        if axis != "z":
+            raise NotImplementedError
+        self.target_position = [0.25, 0.0, 0.0]
+        self.view_mat = self.p.computeViewMatrixFromYawPitchRoll(
+            cameraTargetPosition=self.target_position,
+            distance=0.81,
+            yaw=270.0,
+            pitch=0.0,
             roll=0.0,
             upAxisIndex=2,
         )
@@ -157,7 +181,7 @@ class BulletCamera:
 
     def to_json(self) -> Dict:
         json_dict = {
-            "use_default_camera": self.use_default_camera,
+            "init_type": self.init_type,
             "H": self.H,
             "W": self.W,
             "position": self.position,
@@ -184,9 +208,9 @@ def from_json(json_dict: Dict) -> BulletCamera:
     Returns:
         camera: BulletCamera.
     """
-    use_default_camera = json_dict["use_default_camera"]
-    camera = BulletCamera(use_default_camera=use_default_camera)
-    if not use_default_camera:
+    init_type = json_dict["init_type"]
+    camera = BulletCamera(init_type=init_type)
+    if init_type is None:
         camera.set_pose(
             position=json_dict["position"], rotation=json_dict["rotation"]
         )
