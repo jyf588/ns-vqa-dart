@@ -31,23 +31,31 @@ def main(args: argparse.Namespace):
 
     with open(index_path, "w") as f:
         f.write(HEADER)
-        scene_tags = ["rgb", "pred"]
-        object_tags = ["input_seg", "input_rgb", "gt", "pred"]
+        scene_tags = ["gt_world", "pred", "gt_world_z", "pred_z"]
+        object_tags = [
+            "input_seg",
+            "input_rgb",
+            "gt",
+            "pred",
+            "gt_z",
+            "pred_z",
+        ]
         f.write(create_caption_row(scene_tags + object_tags))
 
+        rows = []
         for img_id, scene_paths in img_id2paths.items():
             scene_row = create_img_row(
                 paths=[scene_paths[t] for t in scene_tags]
             )
 
-            rows = [scene_row]
+            rows.append(scene_row)
 
             if args.show_objects:
                 oid2obj_paths = scene_paths["objects"]
                 for oid, obj_paths in oid2obj_paths.items():
                     rows.append(
                         create_img_row(
-                            paths=[""] * 2
+                            paths=[""] * len(scene_tags)
                             + [obj_paths[t] for t in object_tags]
                         )
                     )
@@ -62,12 +70,13 @@ def main(args: argparse.Namespace):
                     pred_caption = "<br>".join(pred_caption)
                     rows.append(
                         create_caption_row(
-                            [""] * 4 + [gt_caption, pred_caption]
+                            [""] * (len(scene_tags) + 2)
+                            + [gt_caption, pred_caption]
                         )
                     )
 
-            for row in rows:
-                f.write(row)
+        for row in rows:
+            f.write(row)
         f.write(FOOTER)
 
 

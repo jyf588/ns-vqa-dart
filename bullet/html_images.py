@@ -63,27 +63,31 @@ def main(args: argparse.Namespace):
         )
 
         # Rerender the scene from the GT labels.
-        rerendered_gt_world = rerender(objects=gt_objects_world, camera=camera)
+        rend_gt_world, rend_gt_world_z = rerender(
+            objects=gt_objects_world, camera=camera
+        )
 
         # Rerender GT using world -> cam -> world.
         gt_objects_cam = world2cam2world(
             world_objects=gt_objects_world, camera=camera
         )
-        rerendered_gt_cam = rerender(objects=gt_objects_cam, camera=camera)
+        rend_gt_cam, _ = rerender(objects=gt_objects_cam, camera=camera)
 
         # Rerender the scene from the model predictions.
         oid2pred_object = img_id2oid2pred_object[img_id]
         pred_objects = list(oid2pred_object.values())
-        rerendered_pred = rerender(
+        rend_pred, rend_pred_z = rerender(
             objects=pred_objects, camera=camera, check_sizes=False
         )
 
         name2img = {
             "rgb": rgb,
             "mask": convert_mask_to_img(mask=mask),
-            "gt_world": rerendered_gt_world,
-            "gt_cam": rerendered_gt_cam,
-            "pred": rerendered_pred,
+            "gt_world": rend_gt_world,
+            "gt_world_z": rend_gt_world_z,
+            "gt_cam": rend_gt_cam,
+            "pred": rend_pred,
+            "pred_z": rend_pred_z,
         }
 
         rel_img_dir = os.path.join("images", f"{img_id:05}")
@@ -107,14 +111,20 @@ def main(args: argparse.Namespace):
             gt_o = oid2gt_objects_world[oid]
             pred_o = oid2pred_object[oid]
 
-            gt = rerender(objects=[gt_o], camera=camera, check_sizes=False)
-            pred = rerender(objects=[pred_o], camera=camera, check_sizes=False)
+            gt, gt_z = rerender(
+                objects=[gt_o], camera=camera, check_sizes=False
+            )
+            pred, pred_z = rerender(
+                objects=[pred_o], camera=camera, check_sizes=False
+            )
 
             name2img = {
                 "input_seg": data[:, :, :3],
                 "input_rgb": data[:, :, 3:6],
                 "gt": gt,
                 "pred": pred,
+                "gt_z": gt_z,
+                "pred_z": pred_z,
             }
 
             rel_obj_dir = os.path.join(rel_img_dir, "objects", f"{oid:02}")
@@ -197,17 +207,21 @@ def rerender(
 
     Returns:
         rerendered: The rerendered image.
+        rerendered_z: The rerendered image aligned with z axis.
     """
     p = bullet.util.create_bullet_client(mode="direct")
     renderer = BulletRenderer(p=p)
     objects_to_render = objects
-    renderer.render_table(DashTable())
+
     [
         renderer.render_object(o=o, check_sizes=check_sizes)
         for o in objects_to_render
     ]
+    rerendered_z, _ = BulletCamera(init_type="z_axis").get_rgb_and_mask(p=p)
+    renderer.render_table(DashTable())
     rerendered, _ = camera.get_rgb_and_mask(p=p)
-    return rerendered
+
+    return rerendered, rerendered_z
 
 
 def world2cam2world(
