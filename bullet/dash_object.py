@@ -70,6 +70,19 @@ class DashObject:
         self.oid = oid
         self.img_id = img_id
 
+    def mask_area(self, mask: np.ndarray) -> int:
+        """Computes the object mask area.
+
+        Args:
+            mask: The mask for all objects in a scene.
+        
+        Returns:
+            area: The number of mask pixels that the object has.
+        """
+        rle = self.compute_object_mask(mask=mask)
+        area = mask_util.area(rle)
+        return area
+
     def compute_bbox(self, mask: np.ndarray) -> Tuple[int]:
         """Compute the object bounding box.
 
@@ -79,13 +92,8 @@ class DashObject:
         Returns:
             (x, y, w, h): The bounding box of the object.
         """
-        # Binary mask of the object.
-        obj_mask = mask == self.oid
+        rle = self.compute_object_mask(mask=mask)
 
-        # Mask to bbox.
-        mask = np.asfortranarray(obj_mask, dtype="uint8")
-        rle = mask_util.encode(mask)
-        rle["counts"] = rle["counts"].decode("ASCII")
         if mask_util.area(rle) > 0:
             bbox = mask_util.toBbox(rle)  # xywh
 
@@ -94,6 +102,24 @@ class DashObject:
             return x, y, w, h
         else:
             return None
+
+    def compute_object_mask(self, mask: np.ndarray) -> List[int]:
+        """Computes the object mask, in RLE format.
+
+        Args:
+            mask: The mask of all objects in a scene.
+        
+        Returns:
+            rle: The object mask, in RLE format.
+        """
+        # Binary mask of the object.
+        obj_mask = mask == self.oid
+
+        # Mask to bbox.
+        mask = np.asfortranarray(obj_mask, dtype="uint8")
+        rle = mask_util.encode(mask)
+        rle["counts"] = rle["counts"].decode("ASCII")
+        return rle
 
     def to_y_vec(
         self,

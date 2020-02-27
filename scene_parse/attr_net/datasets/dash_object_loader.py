@@ -70,9 +70,7 @@ class DashTorchDataset(Dataset):
 
         # Load object examples included in the image ID bounds.
         self.objects = self.dataset.load_objects(
-            exclude_out_of_view=False,
-            min_img_id=min_img_id,
-            max_img_id=max_img_id,
+            min_img_id=min_img_id, max_img_id=max_img_id
         )
 
         self.use_attr = use_attr

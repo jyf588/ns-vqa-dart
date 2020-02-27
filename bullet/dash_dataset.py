@@ -15,17 +15,22 @@ KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json", "input_data": "npy"}
 
 
 class DashDataset:
-    def __init__(self, dataset_dir: str):
+    def __init__(self, dataset_dir: str, threshold_obj_area=0):
         """
         Args:
             dataset_dir: The directory to save the dataset in.
+            threshold_obj_area: The threshold object area to include in the 
+                dataset.
         
         Attributes:
             dataset_dir: The directory to save the dataset in.
+            threshold_obj_area: The threshold object area to include in the 
+                dataset.
             eid: The example ID to assign to the next call to 
                 `self.save_example`.
         """
         self.dataset_dir = dataset_dir
+        self.threshold_obj_area = threshold_obj_area
         self.eid = 0
         self.eids = []
         self.profiler = Profiler()
@@ -64,12 +69,17 @@ class DashDataset:
             rgb: The RGB image of the scene.
             mask: The mask of the scene.
         """
+        # Filter out objects that are out-of-view.
+        objects = self.filter_objects_by_area(
+            objects=objects, mask=mask, threshold_area=self.threshold_obj_area
+        )
+
+        # Associate each object with the image ID.
+        for o in objects:
+            o.img_id = self.eid
+
         self.save_rgb(rgb=rgb, eid=self.eid)
         self.save_mask(mask=mask, eid=self.eid)
-
-        for o in objects:
-            # Associate each object with the image ID.
-            o.img_id = self.eid
 
         self.save_input_data(objects=objects, rgb=rgb, mask=mask)
         self.save_labels(objects=objects, camera=camera, eid=self.eid)
@@ -93,7 +103,6 @@ class DashDataset:
 
     def load_objects(
         self,
-        exclude_out_of_view: bool,
         min_img_id: Optional[int] = None,
         max_img_id: Optional[int] = None,
     ) -> List[DashObject]:
@@ -101,8 +110,6 @@ class DashDataset:
         IDs.
 
         Args:
-            exclude_out_of_view: Whether to exclude objects that are out of
-                view (i.e., mask area is zero).
             min_img_id: The minimum image ID, inclusive.
             max_img_id: The maximum image ID, inclusive.
         
@@ -113,44 +120,29 @@ class DashDataset:
         all_objects = []
         for sid in scene_ids:
             objects = self.load_objects_for_eid(eid=sid)
-            if exclude_out_of_view:
-                objects = self.filter_out_of_view_objects(objects=objects)
             all_objects += objects
         return all_objects
 
-    def filter_out_of_view_objects(
-        self, objects: List[DashObject]
+    def filter_objects_by_area(
+        self, objects: List[DashObject], mask: np.ndarray, threshold_area: int
     ) -> List[DashObject]:
-        """Computes the mask for each object and excludes objects that are out
-        of view, aka zero mask area objects.
+        """Computes the mask for each object and excludes objects with a mask
+        area less than a certain threshold.
 
         Args:
             objects: A list of objects.
+            mask: A mask of all the objects in the scene.
+            threshold_area: If any objects have an area greater than
+                this threshold area, they are included
         
         Returns:
-            filtered_objects: The same list of objects with out-of-view ones
-                excluded.
+            objects_to_keep: A list of objects to keep.
         """
-        filtered_objects = []
+        objects_to_keep = []
         for o in objects:
-            if not self.object_out_of_view(o):
-                filtered_objects.append(o)
-        return filtered_objects
-
-    def object_out_of_view(self, o: DashObject) -> bool:
-        """Checks whether an object is out-of-view (a.k.a. its mask area is 
-        zero).
-
-        Args:
-            o: A DashObject.
-        
-        Returns:
-            is_out_of_view: True if it's out-of-view, false if it's in-view.
-        """
-        mask = self.load_mask(eid=o.img_id)
-        bbox = o.compute_bbox(mask=mask)
-        is_out_of_view = bbox is None
-        return is_out_of_view
+            if o.mask_area(mask=mask) > threshold_area:
+                objects_to_keep.append(o)
+        return objects_to_keep
 
     def load_object_x(self, o: DashObject) -> np.ndarray:
         """Loads the x data for an object.
@@ -244,7 +236,7 @@ class DashDataset:
         """
         rgb = rgb.copy()
         bbox = o.compute_bbox(mask)
-        data = np.zeros((480, 480, 6)).astype(np.uint8)
+        data = np.zeros((data_height, data_width, 6)).astype(np.uint8)
         input_rgb = rgb.copy()
         if bbox is None:
             print(f"Bbox is None. Object: {o.to_json()}")
