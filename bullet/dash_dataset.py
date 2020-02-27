@@ -103,8 +103,8 @@ class DashDataset:
         Args:
             exclude_out_of_view: Whether to exclude objects that are out of
                 view (i.e., mask area is zero).
-            min_img_id: The minimum image ID to include.
-            max_img_id: The maximum image ID to include.
+            min_img_id: The minimum image ID, inclusive.
+            max_img_id: The maximum image ID, inclusive.
         
         Returns:
             objects: A list of DashObject's.
@@ -308,7 +308,7 @@ class DashDataset:
 
         Args:
             min_id: The minimum image ID, inclusive.
-            max_id: The maximum image ID, exclusive.
+            max_id: The maximum image ID, inclusive.
 
         Returns:
             filtered_eids: A list of example IDs, optionally filtered to only
@@ -324,7 +324,7 @@ class DashDataset:
 
         filtered_eids = []
         for eid in eids:
-            if min_id <= eid < max_id:
+            if min_id <= eid <= max_id:
                 filtered_eids.append(eid)
         return filtered_eids
 

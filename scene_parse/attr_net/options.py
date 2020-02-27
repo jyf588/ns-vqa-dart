@@ -98,15 +98,19 @@ class BaseOptions:
             help="The coordinate frame to train on.",
         )
         self.parser.add_argument(
-            "--fp16",
-            action="store_true",
-            help="Whether to use FP 16. Note: Only inference supported.",
+            "--fp16", action="store_true", help="Whether to use FP 16."
         )
         self.parser.add_argument(
-            "--split_id",
+            "--start_id",
             default=18500,
             type=int,
-            help="splitting index between train and val images",
+            help="The start example ID from the dataset to use.",
+        )
+        self.parser.add_argument(
+            "--end_id",
+            default=18500,
+            type=int,
+            help="The start example ID from the dataset to use.",
         )
         self.parser.add_argument(
             "--batch_size", default=20, type=int, help="batch size"

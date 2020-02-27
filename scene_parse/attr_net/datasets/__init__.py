@@ -6,19 +6,12 @@ from .clevr_dart_object import ClevrDartObjectDataset
 
 def get_dataset(opt, split):
     if opt.dataset == "dash":
-        min_img_id, max_img_id = None, None
-        if split == "train":
-            max_img_id = opt.split_id
-        elif split in ["val", "test"]:
-            min_img_id = opt.split_id
-        else:
-            raise ValueError("Invalid dataset split: %s" % split)
         ds = DashTorchDataset(
             dataset_dir=opt.dataset_dir,
             height=opt.height,
             width=opt.width,
-            min_img_id=min_img_id,
-            max_img_id=max_img_id,
+            min_img_id=opt.start_id,
+            max_img_id=opt.end_id,
             use_attr=opt.pred_attr,
             use_size=opt.pred_size,
             use_position=opt.pred_position,

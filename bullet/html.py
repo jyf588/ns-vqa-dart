@@ -31,21 +31,35 @@ def main(args: argparse.Namespace):
 
     with open(index_path, "w") as f:
         f.write(HEADER)
-        # scene_captions = [f"Input RGB", "Rerendered Pred", "Mask", "Scene RGB"]
         scene_tags = ["rgb", "pred"]
-        object_tags = ["input_seg", "input_rgb"]
-        f.write(create_caption_row(scene_tags))
+        object_tags = ["input_seg", "input_rgb", "gt", "pred"]
+        f.write(create_caption_row(scene_tags + object_tags))
 
-        for img_id, paths in img_id2paths.items():
-            rows = []
-            rows.append(create_img_row(paths=[paths[t] for t in scene_tags]))
+        for img_id, scene_paths in img_id2paths.items():
+            scene_row = create_img_row(
+                paths=[scene_paths[t] for t in scene_tags]
+            )
 
-            object_paths = paths["objects"]
-            for oid, paths in object_paths.items():
+            rows = [scene_row]
+
+            oid2obj_paths = scene_paths["objects"]
+            for oid, obj_paths in oid2obj_paths.items():
                 rows.append(
                     create_img_row(
-                        paths=[""] * 2 + [paths[t] for t in object_tags]
+                        paths=[""] * 2 + [obj_paths[t] for t in object_tags]
                     )
+                )
+
+                gt_caption = bullet.util.load_json(
+                    path=obj_paths["gt_caption"]
+                )
+                pred_caption = bullet.util.load_json(
+                    path=obj_paths["pred_caption"]
+                )
+                gt_caption = "<br>".join(gt_caption)
+                pred_caption = "<br>".join(pred_caption)
+                rows.append(
+                    create_caption_row([""] * 4 + [gt_caption, pred_caption])
                 )
 
             # oid2paths = get_object_results(

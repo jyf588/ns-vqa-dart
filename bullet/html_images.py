@@ -103,9 +103,18 @@ def main(args: argparse.Namespace):
         for oid, o in oid2gt_objects_world.items():
             data = dataset.load_object_x(o=o)
 
+            # Get the GT and pred objects.
+            gt_o = oid2gt_objects_world[oid]
+            pred_o = oid2pred_object[oid]
+
+            gt = rerender(objects=[gt_o], camera=camera, check_sizes=False)
+            pred = rerender(objects=[pred_o], camera=camera, check_sizes=False)
+
             name2img = {
                 "input_seg": data[:, :, :3],
                 "input_rgb": data[:, :, 3:6],
+                "gt": gt,
+                "pred": pred,
             }
 
             rel_obj_dir = os.path.join(rel_img_dir, "objects", f"{oid:02}")
@@ -113,50 +122,26 @@ def main(args: argparse.Namespace):
             os.makedirs(abs_obj_dir, exist_ok=True)
             object_paths[oid] = {}
             for k, img in name2img.items():
-                rel_path = os.path.join(rel_obj_dir, f"{k}.png")
-                abs_path = os.path.join(abs_obj_dir, f"{k}.png")
-                imageio.imwrite(abs_path, img)
-                object_paths[oid][k] = rel_path
+                if img is not None:
+                    rel_path = os.path.join(rel_obj_dir, f"{k}.png")
+                    abs_path = os.path.join(abs_obj_dir, f"{k}.png")
+                    imageio.imwrite(abs_path, img)
+                    object_paths[oid][k] = rel_path
+                else:
+                    object_paths[oid][k] = None
+
+            gt_cap_path = os.path.join(abs_obj_dir, f"gt_caption.json")
+            pred_cap_path = os.path.join(abs_obj_dir, f"pred_caption.json")
+            bullet.util.save_json(path=gt_cap_path, data=gt_o.to_caption())
+            bullet.util.save_json(path=pred_cap_path, data=pred_o.to_caption())
+            object_paths[oid]["gt_caption"] = gt_cap_path
+            object_paths[oid]["pred_caption"] = pred_cap_path
 
         img_id2paths[img_id]["objects"] = object_paths
 
     # Save the paths.
     path = os.path.join(args.html_dir, "paths.json")
     bullet.util.save_json(path=path, data=img_id2paths)
-
-
-def save_obj_results(
-    oid: int,
-    img_id: int,
-    input_seg: np.ndarray,
-    # new_seg: np.ndarray,
-    # seg_black: np.ndarray,
-    input_rgb: np.ndarray,
-    # input_rgb_seg: np.ndarray,
-    gt_o: DashObject,
-    pred_o: DashObject,
-    camera: BulletCamera,
-):
-    gt_img = rerender(objects=[gt_o], camera=camera, check_sizes=False)
-    pred_img = rerender(objects=[pred_o], camera=camera, check_sizes=False)
-
-    obj_dir = os.path.join(
-        args.output_dir, f"{img_id:05}", "objs", f"{oid:02}"
-    )
-    os.makedirs(obj_dir, exist_ok=True)
-
-    imageio.imwrite(os.path.join(obj_dir, f"input_seg.png"), input_seg)
-    # imageio.imwrite(os.path.join(obj_dir, f"new_seg.png"), new_seg)
-    # imageio.imwrite(os.path.join(obj_dir, f"seg_black.png"), seg_black)
-    imageio.imwrite(os.path.join(obj_dir, f"input_rgb.png"), input_rgb)
-    # imageio.imwrite(os.path.join(obj_dir, f"input_rgb_seg.png"), input_rgb_seg)
-    imageio.imwrite(os.path.join(obj_dir, f"gt.png"), gt_img)
-    imageio.imwrite(os.path.join(obj_dir, f"pred.png"), pred_img)
-
-    # gt_cap_path = os.path.join(gt_cap_dir, f"{oid:02}.json")
-    # pred_cap_path = os.path.join(pred_cap_dir, f"{oid:02}.json")
-    # bullet.util.save_json(path=gt_cap_path, data=gt_o.to_caption())
-    # bullet.util.save_json(path=pred_cap_path, data=pred_o.to_caption())
 
 
 def create_visual(

@@ -35,7 +35,6 @@ def main():
             img_id = img_ids[i].item()
             oid = oids[i].item()
             pred_vec = pred[i].tolist()
-            print(pred_vec)
             preds.append({"img_id": img_id, "oid": oid, "pred": pred_vec})
         assert oids.size(0) == pred.shape[0]
         count += oids.size(0)
