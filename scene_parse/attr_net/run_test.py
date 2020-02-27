@@ -20,6 +20,7 @@ def main():
     opt = get_options("test")
     test_loader = get_dataloader(opt, "test")
     model = get_model(opt)
+    model.eval_mode()
 
     # print(f"Warning: Predictions are not currently being saved.")
 

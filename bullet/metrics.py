@@ -33,11 +33,10 @@ def compute_metrics(
 
     cls_correct = {k: 0 for k in ["shape", "color"]}
     errors = {
-        "radius": 0,
-        "height": 0,
+        "radius": 0.0,
+        "height": 0.0,
         "position": np.zeros((3,)),
         "up_vector": np.zeros((3,)),
-        "height": 0,
     }
     reg_error = {
         "pos": copy.deepcopy(errors),
@@ -101,7 +100,7 @@ def compute_metrics(
             units = UNITS[k]
 
             # Print out the results.
-            if type(v) == np.float64:
+            if type(v) in [np.float64, float]:
                 print(
                     f"\t{k} {err_type} ({units}): {v / n_total:.2f} ({v:.2f}/{n_total})"
                 )
@@ -111,6 +110,8 @@ def compute_metrics(
                     print(
                         f"\t\t{AXIS_NAMES[axis_i]}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
                     )
+            else:
+                raise ValueError(f"Unrecognized type: {type(v)}")
 
 
 if __name__ == "__main__":
