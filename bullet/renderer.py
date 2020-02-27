@@ -71,9 +71,14 @@ class BulletRenderer:
                 basePosition=o.position,
             )
         else:
+            # Update the position to be defined for the COM, since that's what
+            # PyBullet expects.
+            com_position = o.position.copy()
+            com_position[2] = h / 2
+
             oid = self.generate_primitive_shape(
                 shape=o.shape,
-                position=o.position,
+                com_position=com_position,
                 r=o.radius,
                 h=o.height,
                 check_sizes=check_sizes,
@@ -96,7 +101,7 @@ class BulletRenderer:
     def generate_primitive_shape(
         self,
         shape: str,
-        position: List[float],
+        com_position: List[float],
         r: float,
         h: Optional[float] = None,
         check_sizes: Optional[bool] = True,
@@ -105,8 +110,7 @@ class BulletRenderer:
 
         Args:
             shape: The name of the shape to generate.
-            position: The (x, y, z) position of the center of the base, in
-                world coordinates.
+            com_position: The (x, y, z) position of the COM, in world coordinates.
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
             check_sizes: Whether to check that the sizes are valid for various
@@ -123,10 +127,6 @@ class BulletRenderer:
 
         geom = SHAPE2GEOM[shape]
         half_extents = [r, r, h / 2]
-
-        # Update the position to be defined for the COM, since that's what
-        # PyBullet expects.
-        position[2] = h / 2
 
         # Create the shape.
         try:
@@ -148,7 +148,7 @@ class BulletRenderer:
             baseInertialFramePosition=[0, 0, 0],
             baseCollisionShapeIndex=collisionShapeId,
             baseVisualShapeIndex=visualShapeId,
-            basePosition=position,
+            basePosition=com_position,  # Pybullet expects COM.
         )
         return oid
 
