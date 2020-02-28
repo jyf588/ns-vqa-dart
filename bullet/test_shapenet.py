@@ -1,3 +1,4 @@
+import math
 import pybullet as p
 import time
 
@@ -9,26 +10,33 @@ meshScale = [1.0, 1.0, 1.0]
 visualShapeId = p.createVisualShape(
     shapeType=p.GEOM_MESH,
     fileName="bullet/assets/model_normalized.obj",
-    rgbaColor=[1, 1, 1, 1],
-    specularColor=[0.4, 0.4, 0],
-    visualFramePosition=shift,
-    meshScale=meshScale,
+    rgbaColor=[0.8, 0.0, 0.0, 1.0],
+    visualFrameOrientation=[
+        math.cos(math.radians(90 / 2)),
+        0,
+        0,
+        math.sin(math.radians(90 / 2)),
+    ],
 )
 collisionShapeId = p.createCollisionShape(
     shapeType=p.GEOM_MESH,
     fileName="bullet/assets/model_normalized.obj",
-    collisionFramePosition=shift,
-    meshScale=meshScale,
+    # collisionFramePosition=shift,
+    # meshScale=meshScale,
 )
 
-p.createMultiBody(
-    baseMass=1,
-    baseInertialFramePosition=[0, 0, 0],
+oid = p.createMultiBody(
+    # baseMass=1,
+    # baseInertialFramePosition=[0, 0, 0],
     baseCollisionShapeIndex=collisionShapeId,
     baseVisualShapeIndex=visualShapeId,
-    basePosition=[0.0, 0.0, 0.0],
-    useMaximalCoordinates=True,
+    basePosition=[0.0, 0.0, 0.5],
+    # useMaximalCoordinates=True,
 )
+
+# p.changeVisualShape(
+#     objectUniqueId=oid, linkIndex=-1, rgbaColor=[0.8, 0.0, 0.0, 1.0]
+# )
 
 
 for _ in range(10000):

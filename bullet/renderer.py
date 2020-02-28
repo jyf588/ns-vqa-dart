@@ -137,6 +137,8 @@ class BulletRenderer:
             visualShapeId = self.p.createVisualShape(
                 shapeType=geom, radius=r, halfExtents=half_extents, length=h
             )
+        # This can happen when trying to render predictions that are physically
+        # impossible.
         except pybullet.error as e:
             # print(e)
             # print(
