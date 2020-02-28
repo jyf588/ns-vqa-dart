@@ -161,7 +161,7 @@ class DashDataset:
         use_position: bool,
         use_up_vector: bool,
         coordinate_frame: str,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> np.ndarray:
         """Loads y data for a given object.
 
         Args:
@@ -388,7 +388,7 @@ class DashDataset:
         return camera
 
     def save_labels(
-        self, objects: List[DashObject], camera: BulletCamera, eid: str
+        self, objects: List[DashObject], camera: BulletCamera, eid: int
     ):
         """Saves a json dictionary of camera and object information.
         

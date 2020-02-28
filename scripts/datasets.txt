@@ -10,3 +10,4 @@ ego_v007: Same as ego v5 and 6, but with inputs that are:
     aspect ratio maintained
     replicate padding instead of zero padding.
 ego_v008: Same as 7 but with fixed segs.
+ego_v009: Updated from z position=H/2 to z position=0.

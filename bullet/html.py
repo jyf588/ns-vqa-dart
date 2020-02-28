@@ -60,18 +60,17 @@ def main(args: argparse.Namespace):
                         )
                     )
 
-                    gt_caption = bullet.util.load_json(
-                        path=obj_paths["gt_caption"]
-                    )
-                    pred_caption = bullet.util.load_json(
-                        path=obj_paths["pred_caption"]
-                    )
-                    gt_caption = "<br>".join(gt_caption)
-                    pred_caption = "<br>".join(pred_caption)
+                    captions = []
+                    for cap_key in ["gt_caption", "pred_caption"]:
+                        caption = bullet.util.load_json(
+                            path=obj_paths[cap_key]
+                        )
+                        caption = "<br>".join(caption)
+                        captions.append(caption)
+
                     rows.append(
                         create_caption_row(
-                            [""] * (len(scene_tags) + 2)
-                            + [gt_caption, pred_caption]
+                            [""] * (len(scene_tags) + 2) + captions
                         )
                     )
 

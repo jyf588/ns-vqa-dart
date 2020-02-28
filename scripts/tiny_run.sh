@@ -1,9 +1,13 @@
+python bullet/generate.py \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
+    --n_examples 20
+
 cd scene_parse/attr_net
 
 time python run_train.py \
     --dataset dash \
     --run_dir ~/outputs/ego_v007 \
-    --dataset_dir ~/datasets/ego_v007 \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/ego_v008 \
     --split_id 21990 \
     --checkpoint_every 2000 \
     --num_iters 20 \
@@ -17,7 +21,7 @@ time python run_train.py \
 time python run_test.py \
     --dataset dash \
     --run_dir ~/outputs/ego_v007 \
-    --dataset_dir ~/datasets/ego_v007 \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/ego_v008 \
     --output_path ~/outputs/ego_v007/test.json \
     --load_checkpoint_path ~/outputs/ego_v007/checkpoint_best.pt \
     --split_id 21990 \
@@ -30,13 +34,8 @@ time python run_test.py \
 
 cd ../..
 
-time python bullet/metrics.py \
-    --dataset_dir ~/datasets/ego_v007 \
-	--pred_path ~/outputs/ego_v007/test.json \
-    --coordinate_frame camera
-
 python html/html_images.py \
-    --dataset_dir ~/datasets/ego_v007 \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/ego_v008 \
 	--pred_path ~/outputs/ego_v007/test.json \
     --output_dir ~/analysis/ego_v007 \
     --coordinate_frame camera \

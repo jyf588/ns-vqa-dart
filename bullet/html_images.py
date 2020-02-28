@@ -140,8 +140,12 @@ def main(args: argparse.Namespace):
                 else:
                     object_paths[oid][k] = None
 
-            gt_cap_path = os.path.join(abs_obj_dir, f"gt_caption.json")
-            pred_cap_path = os.path.join(abs_obj_dir, f"pred_caption.json")
+            # HACK: Change GT's z position to be H/2.
+            print("Warning: Changing GT's z position to be H/2.")
+            gt_o.position[2] = gt_o.height / 2
+
+            gt_cap_path = os.path.join(abs_obj_dir, "gt_caption.json")
+            pred_cap_path = os.path.join(abs_obj_dir, "pred_caption.json")
             bullet.util.save_json(path=gt_cap_path, data=gt_o.to_caption())
             bullet.util.save_json(path=pred_cap_path, data=pred_o.to_caption())
             object_paths[oid]["gt_caption"] = gt_cap_path

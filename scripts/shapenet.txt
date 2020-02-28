@@ -1,0 +1,10 @@
+http://shapenet.cs.stanford.edu/shapenet/obj-zip/ShapeNetCore.v1/<synsetId>.zip
+http://www.image-net.org/synset?wnid=n<synsetId>
+
+02823510
+http://shapenet.cs.stanford.edu/shapenet/obj-zip/ShapeNetCore.v1/02823510.zip
+http://shapenet.cs.stanford.edu/shapenet/obj-zip/02823510.zip
+http://www.image-net.org/synset?wnid=n02823510
+
+http://shapenet.cs.stanford.edu/shapenet/obj-zip/02828884.zip
+

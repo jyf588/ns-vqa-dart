@@ -2,6 +2,7 @@
 Definition of a BulletRenderer which renders various objects in a bullet scene.
 """
 
+import copy
 import math
 import numpy as np
 import os
@@ -60,6 +61,10 @@ class BulletRenderer:
         Returns:
             oid: The object ID.
         """
+        # Make a deep copy of the object because downstream functions might
+        # modify the object for rendering purposes.
+        o = copy.deepcopy(o)
+
         if o.shape == "lego":
             oid = self.p.loadURDF(
                 os.path.join(self.urdf_dir, "lego.urdf"),

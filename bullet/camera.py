@@ -208,7 +208,10 @@ def from_json(json_dict: Dict) -> BulletCamera:
     Returns:
         camera: BulletCamera.
     """
-    init_type = json_dict["init_type"]
+    if "init_type" in json_dict:
+        init_type = json_dict["init_type"]
+    else:
+        init_type = None
     camera = BulletCamera(init_type=init_type)
     if init_type is None:
         camera.set_pose(
