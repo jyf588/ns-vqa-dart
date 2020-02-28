@@ -31,6 +31,19 @@ SHAPE2PATH = {
 URDF_SHAPES = ["table", "lego"]
 MESH_SHAPES = ["soda_can", "cup"]
 
+MESH_MEASUREMENTS = {
+    "soda_can": {
+        "scale": [0.22, 0.24, 0.22],
+        "origin": [0.0, 0.0, 0.115],
+        "orientation": [
+            math.cos(math.radians(90 / 2)),
+            0,
+            0,
+            math.sin(math.radians(90 / 2)),
+        ],
+    }
+}
+
 COLOR2RGBA = {
     "red": [0.8, 0.0, 0.0, 1.0],
     "grey": [0.4, 0.4, 0.4, 1.0],
@@ -180,10 +193,17 @@ class BulletRenderer:
                 path=path, position=position, rgba_color=rgba_color
             )
         elif shape in MESH_SHAPES:
+            mesh_measurements = MESH_MEASUREMENTS[shape]
+
+            scale = mesh_measurements["scale"]
+            position += mesh_measurements["origin"]
+            orientation = mesh_measurements["orientation"]
+
             oid = self.load_mesh(
                 path=path,
+                scale=scale,
                 position=position,
-                # orientation=orientation,
+                orientation=orientation,
                 rgba_color=rgba_color,
             )
         else:
@@ -195,8 +215,9 @@ class BulletRenderer:
     def load_mesh(
         self,
         path: str,
+        scale: List[float],
         position: List[float],
-        # orientation: List[float],
+        orientation: List[float],
         rgba_color: List[float],
     ):
         """Loads a mesh object.
@@ -214,10 +235,11 @@ class BulletRenderer:
             shapeType=self.p.GEOM_MESH,
             fileName=path,
             rgbaColor=rgba_color,
-            # visualFrameOrientation=orientation,
+            meshScale=scale,
+            visualFrameOrientation=orientation,
         )
         collisionShapeId = self.p.createCollisionShape(
-            shapeType=self.p.GEOM_MESH, fileName=path
+            shapeType=self.p.GEOM_MESH, fileName=path, meshScale=scale
         )
 
         oid = self.p.createMultiBody(
