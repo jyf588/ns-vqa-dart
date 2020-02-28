@@ -196,7 +196,8 @@ class BulletRenderer:
             mesh_measurements = MESH_MEASUREMENTS[shape]
 
             scale = mesh_measurements["scale"]
-            position += mesh_measurements["origin"]
+            origin = mesh_measurements["origin"]
+            position = list(np.array(position) + np.array(origin))
             orientation = mesh_measurements["orientation"]
 
             oid = self.load_mesh(
