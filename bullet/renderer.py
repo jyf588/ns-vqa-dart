@@ -209,17 +209,17 @@ class BulletRenderer:
         Returns:
             oid: The object ID.
         """
-        visualShapeId = p.createVisualShape(
-            shapeType=p.GEOM_MESH,
+        visualShapeId = self.p.createVisualShape(
+            shapeType=self.p.GEOM_MESH,
             fileName=path,
             rgbaColor=rgba_color,
             # visualFrameOrientation=orientation,
         )
-        collisionShapeId = p.createCollisionShape(
-            shapeType=p.GEOM_MESH, fileName=path
+        collisionShapeId = self.p.createCollisionShape(
+            shapeType=self.p.GEOM_MESH, fileName=path
         )
 
-        oid = p.createMultiBody(
+        oid = self.p.createMultiBody(
             baseCollisionShapeIndex=collisionShapeId,
             baseVisualShapeIndex=visualShapeId,
             basePosition=position,

@@ -45,7 +45,7 @@ def main(args: argparse.Namespace):
         max_retries=50,
         # shapes=["box", "cylinder", "sphere"],
         # colors=["red", "blue", "yellow", "green"],
-        shapes=["lego"],
+        shapes=["soda_can"],
         colors=["red"],
         radius_bounds=(0.04, 0.04),
         height_bounds=(0.18, 0.18),
