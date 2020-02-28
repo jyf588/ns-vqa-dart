@@ -27,10 +27,10 @@ def main(args: argparse.Namespace):
     print("Loading predictions...")
     pred_dicts = bullet.util.load_json(path=args.pred_path)
     print(f"Number of total predictions: {len(pred_dicts)}")
-    print(f"Number of objects to visualize: {args.n_examples}")
+    print(f"Number of objects to visualize: {args.n_objects}")
     img_id2oid2pred_object = {}
-    if args.n_examples is not None:
-        pred_dicts = pred_dicts[: args.n_examples]
+    if args.n_objects is not None:
+        pred_dicts = pred_dicts[: args.n_objects]
     for pred_dict in tqdm(pred_dicts):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
@@ -104,7 +104,9 @@ def main(args: argparse.Namespace):
         # Write object-level images.
         object_paths = {}
         oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
-        for oid, o in oid2gt_objects_world.items():
+        print(f"GT keys: {oid2gt_objects_world.keys()}")
+        print(f"Pred keys: {oid2pred_object.keys()}")
+        for oid, o in oid2pred_object.items():
             data = dataset.load_object_x(o=o)
 
             # Get the GT and pred objects.
@@ -295,9 +297,9 @@ if __name__ == "__main__":
         help="The coordinate frame that predictions are in.",
     )
     parser.add_argument(
-        "--n_examples",
+        "--n_objects",
         type=int,
-        help="Number of examples to generate images for.",
+        help="Number of example objects to generate images for.",
     )
     args = parser.parse_args()
     main(args)

@@ -4,6 +4,7 @@ import json
 import numpy as np
 import os
 import time
+from tqdm import tqdm
 from typing import *
 
 from bullet.camera import BulletCamera
@@ -116,9 +117,12 @@ class DashDataset:
         Returns:
             objects: A list of DashObject's.
         """
+        print(
+            f"Loading objects between example IDs {min_img_id} and {max_img_id} (inclusive)..."
+        )
         scene_ids = self.load_example_ids(min_id=min_img_id, max_id=max_img_id)
         all_objects = []
-        for sid in scene_ids:
+        for sid in tqdm(scene_ids):
             objects = self.load_objects_for_eid(eid=sid)
             all_objects += objects
         return all_objects
