@@ -7,7 +7,7 @@ time python run_train.py \
     --start_id 0 \
     --end_id 19999 \
     --checkpoint_every 2000 \
-    --num_iters 20 \
+    --num_iters 60000 \
     --height 480 \
     --width 480 \
     --pred_attr \
@@ -33,3 +33,16 @@ time python run_test.py \
     --pred_up_vector \
     --coordinate_frame camera \
     --num_workers 8
+
+cd ../..
+
+python bullet/html_images.py \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/ego_v009 \
+	--pred_path ~/outputs/ego_v009/test.json \
+    --html_dir ~/html/ego_v009 \
+    --coordinate_frame camera \
+    --n_examples 100
+
+python bullet/html.py \
+    --html_dir ~/html/ego_v009 \
+    --show_objects
