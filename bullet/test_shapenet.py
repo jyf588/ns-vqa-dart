@@ -3,7 +3,7 @@ import time
 
 
 physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version
-shift = [0, -0.02, 0]
+shift = [0, 0, 0]
 meshScale = [1.0, 1.0, 1.0]
 
 visualShapeId = p.createVisualShape(
