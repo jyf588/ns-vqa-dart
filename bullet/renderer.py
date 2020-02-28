@@ -23,12 +23,13 @@ PRIMITIVE2GEOM = {
 SHAPE2PATH = {
     "table": "table.urdf",
     "lego": "lego.urdf",
-    "cup": "cup/cup_small.urdf",
+    # "cup": "cup/cup_small.urdf",
+    "cup": "cup/Cup/cup_vhacd.obj",
     "soda_can": "soda_can.obj",
 }
 
-URDF_SHAPES = ["table", "lego", "cup"]
-MESH_SHAPES = ["soda_can"]
+URDF_SHAPES = ["table", "lego"]
+MESH_SHAPES = ["soda_can", "cup"]
 
 COLOR2RGBA = {
     "red": [0.8, 0.0, 0.0, 1.0],
