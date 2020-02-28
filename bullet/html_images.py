@@ -104,8 +104,6 @@ def main(args: argparse.Namespace):
         # Write object-level images.
         object_paths = {}
         oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
-        print(f"GT keys: {oid2gt_objects_world.keys()}")
-        print(f"Pred keys: {oid2pred_object.keys()}")
         for oid, o in oid2pred_object.items():
             data = dataset.load_object_x(o=o)
 
@@ -143,8 +141,8 @@ def main(args: argparse.Namespace):
                     object_paths[oid][k] = None
 
             # HACK: Change GT's z position to be H/2.
-            print("Warning: Changing GT's z position to be H/2.")
-            gt_o.position[2] = gt_o.height / 2
+            # print("Warning: Changing GT's z position to be H/2.")
+            # gt_o.position[2] = gt_o.height / 2
 
             gt_cap_path = os.path.join(abs_obj_dir, "gt_caption.json")
             pred_cap_path = os.path.join(abs_obj_dir, "pred_caption.json")
