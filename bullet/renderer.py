@@ -14,11 +14,21 @@ from bullet.camera import BulletCamera
 from bullet.dash_object import DashObject, DashTable
 
 
-SHAPE2GEOM = {
+PRIMITIVE2GEOM = {
     "box": pybullet.GEOM_BOX,
     "cylinder": pybullet.GEOM_CYLINDER,
     "sphere": pybullet.GEOM_SPHERE,
 }
+
+SHAPE2PATH = {
+    "table": "table.urdf",
+    "lego": "lego.urdf",
+    "cup": "cup/cup_small.urdf",
+    "soda_can": "soda_can.obj",
+}
+
+URDF_SHAPES = ["table", "lego", "cup"]
+MESH_SHAPES = ["soda_can"]
 
 COLOR2RGBA = {
     "red": [0.8, 0.0, 0.0, 1.0],
@@ -30,24 +40,26 @@ COLOR2RGBA = {
 
 
 class BulletRenderer:
-    def __init__(self, p, urdf_dir="bullet/assets"):
-        # self.p = bc.BulletClient(connection_mode=pybullet.DIRECT)
+    def __init__(self, p, assets_dir="bullet/assets"):
         self.p = p
-        self.urdf_dir = urdf_dir
+        self.assets_dir = assets_dir
 
-    def render_table(self, o: DashTable) -> int:
-        """Renders a DashTable.
+    # def render_table(self, o: DashTable) -> int:
+    #     """Renders a DashTable.
 
-        Returns:
-            oid: The ID of the table.
-        """
-        oid = self.p.loadURDF(
-            fileName=self.construct_urdf_path(o),
-            basePosition=o.position,
-            baseOrientation=o.orientation,
-        )
-        self.color_object(oid=oid, color=o.color)
-        return oid
+    #     Returns:
+    #         oid: The ID of the table.
+    #     """
+    #     self.load_urdf(
+    #         shape=o.shape, position=o.position, orientation=o.orientation
+    #     )
+    #     oid = self.p.loadURDF(
+    #         fileName=self.construct_object_path(obj_name=o.shape),
+    #         basePosition=o.position,
+    #         baseOrientation=o.orientation,
+    #     )
+    #     self.color_object(oid=oid, color=o.color)
+    #     return oid
 
     def render_object(
         self, o: DashObject, check_sizes: Optional[bool] = True
@@ -56,7 +68,8 @@ class BulletRenderer:
 
         Args:
             o: A DashObject.
-            check_sizes: Whether to check sizes of the object.
+            check_sizes: Whether to check sizes of the object, e.g. that the
+                height of a sphere should be 2*r.
         
         Returns:
             oid: The object ID.
@@ -64,46 +77,30 @@ class BulletRenderer:
         # Make a deep copy of the object because downstream functions might
         # modify the object for rendering purposes.
         o = copy.deepcopy(o)
+        rgba_color = COLOR2RGBA[o.color]
 
-        if o.shape == "lego":
-            oid = self.p.loadURDF(
-                os.path.join(self.urdf_dir, "lego.urdf"),
-                basePosition=o.position,
-            )
-        elif o.shape == "cup":
-            oid = self.p.loadURDF(
-                os.path.join(self.urdf_dir, "cup/cup_small.urdf"),
-                basePosition=o.position,
-            )
-        else:
-            oid = self.generate_primitive_shape(
+        if o.shape in PRIMITIVE2GEOM:
+            oid = self.load_primitive(
                 shape=o.shape,
                 position=o.position,
                 r=o.radius,
                 h=o.height,
+                rgba_color=rgba_color,
                 check_sizes=check_sizes,
             )
-        if oid is not None and o.color is not None:
-            self.color_object(oid=oid, color=o.color)
+        else:
+            oid = self.load_nonprimitive(
+                shape=o.shape, position=o.position, rgba_color=rgba_color
+            )
         return oid
 
-    def color_object(self, oid: int, color: str):
-        """Colors an object.
-
-        Args:
-            oid: The ID of the object.
-            color: The color to color the object.
-        """
-        self.p.changeVisualShape(
-            objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[color]
-        )
-
-    def generate_primitive_shape(
+    def load_primitive(
         self,
         shape: str,
         position: List[float],
         r: float,
         h: Optional[float] = None,
+        rgba_color: List[float] = None,
         check_sizes: Optional[bool] = True,
     ) -> Optional[int]:
         """Creates a primitive object.
@@ -113,6 +110,7 @@ class BulletRenderer:
             com_position: The (x, y, z) position of the COM, in world coordinates.
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
+            rgba_color: The color of the object.
             check_sizes: Whether to check that the sizes are valid for various
                 shapes.
 
@@ -125,7 +123,7 @@ class BulletRenderer:
         if check_sizes and shape == "sphere":
             assert h == 2 * r
 
-        geom = SHAPE2GEOM[shape]
+        geom = PRIMITIVE2GEOM[shape]
         half_extents = [r, r, h / 2]
 
         # Update the position to be defined for the COM, since that's what
@@ -135,7 +133,11 @@ class BulletRenderer:
         # Create the shape.
         try:
             visualShapeId = self.p.createVisualShape(
-                shapeType=geom, radius=r, halfExtents=half_extents, length=h
+                shapeType=geom,
+                radius=r,
+                halfExtents=half_extents,
+                length=h,
+                rgbaColor=rgba_color,
             )
         # This can happen when trying to render predictions that are physically
         # impossible.
@@ -158,15 +160,99 @@ class BulletRenderer:
         )
         return oid
 
-    def construct_urdf_path(self, o: DashTable) -> str:
+    def load_nonprimitive(
+        self, shape: str, position: List[float], rgba_color: List[float]
+    ) -> int:
+        """Loads a nonprimitive object.
+
+        Args:
+            shape: The object shape.
+            position: The position to set the origin of the object.
+            rgba_color: The RGBA color of the object.
+        
+        Returns:
+            oid: The object ID.
+        """
+        path = self.construct_object_path(obj_name=shape)
+        if shape in URDF_SHAPES:
+            oid = self.load_urdf(
+                path=path, position=position, rgba_color=rgba_color
+            )
+        elif shape in MESH_SHAPES:
+            oid = self.load_mesh(
+                path=path,
+                position=position,
+                # orientation=orientation,
+                rgba_color=rgba_color,
+            )
+        else:
+            raise ValueError(
+                f"Invalid shape: {shape}. Shape must be a primitive, URDF, or MESH."
+            )
+        return oid
+
+    def load_mesh(
+        self,
+        path: str,
+        position: List[float],
+        # orientation: List[float],
+        rgba_color: List[float],
+    ):
+        """Loads a mesh object.
+
+        Args:
+            path: The path to the object file.
+            position: The xyz position of the object's origin.
+            # orientation: The orientation of the object.
+            rgba_color: The color of the object.
+
+        Returns:
+            oid: The object ID.
+        """
+        visualShapeId = p.createVisualShape(
+            shapeType=p.GEOM_MESH,
+            fileName=path,
+            rgbaColor=rgba_color,
+            # visualFrameOrientation=orientation,
+        )
+        collisionShapeId = p.createCollisionShape(
+            shapeType=p.GEOM_MESH, fileName=path
+        )
+
+        oid = p.createMultiBody(
+            baseCollisionShapeIndex=collisionShapeId,
+            baseVisualShapeIndex=visualShapeId,
+            basePosition=position,
+        )
+        return oid
+
+    def load_urdf(
+        self, path: str, position: List[float], rgba_color: List[float]
+    ):
+        """Loads a urdf object.
+
+        Args:
+            path: The path of the urdf file.
+            position: The position to set the origin of the object.
+            rgba_color: The RGBA color of the object.
+        
+        Returns:
+            oid: The object ID.
+        """
+        oid = self.p.loadURDF(path, basePosition=position)
+        self.p.changeVisualShape(
+            objectUniqueId=oid, linkIndex=-1, rgbaColor=rgba_color
+        )
+        return oid
+
+    def construct_object_path(self, obj_name: str) -> str:
         """Constructs the URDF path based on object attributes.
         
         Args:
-            o: A DashObject.
+            obj_name: The name of the object.
         
         Returns:
-            urdf_path: The path to the urdf file matching the attributes of the
-                DashObject.
+            path: The path to the file for the object.
         """
-        urdf_path = os.path.join(self.urdf_dir, f"{o.shape}.urdf")
-        return urdf_path
+        path = os.path.join(self.assets_dir, SHAPE2PATH[obj_name])
+        return path

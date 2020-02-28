@@ -26,17 +26,10 @@ collisionShapeId = p.createCollisionShape(
 )
 
 oid = p.createMultiBody(
-    # baseMass=1,
-    # baseInertialFramePosition=[0, 0, 0],
     baseCollisionShapeIndex=collisionShapeId,
     baseVisualShapeIndex=visualShapeId,
     basePosition=[0.0, 0.0, 0.5],
-    # useMaximalCoordinates=True,
 )
-
-# p.changeVisualShape(
-#     objectUniqueId=oid, linkIndex=-1, rgbaColor=[0.8, 0.0, 0.0, 1.0]
-# )
 
 
 for _ in range(10000):

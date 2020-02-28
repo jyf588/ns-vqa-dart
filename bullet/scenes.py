@@ -90,7 +90,7 @@ class RandomSceneGenerator:
         self.dataset = DashDataset(dataset_dir=dataset_dir)
 
         # Initialize the tabletop which is constant throughout the scenes.
-        self.renderer.render_table(DashTable())
+        self.renderer.render_object(DashTable())
 
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds

@@ -1,17 +1,17 @@
 python bullet/generate.py \
-    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
-    --n_examples 15
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/irreg \
+    --n_examples 2
 
 cd scene_parse/attr_net
 
 time python run_test.py \
     --dataset dash \
-    --run_dir ~/outputs/cup \
-    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
-    --output_path ~/outputs/cup/test.json \
+    --run_dir ~/outputs/irreg \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/irreg \
+    --output_path ~/outputs/irreg/test.json \
     --load_checkpoint_path ~/outputs/ego_v008/checkpoint_best.pt \
     --start_id 0 \
-    --end_id 14 \
+    --end_id 1 \
     --height 480 \
     --width 480 \
     --pred_attr \
@@ -24,11 +24,11 @@ time python run_test.py \
 cd ../..
 
 python bullet/html_images.py \
-    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
-	--pred_path ~/outputs/cup/test.json \
-    --html_dir ~/html/cup \
+    --dataset_dir /media/michelle/68B62784B62751BC/datasets/irreg \
+	--pred_path ~/outputs/irreg/test.json \
+    --html_dir ~/html/irreg \
     --coordinate_frame camera
 
 python bullet/html.py \
-    --html_dir ~/html/cup \
+    --html_dir ~/html/irreg \
     --show_objects

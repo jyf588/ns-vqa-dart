@@ -222,7 +222,7 @@ def rerender(
         for o in objects_to_render
     ]
     rerendered_z, _ = BulletCamera(init_type="z_axis").get_rgb_and_mask(p=p)
-    renderer.render_table(DashTable())
+    renderer.render_object(DashTable())
     rerendered, _ = camera.get_rgb_and_mask(p=p)
 
     return rerendered, rerendered_z
