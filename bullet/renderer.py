@@ -26,10 +26,11 @@ SHAPE2PATH = {
     # "cup": "cup/cup_small.urdf",
     "cup": "cup/Cup/cup_vhacd.obj",
     "soda_can": "soda_can.obj",
+    "can": "can.obj",
 }
 
 URDF_SHAPES = ["table", "lego"]
-MESH_SHAPES = ["soda_can", "cup"]
+MESH_SHAPES = ["soda_can", "cup", "can"]
 
 MESH_MEASUREMENTS = {
     "soda_can": {
@@ -41,7 +42,17 @@ MESH_MEASUREMENTS = {
             0,
             math.sin(math.radians(90 / 2)),
         ],
-    }
+    },
+    "can": {
+        "scale": [0.22, 0.24, 0.22],
+        "origin": [0.0, 0.0, 0.115],
+        "orientation": [
+            math.cos(math.radians(90 / 2)),
+            0,
+            0,
+            math.sin(math.radians(90 / 2)),
+        ],
+    },
 }
 
 COLOR2RGBA = {
