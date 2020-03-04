@@ -11,8 +11,6 @@ from model import get_model
 
 import bullet.util
 
-sys.path.append("/home/michelle/workspace/ns-vqa-dart")
-from bullet.profiler import Profiler
 import bullet.metrics
 
 
