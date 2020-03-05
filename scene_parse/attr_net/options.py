@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+from typing import *
 
 
 def mkdirs(paths):
@@ -43,7 +44,11 @@ class BaseOptions:
         self.parser.add_argument(
             "--gpu_ids", default="0", type=str, help="ids of gpu to be used"
         )
-
+        self.parser.add_argument(
+            "--inference_only",
+            action="store_true",
+            help="Whether to only run inference.",
+        )
         self.parser.add_argument(
             "--dataset_dir",
             required=True,
@@ -127,42 +132,57 @@ class BaseOptions:
 
         self.initialized = True
 
-    def parse(self):
-        # initialize parser
-        if not self.initialized:
+    def parse(
+        self,
+        opt: Optional[argparse.Namespace],
+        save_options: Optional[bool] = True,
+    ):
+        """
+        Parse options.
+
+        Args:
+            opt: User-provided options.
+            save_options: Whether to save the options to a text file.
+        
+        Returns:
+            opt: Options, with the first GPU device set for PyTorch if the 
+                device is available.
+        """
+        # If user doesn't provide options, parse options using argparse.
+        if opt is None and not self.initialized:
             self.initialize()
-        self.opt = self.parser.parse_args()
+            opt = self.parser.parse_args()
 
         # parse gpu id list
-        str_gpu_ids = self.opt.gpu_ids.split(",")
-        self.opt.gpu_ids = []
+        str_gpu_ids = opt.gpu_ids.split(",")
+        opt.gpu_ids = []
         for str_id in str_gpu_ids:
             if str_id.isdigit() and int(str_id) >= 0:
-                self.opt.gpu_ids.append(int(str_id))
-        if len(self.opt.gpu_ids) > 0 and torch.cuda.is_available():
-            torch.cuda.set_device(self.opt.gpu_ids[0])
+                opt.gpu_ids.append(int(str_id))
+        if len(opt.gpu_ids) > 0 and torch.cuda.is_available():
+            torch.cuda.set_device(opt.gpu_ids[0])
         else:
             print("| using cpu")
-            self.opt.gpu_ids = []
+            opt.gpu_ids = []
 
         # print and save options
-        args = vars(self.opt)
-        print("| options")
-        for k, v in args.items():
-            print("%s: %s" % (str(k), str(v)))
-        mkdirs(self.opt.run_dir)
+        if save_options:
+            args = vars(self.opt)
+            print("| options")
+            for k, v in args.items():
+                print("%s: %s" % (str(k), str(v)))
+            mkdirs(opt.run_dir)
 
-        if self.is_train:
-            filename = "train_opt.txt"
-        else:
-            filename = "test_opt.txt"
-        file_path = os.path.join(self.opt.run_dir, filename)
-        with open(file_path, "wt") as fout:
-            fout.write("| options\n")
-            for k, v in sorted(args.items()):
-                fout.write("%s: %s\n" % (str(k), str(v)))
-
-        return self.opt
+            if self.is_train:
+                filename = "train_opt.txt"
+            else:
+                filename = "test_opt.txt"
+            file_path = os.path.join(opt.run_dir, filename)
+            with open(file_path, "wt") as fout:
+                fout.write("| options\n")
+                for k, v in sorted(args.items()):
+                    fout.write("%s: %s\n" % (str(k), str(v)))
+        return opt
 
 
 class TrainOptions(BaseOptions):

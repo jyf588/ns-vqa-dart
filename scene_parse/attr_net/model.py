@@ -68,10 +68,13 @@ class AttributeNetwork:
         if opt.fp16:
             self.half_net()
 
-        self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(
-            self.net.parameters(), lr=opt.learning_rate
-        )
+        # If only inference, don't need to initialize the loss criternion and
+        # optimizer.
+        if not opt.inference_only:
+            self.criterion = nn.MSELoss()
+            self.optimizer = torch.optim.Adam(
+                self.net.parameters(), lr=opt.learning_rate
+            )
 
         self.use_cuda = len(opt.gpu_ids) > 0 and torch.cuda.is_available()
         self.gpu_ids = opt.gpu_ids
@@ -82,7 +85,7 @@ class AttributeNetwork:
         self.input, self.label = None, None
 
     def set_input(self, x, y=None):
-        """Stores x and y.
+        """Stores x and y (if provided).
 
         Args:
             x: The input data to the network.
@@ -101,10 +104,14 @@ class AttributeNetwork:
             self.half_net()
         self.forward()
         self.loss.backward()
-        self.net.float()
+        if self.opt.fp16:
+            self.net.float()
         self.optimizer.step()
 
     def forward(self):
+        """Computes the forward pass of the model given the current input.
+        Additionally computes loss if a label is provided.
+        """
         self.pred = self.net(self.input)
         if self.label is not None:
             if self.opt.fp16:
