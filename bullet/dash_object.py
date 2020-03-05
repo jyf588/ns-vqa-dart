@@ -1,3 +1,4 @@
+import cv2
 import math
 import numpy as np
 import os
@@ -82,44 +83,6 @@ class DashObject:
         rle = self.compute_object_mask(mask=mask)
         area = mask_util.area(rle)
         return area
-
-    def compute_bbox(self, mask: np.ndarray) -> Tuple[int]:
-        """Compute the object bounding box.
-
-        Args:
-            mask: A 2D mask where values represent the object ID of each pixel.
-        
-        Returns:
-            (x, y, w, h): The bounding box of the object.
-        """
-        rle = self.compute_object_mask(mask=mask)
-
-        if mask_util.area(rle) > 0:
-            bbox = mask_util.toBbox(rle)  # xywh
-
-            # Convert to integers.
-            x, y, w, h = [int(bbox[i]) for i in (0, 1, 2, 3)]
-            return x, y, w, h
-        else:
-            return None
-
-    def compute_object_mask(self, mask: np.ndarray) -> List[int]:
-        """Computes the object mask, in RLE format.
-
-        Args:
-            mask: The mask of all objects in a scene.
-        
-        Returns:
-            rle: The object mask, in RLE format.
-        """
-        # Binary mask of the object.
-        obj_mask = mask == self.oid
-
-        # Mask to bbox.
-        mask = np.asfortranarray(obj_mask, dtype="uint8")
-        rle = mask_util.encode(mask)
-        rle["counts"] = rle["counts"].decode("ASCII")
-        return rle
 
     def to_y_vec(
         self,
@@ -231,6 +194,111 @@ class DashObject:
                 continue
             str_list.append(f"{k}: {v}")
         return str_list
+
+
+def compute_data_from_rgb_and_mask(
+    oid: int,
+    rgb: np.ndarray,
+    mask: np.ndarray,
+    data_height: Optional[int] = 480,
+    data_width: Optional[int] = 480,
+) -> np.ndarray:
+    """Constructs the data tensor for an object.
+
+    Args:
+        oid: The object ID.
+        rgb: The RGB image of the entire scene.
+        mask: A 2D mask where each pixel holds the object ID it belongs to.
+        data_height: The height of the data tensor.
+        data_width: The width of the data tensor.
+    
+    Returns:
+        data: The final data, which contains a cropped image of the object
+            concatenated with the original image of the scene, with the
+            object cropped out. (RGB, HWC)
+    """
+    rgb = rgb.copy()
+    bbox = compute_bbox(oid=oid, mask=mask)
+    data = np.zeros((data_height, data_width, 6)).astype(np.uint8)
+    input_rgb = rgb.copy()
+    if bbox is None:
+        print(f"Bbox is None. Object ID: {oid}")
+    else:
+        x, y, w, h = bbox
+
+        # Set the object seg to zeros in the original RGB image.
+        input_rgb[mask == oid] = 0.0
+
+        # Create the segmentation image (maintain aspect ratio, use
+        # replicate padding).
+        # First, zero out everything in the RGB image except for the object
+        # segmentation.
+        rgb_with_only_seg = rgb.copy()
+        rgb_with_only_seg[mask != oid] = 0.0
+
+        # Crop the segmentation out using its bbox.
+        seg = rgb_with_only_seg[y : y + h, x : x + w, :]
+
+        # Compute the new dimensions to resize the segmentation to.
+        if h > w:
+            aspect_ratio = h / w
+            resize_dims = (data_height, int(data_width / aspect_ratio))
+        else:
+            aspect_ratio = w / h
+            resize_dims = (int(data_height / aspect_ratio), data_width)
+        H_, W_ = resize_dims
+
+        # Resize the segmentation while maintaining aspect ratio.
+        seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
+        seg_padded = np.zeros((data_height, data_width, 3), dtype=np.uint8)
+        top_pad = (data_height - H_) // 2
+        left_pad = (data_width - W_) // 2
+        seg_padded[top_pad : top_pad + H_, left_pad : left_pad + W_] = seg
+        data[:, :, :3] = seg_padded
+    data[80:400, :, 3:6] = input_rgb
+    return data
+
+
+def compute_bbox(oid: int, mask: np.ndarray) -> Tuple[int]:
+    """Compute the object bounding box.
+
+    Args:
+        oid: The object ID.
+        mask: A 2D mask where values represent the object ID of each pixel.
+    
+    Returns:
+        (x, y, w, h): The bounding box of the object.
+    """
+    rle = compute_object_mask(oid=oid, mask=mask)
+
+    if mask_util.area(rle) > 0:
+        bbox = mask_util.toBbox(rle)  # xywh
+
+        # Convert to integers.
+        x, y, w, h = [int(bbox[i]) for i in (0, 1, 2, 3)]
+        return x, y, w, h
+    else:
+        return None
+
+
+def compute_object_mask(oid: int, mask: np.ndarray) -> List[int]:
+    """Computes the object mask, in RLE format.
+
+    Args:
+        oid: The object ID.
+        mask: The mask of all objects in a scene.
+    
+    Returns:
+        rle: The object mask, in RLE format.
+    """
+    # Binary mask of the object.
+    obj_mask = mask == oid
+
+    # Mask to bbox.
+    mask = np.asfortranarray(obj_mask, dtype="uint8")
+    rle = mask_util.encode(mask)
+    rle["counts"] = rle["counts"].decode("ASCII")
+    return rle
 
 
 def y_vec_to_dict(
@@ -399,7 +467,7 @@ class DashRobot:
         self.p = p
         self.urdf_path = urdf_path
         self.position = position
-        self.robot_id = self.render_robot()
+        self.robot_id = self.load_robot()
 
         # The robot's head camera.
         self.camera = BulletCamera(offset=cam_offset)
@@ -415,7 +483,7 @@ class DashRobot:
         # Initialize the head and camera to zero rotation.
         self.set_head_and_camera(roll=0, tilt=0, pan=0, degrees=True)
 
-    def render_robot(self) -> int:
+    def load_robot(self) -> int:
         """Renders the robot in bullet.
 
         Returns:
