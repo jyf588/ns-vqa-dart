@@ -80,7 +80,7 @@ class DashObject:
         Returns:
             area: The number of mask pixels that the object has.
         """
-        rle = self.compute_object_mask(mask=mask)
+        rle = compute_object_mask(mask=mask)
         area = mask_util.area(rle)
         return area
 
