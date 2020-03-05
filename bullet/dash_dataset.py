@@ -215,7 +215,9 @@ class DashDataset:
             mask: The mask of the scene.
         """
         for o in objects:
-            data = self.compute_data_from_rgb_and_mask(o=o, rgb=rgb, mask=mask)
+            data = bullet.dash_object.compute_data_from_rgb_and_mask(
+                oid=o.oid, rgb=rgb, mask=mask
+            )
             np.save(self.construct_object_path(o=o, key="input_data"), data)
 
     """ Image IDs. """

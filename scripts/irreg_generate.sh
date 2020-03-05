@@ -1,3 +1,3 @@
 python bullet/generate.py \
-    --dataset_dir /media/michelle/68B62784B62751BC/datasets/cup \
+    --dataset_dir /home/michelle/datasets/test \
     --n_examples 4
