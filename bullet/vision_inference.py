@@ -23,7 +23,7 @@ class VisionInference:
         img_width: int = 480,
         data_height: int = 480,
         data_width: int = 480,
-        coordinate_frame: Optional[str] = "world",
+        coordinate_frame: Optional[str] = "camera",
     ):
         """A class for performing vision inference.
 
@@ -106,7 +106,9 @@ class VisionInference:
         odicts = []
         for i in range(len(pred)):
             odict = dash_object.y_vec_to_dict(
-                y=pred[i], coordinate_frame=self.coordinate_frame
+                y=list(pred[i]),
+                coordinate_frame=self.coordinate_frame,
+                camera=self.camera,
             )
             odicts.append(odict)
         return odicts

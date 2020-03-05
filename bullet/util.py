@@ -45,6 +45,7 @@ def cam_to_world(xyz: List[float], camera) -> List[float]:
     Returns:
         world_xyz: The xyz point in world coordinate frame.
     """
+    assert type(xyz) == list
 
     view_mat = np.array(camera.view_mat)
     view_mat = view_mat.reshape((4, 4))

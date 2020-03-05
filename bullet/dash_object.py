@@ -216,6 +216,9 @@ def compute_data_from_rgb_and_mask(
         data: The final data, which contains a cropped image of the object
             concatenated with the original image of the scene, with the
             object cropped out. (RGB, HWC)
+
+            Note: If the object bbox area is zero, the input RGB is simply the
+            original RGB image, and the object segmentation image is all zeros.
     """
     rgb = rgb.copy()
     bbox = compute_bbox(oid=oid, mask=mask)
@@ -329,6 +332,7 @@ def y_vec_to_dict(
                 "up_vector": [float, float, float]
             }
     """
+    assert type(y) == list
     if coordinate_frame == "camera" and camera is None:
         raise ValueError(
             f"Coordinate frame is camera but no camera was provided."
