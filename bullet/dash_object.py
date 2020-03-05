@@ -234,7 +234,9 @@ class DashObject:
 
 
 def y_vec_to_dict(
-    y: List[float], coordinate_frame: str, camera: BulletCamera
+    y: List[float],
+    coordinate_frame: str,
+    camera: Optional[BulletCamera] = None,
 ) -> Dict:
     """Converts a y vector containing object labels into dictionary. Values are
     converted back into global coordinate frame if `coordinate_frame` is 
@@ -245,11 +247,25 @@ def y_vec_to_dict(
         coordinate_frame: The coordinate frame to use, either "world" or
                 "camera" coordinate frame.
         camera: The BulletCamera for computing values in camera coordinate 
-            frame.
+            frame. Required if the coordinate frame is "camera".
 
     Returns:
-        y_dict: A dictionary representation of the y vector.
+        y_dict: A dictionary representation of the y vector. All xyz values are
+            in world coordinate frame. Contains the following keys: {
+                "shape": str,
+                "color": str,
+                "size": str,
+                "radius": float,
+                "height": float,
+                "position": [float, float, float],
+                "up_vector": [float, float, float]
+            }
     """
+    if coordinate_frame == "camera" and camera is None:
+        raise ValueError(
+            f"Coordinate frame is camera but no camera was provided."
+        )
+
     y_dict = {}
     start = 0
     for name, attr_list in ATTR_NAME2LIST.items():
@@ -269,6 +285,7 @@ def y_vec_to_dict(
     end = start + 3
     y_dict["up_vector"] = y[start:end]
 
+    # Converts from camera to world coordinate frame if necessary.
     if coordinate_frame == "world":
         pass
     elif coordinate_frame == "camera":
@@ -276,6 +293,13 @@ def y_vec_to_dict(
             y_dict[k] = bullet.util.cam_to_world(xyz=y_dict[k], camera=camera)
     else:
         raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
+
+    # Assigns a categorical size label for the given radius and height.
+    if y_dict["radius"] > 0.04 and y_dict["height"] > 0.18:
+        size = "large"
+    else:
+        size = "small"
+    y_dict["size"] = size
     return y_dict
 
 
