@@ -19,10 +19,11 @@ class VisionInference:
         checkpoint_path: str,
         camera_position: List[float] = [
             -0.1916501582752709,
-            0.03197646764976494,
+            0.03197646764976494,  # 0.2 is the table offset
             0.4177423103840716,
         ],
         camera_rotation: List[float] = [0.0, 50.0, 0.0],
+        camera_offset: Optional[List[float]] = None,
         img_height: int = 320,
         img_width: int = 480,
         data_height: int = 480,
@@ -36,6 +37,8 @@ class VisionInference:
             checkpoint_path: The path to the model checkpoint.
             camera_position: The position of the camera.
             camera_rotation: The roll, pitch, and yaw of the camera (degrees).
+            camera_offset: The amount to offset the camera position compared to
+                the camera position that the vision module was trained on.
             img_height: The height of the image.
             img_width: The width of the image.
             data_height: The height of the input data to the model.
@@ -47,6 +50,7 @@ class VisionInference:
         self.checkpoint_path = checkpoint_path
         self.camera_position = camera_position
         self.camera_rotation = camera_rotation
+        self.camera_offset = camera_offset
         self.img_height = img_height
         self.img_width = img_width
         self.data_height = data_height
@@ -74,6 +78,10 @@ class VisionInference:
             camera: The BulletCamera.
         """
         camera = BulletCamera()
+        if self.camera_offset is not None:
+            self.camera_position = list(
+                np.array(self.camera_position) + np.array(self.camera_offset)
+            )
         camera.set_pose(
             position=self.camera_position, rotation=self.camera_rotation
         )
@@ -114,6 +122,12 @@ class VisionInference:
                 coordinate_frame=self.coordinate_frame,
                 camera=self.camera,
             )
+
+            # Apply the camera offset.
+            if self.camera_offset is not None:
+                odict["position"] = list(
+                    np.array(odict["position"]) + np.array(self.camera_offset)
+                )
             odicts.append(odict)
         return odicts
 
