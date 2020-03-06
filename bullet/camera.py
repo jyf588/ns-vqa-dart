@@ -10,37 +10,53 @@ import bullet.util
 class BulletCamera:
     def __init__(
         self,
-        offset: Optional[List[float]] = [0.0, 0.0, 0.0],
+        p: Optional[bc.BulletClient] = None,
+        position: Optional[List[float]] = None,
+        rotation: Optional[List[float]] = None,
+        offset: Optional[List[float]] = None,
+        directed_offset: Optional[List[float]] = None,
         init_type: Optional[str] = None,
     ):
         """
         Args:
-            p: The pybullet client.
-            offset: The position offset to apply.
+            p: The pybullet client containing the scenes that we want to take
+                snapshots of.
+            position: The position of the camera, in world coordinate frame.
+            rotation: The rotation of the camera (in degrees), in world 
+                coordinate frame.
+            offset: The amount of offset to apply to the camera position.
+            directed_offset: The position offset to apply in the direction of 
+                the camera up vector.
             init_type: The type of camera to initialize with.
 
         Attributes:
-            p: The pybullet client.
+            p: The pybullet client containing the scenes that we want to take
+                snapshots of.
             H: The height of the generated images.
             W: The width of the generated images.
             position: The position of the camera, in world coordinate frame.
             rotation: The rotation of the camera (in degrees), in world 
                 coordinate frame.
-            offset: The position offset to apply.
+            offset: The amount of offset to apply to the camera position.
+            directed_offset: The position offset to apply in the direction of 
+                the camera up vector.
             cam_target_pos: The target position of the camera.
             up_vector: The up vector of the camera.
             view_mat: The view matrix of the camera.
             proj_mat: The projection matrix of the camera.
         """
-        self.p = bullet.util.create_bullet_client(mode="direct")
+        self.p = p
+        # self.p_util = bullet.util.create_bullet_client(mode="direct")
 
         # Camera configurations.
         self.H = 480  # image dim
         self.W = 320
 
-        self.position = None
-        self.rotation = None
+        self.position = position
+        self.rotation = rotation
         self.offset = offset
+        self.directed_offset = directed_offset
+        self.set_pose(position=position, rotation=rotation)
 
         self.target_position = [0.0, 0.0, 0.0]
         self.up_vector = [0.0, 0.0, 1.0]
@@ -76,7 +92,7 @@ class BulletCamera:
         and centered.
         """
         self.target_position = [0.25, 0.0, 0.0]
-        self.view_mat = self.p.computeViewMatrixFromYawPitchRoll(
+        self.view_mat = pybullet.computeViewMatrixFromYawPitchRoll(
             cameraTargetPosition=self.target_position,
             distance=0.81,
             yaw=270.0,
@@ -94,7 +110,7 @@ class BulletCamera:
         if axis != "z":
             raise NotImplementedError
         self.target_position = [0.25, 0.0, 0.0]
-        self.view_mat = self.p.computeViewMatrixFromYawPitchRoll(
+        self.view_mat = pybullet.computeViewMatrixFromYawPitchRoll(
             cameraTargetPosition=self.target_position,
             distance=0.81,
             yaw=270.0,
@@ -111,10 +127,14 @@ class BulletCamera:
             position: The xyz position of the camera.
             rotation: The xyz rotation of the camera.
         """
+        if self.offset is not None:
+            position = list(np.array(position) + np.array(self.offset))
+
         # Apply to offset to the camera position.
-        position = self.offset_in_direction(
-            source=position, offset=self.offset, rotation=rotation
-        )
+        if self.directed_offset is not None:
+            position = self.offset_in_direction(
+                source=position, offset=self.directed_offset, rotation=rotation
+            )
 
         self.position = position
         self.rotation = rotation
@@ -126,7 +146,7 @@ class BulletCamera:
 
     def compute_view_matrix(self) -> List[float]:
         """Computes the view matrix based on the camera attributes."""
-        view_mat = self.p.computeViewMatrix(
+        view_mat = pybullet.computeViewMatrix(
             cameraEyePosition=self.position,
             cameraTargetPosition=self.target_position,
             cameraUpVector=self.up_vector,
@@ -166,14 +186,14 @@ class BulletCamera:
         vector = rot.apply(vector)
         return list(vector)
 
-    def get_rgb_and_mask(self, p: bc.BulletClient):
+    def get_rgb_and_mask(self):
         view_mat = np.array(self.view_mat).reshape((4, 4))
-        img = p.getCameraImage(
+        img = self.p.getCameraImage(
             self.H,
             self.W,
             viewMatrix=self.view_mat,
             projectionMatrix=self.proj_mat,
-            renderer=p.ER_BULLET_HARDWARE_OPENGL,
+            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
         )
         rgb = np.reshape(img[2], (self.W, self.H, 4))[:, :, :3]
         mask = np.reshape(img[4], (self.W, self.H))

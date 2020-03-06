@@ -114,11 +114,10 @@ class RandomSceneGenerator:
         """
         for _ in tqdm(range(n)):
             objects = self.generate_tabletop_objects()
-            rgb, mask = self.generate_image()
+            if self.egocentric:
+                self.generate_and_set_new_camera_view()
             camera = self.robot.camera if self.egocentric else self.camera
-            self.dataset.save_example(
-                objects=objects, camera=camera, rgb=rgb, mask=mask
-            )
+            self.dataset.save_example(objects=objects, camera=camera)
             self.remove_objects(objects=objects)
 
     def remove_objects(self, objects: List[DashObject]):
@@ -169,29 +168,14 @@ class RandomSceneGenerator:
                 objects.append(o)
         return objects
 
-    def generate_image(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Takes a snapshot of the current scene, where viewpoint is randomly
-        chosen.
-
-        Returns:
-            rgb: The RGB image of the scene.
-            mask: The mask of the scene, where values represent the object ID
-                that is present at each pixel.
-        """
+    def generate_and_set_new_camera_view(self):
+        """Generates and sets new camera viewpoint."""
         roll, tilt, pan = self.generate_random_xyz(
             self.roll_bounds, self.tilt_bounds, self.pan_bounds
         )
-        if self.egocentric:
-            self.robot.set_head_and_camera(
-                roll=roll, tilt=tilt, pan=pan, degrees=self.degrees
-            )
-            rgb, mask = self.robot.camera.get_rgb_and_mask(p=self.p)
-        else:
-            print(
-                f"Warning: Updating the pose for non-egocentric camera is currently not supported."
-            )
-            rgb, mask = self.camera.get_rgb_and_mask(p=self.p)
-        return rgb, mask
+        self.robot.set_head_and_camera(
+            roll=roll, tilt=tilt, pan=pan, degrees=self.degrees
+        )
 
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.

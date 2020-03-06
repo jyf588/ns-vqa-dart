@@ -37,8 +37,8 @@ class VisionInference:
             checkpoint_path: The path to the model checkpoint.
             camera_position: The position of the camera.
             camera_rotation: The roll, pitch, and yaw of the camera (degrees).
-            camera_offset: The amount to offset the camera position compared to
-                the camera position that the vision module was trained on.
+            camera_offset: The amount to offset the camera position in order to
+                match the camera position that the model was trained on.
             img_height: The height of the image.
             img_width: The width of the image.
             data_height: The height of the input data to the model.
@@ -48,8 +48,6 @@ class VisionInference:
         """
         self.p = p
         self.checkpoint_path = checkpoint_path
-        self.camera_position = camera_position
-        self.camera_rotation = camera_rotation
         self.camera_offset = camera_offset
         self.img_height = img_height
         self.img_width = img_width
@@ -58,7 +56,12 @@ class VisionInference:
         self.coordinate_frame = coordinate_frame
 
         # Camera initialization.
-        self.camera = self.init_camera()
+        self.camera = BulletCamera(
+            p=p,
+            position=camera_position,
+            rotation=camera_rotation,
+            offset=camera_offset,
+        )
 
         options = self.get_options()
         self.model = get_model(options)
@@ -70,22 +73,6 @@ class VisionInference:
                 transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
             ]
         )
-
-    def init_camera(self):
-        """Sets up the camera to be a fixed position and rotation in the scene.
-
-        Returns:
-            camera: The BulletCamera.
-        """
-        camera = BulletCamera()
-        if self.camera_offset is not None:
-            self.camera_position = list(
-                np.array(self.camera_position) + np.array(self.camera_offset)
-            )
-        camera.set_pose(
-            position=self.camera_position, rotation=self.camera_rotation
-        )
-        return camera
 
     def get_options(self):
         """Creates the options namespace to define the vision model.

@@ -55,25 +55,24 @@ class DashDataset:
         mask = self.load_mask(eid=eid)
         return objects, camera, rgb, mask
 
-    def save_example(
-        self,
-        objects: List[DashObject],
-        camera: BulletCamera,
-        rgb: np.ndarray,
-        mask: np.ndarray,
-    ):
+    def save_example(self, objects: List[DashObject], camera: BulletCamera):
         """Saves an example scene.
+
+        Before saving, it does the following processing:
+            1. Filter out objects by their area.
+            2. Generate the RGB and mask images.
 
         Args:
             objects: A list of DashObjects in the scene.
             camera: The camera of the scene.
-            rgb: The RGB image of the scene.
-            mask: The mask of the scene.
         """
         # Filter out objects that are out-of-view.
         objects = self.filter_objects_by_area(
             objects=objects, mask=mask, threshold_area=self.threshold_obj_area
         )
+
+        # Generate RGB and mask images.
+        rgb, mask = camera.get_rgb_and_mask()
 
         # Associate each object with the image ID.
         for o in objects:

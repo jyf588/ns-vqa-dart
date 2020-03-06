@@ -45,7 +45,7 @@ class DashObject:
                 world coordinate frame.
             orientation: The orientation of the object, expressed as a 
                 [x, y, z, w] quaternion, in world coordinate frame.     
-            oid: PyBullet object ID that comes from p.loadURDF.
+            oid: PyBullet object ID.
             img_id: The image ID associated with the object.      
 
         Attributes:
