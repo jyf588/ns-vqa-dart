@@ -4,7 +4,7 @@ import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
 from typing import *
 
-import bullet.util
+from . import util
 
 
 class BulletCamera:

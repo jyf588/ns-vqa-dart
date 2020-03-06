@@ -10,8 +10,8 @@ import pybullet
 import pybullet_utils.bullet_client as bc
 from typing import *
 
-from bullet.camera import BulletCamera
-from bullet.dash_object import DashObject, DashTable
+from .camera import BulletCamera
+from .dash_object import DashObject, DashTable
 
 
 PRIMITIVE2GEOM = {
@@ -68,23 +68,6 @@ class BulletRenderer:
     def __init__(self, p, assets_dir="bullet/assets"):
         self.p = p
         self.assets_dir = assets_dir
-
-    # def render_table(self, o: DashTable) -> int:
-    #     """Renders a DashTable.
-
-    #     Returns:
-    #         oid: The ID of the table.
-    #     """
-    #     self.load_urdf(
-    #         shape=o.shape, position=o.position, orientation=o.orientation
-    #     )
-    #     oid = self.p.loadURDF(
-    #         fileName=self.construct_object_path(obj_name=o.shape),
-    #         basePosition=o.position,
-    #         baseOrientation=o.orientation,
-    #     )
-    #     self.color_object(oid=oid, color=o.color)
-    #     return oid
 
     def render_object(
         self, o: DashObject, check_sizes: Optional[bool] = True

@@ -6,8 +6,8 @@ import pybullet_utils.bullet_client as bc
 import pycocotools.mask as mask_util
 from typing import Any, Dict, List, Optional, Tuple
 
-from bullet.camera import BulletCamera
-import bullet.util
+from .camera import BulletCamera
+from . import util
 
 
 # Note: order matters!
