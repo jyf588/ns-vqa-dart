@@ -105,7 +105,7 @@ class BulletRenderer:
         rgba_color = COLOR2RGBA[o.color]
 
         if o.shape in PRIMITIVE2GEOM:
-            oid = self.load_primitive(
+            oid = self.create_primitive(
                 shape=o.shape,
                 position=o.position,
                 r=o.radius,
@@ -119,7 +119,7 @@ class BulletRenderer:
             )
         return oid
 
-    def load_primitive(
+    def create_primitive(
         self,
         shape: str,
         position: List[float],
@@ -127,23 +127,30 @@ class BulletRenderer:
         h: Optional[float] = None,
         rgba_color: List[float] = None,
         check_sizes: Optional[bool] = True,
+        base_mass: Optional[float] = 3.5,
     ) -> Optional[int]:
         """Creates a primitive object.
 
         Args:
             shape: The name of the shape to generate.
-            com_position: The (x, y, z) position of the COM, in world coordinates.
+            position: The (x, y, z) position of the base of the object, in 
+                world coordinates.
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
             rgba_color: The color of the object.
             check_sizes: Whether to check that the sizes are valid for various
                 shapes.
+            base_mass: The mass of the object.
 
         Returns:
             If the object creation is successful:
                 oid: The object ID.
-            If the dimensions of the object are invalid:
+            If creating the visual shape failed:
                 None
+        
+        Raises:
+            pybullet.error: If creating the visual shape failed (e.g., with
+                invalid dimensions). Only raised if `check_sizes` is True.
         """
         if check_sizes and shape == "sphere":
             assert h == 2 * r
@@ -164,20 +171,30 @@ class BulletRenderer:
                 length=h,
                 rgbaColor=rgba_color,
             )
-        # This can happen when trying to render predictions that are physically
-        # impossible.
+        # Errors can occur when trying to render predictions that are
+        # physically impossible.
         except pybullet.error as e:
-            # print(e)
-            # print(
-            #     f"Invalid object. Shape: {shape}\tRadius: {r}\tHeight: {h}\tHalf_extents: {half_extents}"
-            # )
-            return None
+            print(
+                f"Attempted rendering of invalid object. "
+                f"Shape: {shape}\t"
+                f"Radius: {r}\t"
+                f"Height: {h}\t"
+                f"Half_extents: {half_extents}"
+            )
+
+            if check_sizes:
+                raise (e)
+
+            # Don't raise the exception, in cases when we are rendering e.g.
+            # predictions (which we expect to be invalid at times).
+            else:
+                return None
 
         collisionShapeId = self.p.createCollisionShape(
             shapeType=geom, radius=r, halfExtents=half_extents, height=h
         )
         oid = self.p.createMultiBody(
-            baseMass=3.5,
+            baseMass=base_mass,
             baseInertialFramePosition=[0, 0, 0],
             baseCollisionShapeIndex=collisionShapeId,
             baseVisualShapeIndex=visualShapeId,
