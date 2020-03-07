@@ -31,7 +31,7 @@ class DashObject:
         radius: float,
         height: float,
         position: List[float],
-        orientation: List[float],
+        orientation: Optional[List[float]] = [0.0, 0.0, 0.0, 1.0],
         oid: Optional[int] = None,
         img_id: Optional[int] = None,
     ):

@@ -72,7 +72,8 @@ class BulletRenderer:
     def render_object(
         self,
         o: DashObject,
-        base_mass: Optional[float] = None,
+        base_mass: Optional[float] = 3.5,
+        use_fixed_base: Optional[bool] = False,
         check_sizes: Optional[bool] = True,
     ) -> Optional[int]:
         """Renders a DashObject.
@@ -81,6 +82,8 @@ class BulletRenderer:
             o: A DashObject, with all attributes except for oid and img_id 
                 filled.
             base_mass: The mass of the object.
+            use_fixed_base: Whether to force the base of the loaded object to
+                be static. Used for loading URDF objects.
             check_sizes: Whether to check sizes of the object, e.g. that the
                 height of a sphere should be 2*r.
         
@@ -103,7 +106,11 @@ class BulletRenderer:
             )
         else:
             oid = self.load_nonprimitive(
-                shape=o.shape, position=o.position, color=color
+                shape=o.shape,
+                position=o.position,
+                orientation=o.orientation,
+                color=color,
+                use_fixed_base=use_fixed_base,
             )
         return oid
 
@@ -113,7 +120,7 @@ class BulletRenderer:
         base_position: List[float],
         orientation: List[float],
         r: float,
-        h: Optional[float] = None,
+        h: float,
         color: str = None,
         base_mass: Optional[float] = 3.5,
         check_sizes: Optional[bool] = True,
@@ -195,21 +202,35 @@ class BulletRenderer:
         return oid
 
     def load_nonprimitive(
-        self, shape: str, position: List[float], color: str
+        self,
+        shape: str,
+        position: List[float],
+        orientation: List[float],
+        color: str,
+        use_fixed_base: Optional[bool] = False,
     ) -> int:
         """Loads a nonprimitive object.
 
         Args:
             shape: The object shape.
             position: The position to set the origin of the object.
+            orientation: The orientation of the object.
             color: The color of the object.
+            use_fixed_base: Whether to force the base of the loaded object to
+                be static.
         
         Returns:
             oid: The object ID.
         """
         path = self.construct_object_path(obj_name=shape)
         if shape in URDF_SHAPES:
-            oid = self.load_urdf(path=path, position=position, color=color)
+            oid = self.load_urdf(
+                path=path,
+                position=position,
+                orientation=orientation,
+                color=color,
+                use_fixed_base=use_fixed_base,
+            )
         elif shape in MESH_SHAPES:
             mesh_measurements = MESH_MEASUREMENTS[shape]
 
@@ -268,18 +289,33 @@ class BulletRenderer:
         )
         return oid
 
-    def load_urdf(self, path: str, position: List[float], color: str):
+    def load_urdf(
+        self,
+        path: str,
+        position: List[float],
+        orientation: List[float],
+        color: str,
+        use_fixed_base: Optional[bool] = False,
+    ):
         """Loads a urdf object.
 
         Args:
             path: The path of the urdf file.
             position: The position to set the origin of the object.
+            orientation: The orientation of the object.
             color: The color of the object.
+            use_fixed_base: Whether to force the base of the loaded object to
+                be static.
         
         Returns:
             oid: The object ID.
         """
-        oid = self.p.loadURDF(path, basePosition=position)
+        oid = self.p.loadURDF(
+            path,
+            basePosition=position,
+            baseOrientation=orientation,
+            useFixedBase=use_fixed_base,
+        )
         self.p.changeVisualShape(
             objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[color]
         )
