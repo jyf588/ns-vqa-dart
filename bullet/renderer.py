@@ -85,42 +85,44 @@ class BulletRenderer:
         # Make a deep copy of the object because downstream functions might
         # modify the object for rendering purposes.
         o = copy.deepcopy(o)
-        rgba_color = COLOR2RGBA[o.color]
 
         if o.shape in PRIMITIVE2GEOM:
             oid = self.create_primitive(
-                shape=o.shape,
+                geom=PRIMITIVE2GEOM[o.shape],
                 position=o.position,
                 r=o.radius,
                 h=o.height,
-                rgba_color=rgba_color,
+                color=color,
                 check_sizes=check_sizes,
             )
         else:
             oid = self.load_nonprimitive(
-                shape=o.shape, position=o.position, rgba_color=rgba_color
+                shape=o.shape, position=o.position, color=color
             )
         return oid
 
     def create_primitive(
         self,
-        shape: str,
-        position: List[float],
+        geom: Any,
+        base_position: List[float],
+        orientation: List[float],
         r: float,
         h: Optional[float] = None,
-        rgba_color: List[float] = None,
+        color: str = None,
         check_sizes: Optional[bool] = True,
         base_mass: Optional[float] = 3.5,
     ) -> Optional[int]:
         """Creates a primitive object.
 
         Args:
-            shape: The name of the shape to generate.
-            position: The (x, y, z) position of the base of the object, in 
+            geom: The bullet GEOM_{shape} enum.
+            base_position: The (x, y, z) base position of the object, in 
                 world coordinates.
+            orientation: The orientation of the object, in [x, y, z, w] 
+                quaternion format.
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
-            rgba_color: The color of the object.
+            color: The color of the object.
             check_sizes: Whether to check that the sizes are valid for various
                 shapes.
             base_mass: The mass of the object.
@@ -135,24 +137,24 @@ class BulletRenderer:
             pybullet.error: If creating the visual shape failed (e.g., with
                 invalid dimensions). Only raised if `check_sizes` is True.
         """
-        if check_sizes and shape == "sphere":
+        if check_sizes and geom == pybullet.GEOM_SPHERE:
             assert h == 2 * r
 
-        geom = PRIMITIVE2GEOM[shape]
         half_extents = [r, r, h / 2]
 
         # Update the position to be defined for the COM, since that's what
-        # PyBullet expects.
-        position[2] = h / 2
+        # PyBullet expects. So we offset the z position by half of the height.
+        com_position = base_position.copy()
+        com_position[2] += h / 2
 
         # Create the shape.
         try:
-            visualShapeId = self.p.createVisualShape(
+            visual_shape_id = self.p.createVisualShape(
                 shapeType=geom,
                 radius=r,
                 halfExtents=half_extents,
                 length=h,
-                rgbaColor=rgba_color,
+                rgbaColor=COLOR2RGBA[color],
             )
         # Errors can occur when trying to render predictions that are
         # physically impossible.
@@ -173,36 +175,35 @@ class BulletRenderer:
             else:
                 return None
 
-        collisionShapeId = self.p.createCollisionShape(
+        collision_shape_id = self.p.createCollisionShape(
             shapeType=geom, radius=r, halfExtents=half_extents, height=h
         )
         oid = self.p.createMultiBody(
             baseMass=base_mass,
             baseInertialFramePosition=[0, 0, 0],
-            baseCollisionShapeIndex=collisionShapeId,
-            baseVisualShapeIndex=visualShapeId,
-            basePosition=position,  # Pybullet expects COM.
+            baseCollisionShapeIndex=collision_shape_id,
+            baseVisualShapeIndex=visual_shape_id,
+            basePosition=com_position,  # Pybullet expects COM.
+            baseOrientation=orientation,
         )
         return oid
 
     def load_nonprimitive(
-        self, shape: str, position: List[float], rgba_color: List[float]
+        self, shape: str, position: List[float], color: str
     ) -> int:
         """Loads a nonprimitive object.
 
         Args:
             shape: The object shape.
             position: The position to set the origin of the object.
-            rgba_color: The RGBA color of the object.
+            color: The color of the object.
         
         Returns:
             oid: The object ID.
         """
         path = self.construct_object_path(obj_name=shape)
         if shape in URDF_SHAPES:
-            oid = self.load_urdf(
-                path=path, position=position, rgba_color=rgba_color
-            )
+            oid = self.load_urdf(path=path, position=position, color=color)
         elif shape in MESH_SHAPES:
             mesh_measurements = MESH_MEASUREMENTS[shape]
 
@@ -216,7 +217,7 @@ class BulletRenderer:
                 scale=scale,
                 position=position,
                 orientation=orientation,
-                rgba_color=rgba_color,
+                color=color,
             )
         else:
             raise ValueError(
@@ -230,7 +231,7 @@ class BulletRenderer:
         scale: List[float],
         position: List[float],
         orientation: List[float],
-        rgba_color: List[float],
+        color: str,
     ):
         """Loads a mesh object.
 
@@ -238,15 +239,15 @@ class BulletRenderer:
             path: The path to the object file.
             position: The xyz position of the object's origin.
             # orientation: The orientation of the object.
-            rgba_color: The color of the object.
+            color: The color of the object.
 
         Returns:
             oid: The object ID.
         """
-        visualShapeId = self.p.createVisualShape(
+        visual_shape_id = self.p.createVisualShape(
             shapeType=self.p.GEOM_MESH,
             fileName=path,
-            rgbaColor=rgba_color,
+            rgbaColor=COLOR2RGBA[color],
             meshScale=scale,
             visualFrameOrientation=orientation,
         )
@@ -256,27 +257,25 @@ class BulletRenderer:
 
         oid = self.p.createMultiBody(
             baseCollisionShapeIndex=collisionShapeId,
-            baseVisualShapeIndex=visualShapeId,
+            baseVisualShapeIndex=visual_shape_id,
             basePosition=position,
         )
         return oid
 
-    def load_urdf(
-        self, path: str, position: List[float], rgba_color: List[float]
-    ):
+    def load_urdf(self, path: str, position: List[float], color: str):
         """Loads a urdf object.
 
         Args:
             path: The path of the urdf file.
             position: The position to set the origin of the object.
-            rgba_color: The RGBA color of the object.
+            color: The color of the object.
         
         Returns:
             oid: The object ID.
         """
         oid = self.p.loadURDF(path, basePosition=position)
         self.p.changeVisualShape(
-            objectUniqueId=oid, linkIndex=-1, rgbaColor=rgba_color
+            objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[color]
         )
         return oid
 
