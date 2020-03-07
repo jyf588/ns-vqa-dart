@@ -1,8 +1,9 @@
 import pybullet_utils.bullet_client as bc
 from typing import *
 
-from dash_dataset import DashDataset
-from dash_object import DashObject
+from .camera import BulletCamera
+from .dash_dataset import DashDataset
+from .dash_object import DashObject
 
 
 class PlacingDatasetGenerator:
@@ -14,12 +15,12 @@ class PlacingDatasetGenerator:
         self,
         p: bc.BulletClient,
         dataset_dir: str,
-        camera_position: Optiona[List[float]] = [
+        camera_position: Optional[List[float]] = [
             -0.1916501582752709,
             0.03197646764976494,
             0.4177423103840716,
         ],
-        camera_rotation: Optiona[List[float]] = [0.0, 50.0, 0.0],
+        camera_rotation: Optional[List[float]] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = [0.0, 0.0, 0.0],
     ):
         """

@@ -7,10 +7,10 @@ import time
 from tqdm import tqdm
 from typing import *
 
-from bullet.camera import BulletCamera
-import bullet.dash_object
-from bullet.dash_object import DashObject
-from bullet.profiler import Profiler
+from .camera import BulletCamera
+from . import dash_object
+from .dash_object import DashObject
+from .profiler import Profiler
 
 KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json", "input_data": "npy"}
 
