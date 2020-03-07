@@ -52,39 +52,47 @@ class PlacingDatasetGenerator:
         """Resets the list of stored objects."""
         self.objects = []
 
-    def add_object(
-        self,
-        oid: int,
-        shape: str,
-        color: str,
-        radius: float,
-        height: float,
-        position: List[float],
-        orientation: List[float],
-    ):
+    def add_object(self, o: DashObject):
         """Adds a single scene object.
 
         Args:
-            oid: PyBullet object ID.
-            shape: The shape of the object.
-            color: The color of the object.
-            radius: The radius of the object.
-            height: The height of the object.
-            position: The xyz position of the center of the object's base, in 
-                world coordinate frame.
-            orientation: The orientation of the object, expressed as a 
-                [x, y, z, w] quaternion, in world coordinate frame.     
+            o: A DashObject.
         """
-        o = DashObject(
-            shape=shape,
-            color=color,
-            radius=radius,
-            height=height,
-            position=position,
-            orientation=orientation,
-            oid=oid,
-        )
         self.objects.append(o)
+
+    # def add_object(
+    #     self,
+    #     oid: int,
+    #     shape: str,
+    #     color: str,
+    #     radius: float,
+    #     height: float,
+    #     position: List[float],
+    #     orientation: List[float],
+    # ):
+    #     """Adds a single scene object.
+
+    #     Args:
+    #         oid: PyBullet object ID.
+    #         shape: The shape of the object.
+    #         color: The color of the object.
+    #         radius: The radius of the object.
+    #         height: The height of the object.
+    #         position: The xyz position of the center of the object's base, in
+    #             world coordinate frame.
+    #         orientation: The orientation of the object, expressed as a
+    #             [x, y, z, w] quaternion, in world coordinate frame.
+    #     """
+    #     o = DashObject(
+    #         shape=shape,
+    #         color=color,
+    #         radius=radius,
+    #         height=height,
+    #         position=position,
+    #         orientation=orientation,
+    #         oid=oid,
+    #     )
+    #     self.objects.append(o)
 
     def save_and_reset(self):
         """Saves the current scene example, and resets the stored information.

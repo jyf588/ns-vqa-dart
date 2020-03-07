@@ -70,12 +70,17 @@ class BulletRenderer:
         self.assets_dir = assets_dir
 
     def render_object(
-        self, o: DashObject, check_sizes: Optional[bool] = True
+        self,
+        o: DashObject,
+        base_mass: Optional[float] = None,
+        check_sizes: Optional[bool] = True,
     ) -> Optional[int]:
         """Renders a DashObject.
 
         Args:
-            o: A DashObject.
+            o: A DashObject, with all attributes except for oid and img_id 
+                filled.
+            base_mass: The mass of the object.
             check_sizes: Whether to check sizes of the object, e.g. that the
                 height of a sphere should be 2*r.
         
@@ -89,10 +94,11 @@ class BulletRenderer:
         if o.shape in PRIMITIVE2GEOM:
             oid = self.create_primitive(
                 geom=PRIMITIVE2GEOM[o.shape],
-                position=o.position,
+                base_position=o.position,
+                orientation=o.orientation,
                 r=o.radius,
                 h=o.height,
-                color=color,
+                color=o.color,
                 check_sizes=check_sizes,
             )
         else:
@@ -109,8 +115,8 @@ class BulletRenderer:
         r: float,
         h: Optional[float] = None,
         color: str = None,
-        check_sizes: Optional[bool] = True,
         base_mass: Optional[float] = 3.5,
+        check_sizes: Optional[bool] = True,
     ) -> Optional[int]:
         """Creates a primitive object.
 
@@ -123,9 +129,9 @@ class BulletRenderer:
             r: The radius of the object.
             h: The height of the object. This should be 2*r for sphere.
             color: The color of the object.
+            base_mass: The mass of the object.
             check_sizes: Whether to check that the sizes are valid for various
                 shapes.
-            base_mass: The mass of the object.
 
         Returns:
             If the object creation is successful:
