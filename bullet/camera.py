@@ -88,6 +88,14 @@ class BulletCamera:
         elif init_type == "z_axis":
             self.setup_axis_camera(axis="z")
 
+    def set_bullet_client(self, p: bc.BulletClient):
+        """Sets the bullet client of the camera.
+
+        Args:
+            p: The bullet client.
+        """
+        self.p = p
+
     def setup_default_camera(self):
         """Sets the camera to the default pose, which is behind the robot arm
         and centered.
@@ -224,6 +232,7 @@ def from_json(json_dict: Dict) -> BulletCamera:
     already includes the offset.
 
     Args:
+        p: The BulletClient to use.
         json_dict: The JSON dictionary.
     
     Returns:

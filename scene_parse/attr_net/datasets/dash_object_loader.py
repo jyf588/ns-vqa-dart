@@ -65,9 +65,6 @@ class DashTorchDataset(Dataset):
         self.height = height
         self.width = width
 
-        print(f"min_img_id: {min_img_id}")
-        print(f"max_img_id: {max_img_id}")
-
         # Load object examples included in the image ID bounds.
         self.objects = self.dataset.load_objects(
             min_img_id=min_img_id, max_img_id=max_img_id

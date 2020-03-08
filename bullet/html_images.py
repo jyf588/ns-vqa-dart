@@ -31,6 +31,8 @@ def main(args: argparse.Namespace):
     img_id2oid2pred_object = {}
     if args.n_objects is not None:
         pred_dicts = pred_dicts[: args.n_objects]
+
+    print(f"Loading objects...")
     for pred_dict in tqdm(pred_dicts):
         img_id = pred_dict["img_id"]
         oid = pred_dict["oid"]
@@ -221,9 +223,13 @@ def rerender(
         renderer.render_object(o=o, check_sizes=check_sizes)
         for o in objects_to_render
     ]
-    rerendered_z, _ = BulletCamera(init_type="z_axis").get_rgb_and_mask(p=p)
+
+    camera.set_bullet_client(p=p)
+    rerendered, _ = camera.get_rgb_and_mask()
+
+    # Create a camera just to get the z axis view.
+    rerendered_z, _ = BulletCamera(p=p, init_type="z_axis").get_rgb_and_mask()
     renderer.render_object(DashTable())
-    rerendered, _ = camera.get_rgb_and_mask(p=p)
 
     return rerendered, rerendered_z
 

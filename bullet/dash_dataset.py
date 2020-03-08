@@ -3,6 +3,7 @@ import imageio
 import json
 import numpy as np
 import os
+import pybullet_utils.bullet_client as bc
 import time
 from tqdm import tqdm
 from typing import *
@@ -93,7 +94,7 @@ class DashDataset:
     def load_object_for_img_id_and_oid(
         self, img_id: int, oid: int
     ) -> DashObject:
-        objects, camera = self.load_objects_and_camera_for_eid(eid=img_id)
+        objects = self.load_objects_for_eid(eid=img_id)
         debug = 0
         for o in objects:
             if o.img_id == img_id and o.oid == oid:
@@ -278,7 +279,7 @@ class DashDataset:
         objects = []
         for odict in json_dict["objects"]:
             objects.append(dash_object.from_json(odict))
-        camera = bullet_camera.from_json(json_dict["camera"])
+        camera = bullet_camera.from_json(json_dict=json_dict["camera"])
         return objects, camera
 
     def load_objects_for_eid(
@@ -305,6 +306,7 @@ class DashDataset:
 
         Args:
             eid: The example ID.
+            p: The BulletClient to use.
 
         Returns:
             camera: The BulletCamera for the example.
@@ -312,7 +314,7 @@ class DashDataset:
         json_dict = util.load_json(
             path=self.construct_scene_path(key="json", eid=eid)
         )
-        camera = bullet_camera.from_json(json_dict["camera"])
+        camera = bullet_camera.from_json(json_dict=json_dict["camera"])
         return camera
 
     def save_labels(

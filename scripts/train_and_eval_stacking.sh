@@ -43,7 +43,7 @@ python bullet/html_images.py \
 	--pred_path ~/outputs/stacking_v001/pred.json \
     --html_dir ~/html/stacking_v001 \
     --coordinate_frame camera \
-    --n_examples 100
+    --n_objects 100
 
 python bullet/html.py \
-    --html_dir ~/html_stacking_v001
+    --html_dir ~/html/stacking_v001
