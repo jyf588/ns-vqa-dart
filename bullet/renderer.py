@@ -21,7 +21,7 @@ PRIMITIVE2GEOM = {
 }
 
 SHAPE2PATH = {
-    "table": "table.urdf",
+    "tabletop": "tabletop.urdf",
     "lego": "lego.urdf",
     # "cup": "cup/cup_small.urdf",
     "cup": "cup/Cup/cup_vhacd.obj",
@@ -316,10 +316,19 @@ class BulletRenderer:
             baseOrientation=orientation,
             useFixedBase=use_fixed_base,
         )
+        self.color_object(oid=oid, color=color)
+        return oid
+
+    def color_object(self, oid: int, color: str):
+        """Applies a color to the object.
+
+        Args:
+            oid: The object ID.
+            color: The color to apply.
+        """
         self.p.changeVisualShape(
             objectUniqueId=oid, linkIndex=-1, rgbaColor=COLOR2RGBA[color]
         )
-        return oid
 
     def construct_object_path(self, obj_name: str) -> str:
         """Constructs the URDF path based on object attributes.
