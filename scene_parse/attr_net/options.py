@@ -106,16 +106,24 @@ class BaseOptions:
             "--fp16", action="store_true", help="Whether to use FP 16."
         )
         self.parser.add_argument(
-            "--start_id",
-            default=18500,
+            "--train_start_id",
             type=int,
-            help="The start example ID from the dataset to use.",
+            help="The start example ID from the dataset to use for train, inclusive.",
         )
         self.parser.add_argument(
-            "--end_id",
-            default=18500,
+            "--train_end_id",
             type=int,
-            help="The start example ID from the dataset to use.",
+            help="The start example ID from the dataset to use for train, exclusive.",
+        )
+        self.parser.add_argument(
+            "--eval_start_id",
+            type=int,
+            help="The start example ID from the dataset to use for eval, inclusive.",
+        )
+        self.parser.add_argument(
+            "--eval_end_id",
+            type=int,
+            help="The start example ID from the dataset to use for eval, exclusive.",
         )
         self.parser.add_argument(
             "--batch_size", default=20, type=int, help="batch size"
@@ -134,7 +142,7 @@ class BaseOptions:
 
     def parse(
         self,
-        opt: Optional[argparse.Namespace],
+        opt: Optional[argparse.Namespace] = None,
         save_options: Optional[bool] = True,
     ):
         """
@@ -167,7 +175,7 @@ class BaseOptions:
 
         # print and save options
         if save_options:
-            args = vars(self.opt)
+            args = vars(opt)
             print("| options")
             for k, v in args.items():
                 print("%s: %s" % (str(k), str(v)))

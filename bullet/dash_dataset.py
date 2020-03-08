@@ -11,6 +11,7 @@ from . import dash_object, util
 from .camera import BulletCamera
 from .dash_object import DashObject
 from .profiler import Profiler
+from . import camera as bullet_camera
 
 KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json", "input_data": "npy"}
 
@@ -111,13 +112,13 @@ class DashDataset:
 
         Args:
             min_img_id: The minimum image ID, inclusive.
-            max_img_id: The maximum image ID, inclusive.
+            max_img_id: The maximum image ID, exclusive.
         
         Returns:
             objects: A list of DashObject's.
         """
         print(
-            f"Loading objects between example IDs {min_img_id} and {max_img_id} (inclusive)..."
+            f"Loading objects with img IDs in range [{min_img_id}, {max_img_id})"
         )
         scene_ids = self.load_example_ids(min_id=min_img_id, max_id=max_img_id)
         all_objects = []
@@ -231,7 +232,7 @@ class DashDataset:
 
         Args:
             min_id: The minimum image ID, inclusive.
-            max_id: The maximum image ID, inclusive.
+            max_id: The maximum image ID, exclusive.
 
         Returns:
             filtered_eids: A list of example IDs, optionally filtered to only
@@ -245,7 +246,7 @@ class DashDataset:
 
         filtered_eids = []
         for eid in eids:
-            if min_id <= eid <= max_id:
+            if min_id <= eid < max_id:
                 filtered_eids.append(eid)
         return filtered_eids
 
@@ -276,8 +277,8 @@ class DashDataset:
         )
         objects = []
         for odict in json_dict["objects"]:
-            objects.append(bullet.dash_object.from_json(odict))
-        camera = bullet.camera.from_json(json_dict["camera"])
+            objects.append(dash_object.from_json(odict))
+        camera = bullet_camera.from_json(json_dict["camera"])
         return objects, camera
 
     def load_objects_for_eid(
@@ -296,7 +297,7 @@ class DashDataset:
         )
         objects = []
         for odict in json_dict["objects"]:
-            objects.append(bullet.dash_object.from_json(odict))
+            objects.append(dash_object.from_json(odict))
         return objects
 
     def load_camera_for_eid(self, eid: int) -> BulletCamera:
@@ -311,7 +312,7 @@ class DashDataset:
         json_dict = util.load_json(
             path=self.construct_scene_path(key="json", eid=eid)
         )
-        camera = bullet.camera.from_json(json_dict["camera"])
+        camera = bullet_camera.from_json(json_dict["camera"])
         return camera
 
     def save_labels(
