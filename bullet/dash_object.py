@@ -433,12 +433,15 @@ def from_json(json_dict: Dict) -> DashObject:
 
 
 class DashTable(DashObject):
-    def __init__(self):
+    def __init__(self, offset: List[float] = None):
         self.shape = "tabletop"
         self.size = None
         self.color = "grey"
         self.position = [0.25, 0.0, 0.0]  # [0.25, 0.2, 0.0]
         self.orientation = [0.0, 0.0, 0.0, 1.0]
+
+        if offset is not None:
+            self.position = list(np.array(self.position) + np.array(offset))
 
 
 class DashRobot:

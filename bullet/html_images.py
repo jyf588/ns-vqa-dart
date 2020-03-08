@@ -221,7 +221,7 @@ def rerender(
 
     [
         renderer.render_object(o=o, check_sizes=check_sizes)
-        for o in objects_to_render
+        for o in objects_to_render + [DashTable(offset=[0.0, 0.2, 0.0])]
     ]
 
     camera.set_bullet_client(p=p)
@@ -229,7 +229,6 @@ def rerender(
 
     # Create a camera just to get the z axis view.
     rerendered_z, _ = BulletCamera(p=p, init_type="z_axis").get_rgb_and_mask()
-    renderer.render_object(DashTable())
 
     return rerendered, rerendered_z
 
