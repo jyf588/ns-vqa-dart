@@ -15,10 +15,10 @@ class PlacingDatasetGenerator:
         self,
         p: bc.BulletClient,
         dataset_dir: str,
-        camera_position: Optional[List[float]] = [
-            -0.1916501582752709,
-            0.03197646764976494,
-            0.4177423103840716,
+        camera_position: Optional[List[float]] = [  # Robot head position
+            -0.2237938867122504,
+            0.03198004185028341,
+            0.5425,
         ],
         camera_rotation: Optional[List[float]] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = [0.0, 0.0, 0.0],
