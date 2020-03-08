@@ -46,4 +46,5 @@ python bullet/html_images.py \
     --n_objects 100
 
 python bullet/html.py \
-    --html_dir ~/html/stacking_v001
+    --html_dir ~/html/stacking_v001 \
+    --show_objects
