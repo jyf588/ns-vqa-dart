@@ -92,14 +92,15 @@ class VisionInference:
         options = BaseOptions().parse(opt=options, save_options=False)
         return options
 
-    def predict(self, oids: List[int]) -> np.ndarray:
+    def predict(self, oids: List[int]) -> List[Dict]:
         """Gets a snapshot of the current scene and gets model predictions.
 
         Args:
             oids: A list of object IDs to get data for.
 
         Returns:
-            odicts: A list of object dictionaries.
+            odicts: A list of object dictionaries, in the order of the input
+                oids.
         """
         data = self.get_data(oids=oids)
         self.model.set_input(data)
