@@ -58,10 +58,10 @@ class BulletCamera:
         self.directed_offset = directed_offset
         self.set_pose(position=position, rotation=rotation)
 
-        self.target_position = [0.0, 0.0, 0.0]
-        self.up_vector = [0.0, 0.0, 1.0]
+        # self.target_position = [0.0, 0.0, 0.0]
+        # self.up_vector = [0.0, 0.0, 1.0]
+        # self.view_mat = None
 
-        self.view_mat = None
         self.proj_mat = [
             1.0825318098068237,
             0.0,

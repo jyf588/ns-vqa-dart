@@ -46,56 +46,33 @@ class PlacingDatasetGenerator:
             offset=camera_offset,
         )
 
-        self.objects = []
+        self.oid2object: Dict[int, DashObject] = {}
 
     def reset(self):
         """Resets the list of stored objects."""
-        self.objects = []
+        self.oid2object = {}
 
-    def add_object(self, o: DashObject):
-        """Adds a single scene object.
+    def track_object(self, o: DashObject):
+        """Adds an object to track for dataset saving.
 
         Args:
             o: A DashObject.
         """
-        self.objects.append(o)
+        self.oid2object[o.oid] = o
 
-    # def add_object(
-    #     self,
-    #     oid: int,
-    #     shape: str,
-    #     color: str,
-    #     radius: float,
-    #     height: float,
-    #     position: List[float],
-    #     orientation: List[float],
-    # ):
-    #     """Adds a single scene object.
+    def generate_example(self):
+        """Generates a dataset example from the current bullet state."""
+        self.update_state()
+        objects = list(self.oid2object.values())
+        self.dataset.save_example(objects=objects, camera=self.camera)
 
-    #     Args:
-    #         oid: PyBullet object ID.
-    #         shape: The shape of the object.
-    #         color: The color of the object.
-    #         radius: The radius of the object.
-    #         height: The height of the object.
-    #         position: The xyz position of the center of the object's base, in
-    #             world coordinate frame.
-    #         orientation: The orientation of the object, expressed as a
-    #             [x, y, z, w] quaternion, in world coordinate frame.
-    #     """
-    #     o = DashObject(
-    #         shape=shape,
-    #         color=color,
-    #         radius=radius,
-    #         height=height,
-    #         position=position,
-    #         orientation=orientation,
-    #         oid=oid,
-    #     )
-    #     self.objects.append(o)
-
-    def save_and_reset(self):
-        """Saves the current scene example, and resets the stored information.
+    def update_state(self):
+        """Updates the current state. Currently, only the position and 
+        orientation of objects are updated in the function.
         """
-        self.dataset.save_example(objects=self.objects, camera=self.camera)
-        self.reset()
+        for oid in self.oid2object.keys():
+            o = self.oid2object[oid]
+            o.position, o.orientation = self.p.getBasePositionAndOrientation(
+                oid
+            )
+            self.oid2object[oid] = o

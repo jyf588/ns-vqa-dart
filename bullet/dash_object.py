@@ -124,9 +124,9 @@ class DashObject:
                 y += self.compute_up_vector()
         elif coordinate_frame == "camera":
             if use_position:
-                y += bullet.util.world_to_cam(xyz=self.position, camera=camera)
+                y += util.world_to_cam(xyz=self.position, camera=camera)
             if use_up_vector:
-                y += bullet.util.world_to_cam(
+                y += util.world_to_cam(
                     xyz=self.compute_up_vector(), camera=camera
                 )
         else:
@@ -152,7 +152,7 @@ class DashObject:
         Returns:
             up_vector: The up vector for the object.
         """
-        up_vector = bullet.util.orientation_to_up(self.orientation)
+        up_vector = util.orientation_to_up(self.orientation)
         return up_vector
 
     def to_json(self) -> Dict[str, Any]:
@@ -362,7 +362,7 @@ def y_vec_to_dict(
         pass
     elif coordinate_frame == "camera":
         for k in ["position", "up_vector"]:
-            y_dict[k] = bullet.util.cam_to_world(xyz=y_dict[k], camera=camera)
+            y_dict[k] = util.cam_to_world(xyz=y_dict[k], camera=camera)
     else:
         raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
 
@@ -394,9 +394,7 @@ def y_dict_to_object(
     """
     if gt_orientation is None:
         print(f"Warning: GT orientation is not supplied.")
-        rotation = bullet.util.orientation_to_rotation(
-            orientation=gt_orientation
-        )
+        rotation = util.orientation_to_rotation(orientation=gt_orientation)
         rotation = np.array(rotation).reshape((3, 3))
     else:
         rotation = np.zeros((3, 3))
@@ -405,7 +403,7 @@ def y_dict_to_object(
     rotation[:, -1] = y_dict["up_vector"]
 
     # Convert to orientation.
-    orientation = bullet.util.rotation_to_quaternion(rotation=rotation)
+    orientation = util.rotation_to_quaternion(rotation=rotation)
 
     o = DashObject(
         img_id=img_id,

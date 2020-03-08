@@ -7,8 +7,8 @@ import time
 from tqdm import tqdm
 from typing import *
 
+from . import dash_object, util
 from .camera import BulletCamera
-from . import dash_object
 from .dash_object import DashObject
 from .profiler import Profiler
 
@@ -66,13 +66,13 @@ class DashDataset:
             objects: A list of DashObjects in the scene.
             camera: The camera of the scene.
         """
+        # Generate RGB and mask images.
+        rgb, mask = camera.get_rgb_and_mask()
+
         # Filter out objects that are out-of-view.
         objects = self.filter_objects_by_area(
             objects=objects, mask=mask, threshold_area=self.threshold_obj_area
         )
-
-        # Generate RGB and mask images.
-        rgb, mask = camera.get_rgb_and_mask()
 
         # Associate each object with the image ID.
         for o in objects:
@@ -214,7 +214,7 @@ class DashDataset:
             mask: The mask of the scene.
         """
         for o in objects:
-            data = bullet.dash_object.compute_data_from_rgb_and_mask(
+            data = dash_object.compute_data_from_rgb_and_mask(
                 oid=o.oid, rgb=rgb, mask=mask
             )
             np.save(self.construct_object_path(o=o, key="input_data"), data)
@@ -237,9 +237,7 @@ class DashDataset:
             filtered_eids: A list of example IDs, optionally filtered to only
                 include IDs within the provided ID bounds.
         """
-        eids = bullet.util.load_json(
-            path=self.construct_scene_path(key="eids")
-        )
+        eids = util.load_json(path=self.construct_scene_path(key="eids"))
         if min_id is None:
             min_id = 0
         if max_id is None:
@@ -257,9 +255,7 @@ class DashDataset:
         Args:
             eids: A list of example IDs to save.
         """
-        bullet.util.save_json(
-            path=self.construct_scene_path(key="eids"), data=eids
-        )
+        util.save_json(path=self.construct_scene_path(key="eids"), data=eids)
 
     """ Scene annotations. """
 
@@ -275,7 +271,7 @@ class DashDataset:
             objects: A list of DashObject's.
             camera: A BulletCamera.
         """
-        json_dict = bullet.util.load_json(
+        json_dict = util.load_json(
             path=self.construct_scene_path(key="json", eid=eid)
         )
         objects = []
@@ -295,7 +291,7 @@ class DashDataset:
         Returns:
             objects: A list of DashObject's.
         """
-        json_dict = bullet.util.load_json(
+        json_dict = util.load_json(
             path=self.construct_scene_path(key="json", eid=eid)
         )
         objects = []
@@ -312,7 +308,7 @@ class DashDataset:
         Returns:
             camera: The BulletCamera for the example.
         """
-        json_dict = bullet.util.load_json(
+        json_dict = util.load_json(
             path=self.construct_scene_path(key="json", eid=eid)
         )
         camera = bullet.camera.from_json(json_dict["camera"])
@@ -333,7 +329,7 @@ class DashDataset:
         for o in objects:
             json_dict["objects"].append(o.to_json())
 
-        bullet.util.save_json(
+        util.save_json(
             path=self.construct_scene_path(key="json", eid=eid), data=json_dict
         )
 
