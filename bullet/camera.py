@@ -26,7 +26,7 @@ class BulletCamera:
                 coordinate frame.
             offset: The amount of offset to apply to the camera position.
             directed_offset: The position offset to apply in the direction of 
-                the camera up vector.
+                the camera forward vector.
             init_type: The type of camera to initialize with.
 
         Attributes:

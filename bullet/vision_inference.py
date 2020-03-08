@@ -17,13 +17,14 @@ class VisionInference:
         self,
         p: bc.BulletClient,
         checkpoint_path: str,
-        camera_position: List[float] = [
-            -0.1916501582752709,
-            0.03197646764976494,  # 0.2 is the table offset
-            0.4177423103840716,
+        camera_position: List[float] = [  # Robot head position
+            -0.2237938867122504,
+            0.03198004185028341,
+            0.5425,
         ],
         camera_rotation: List[float] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = None,
+        camera_directed_offset: Optional[List[float]] = [0.02, 0.0, 0.0],
         img_height: int = 320,
         img_width: int = 480,
         data_height: int = 480,
@@ -39,6 +40,8 @@ class VisionInference:
             camera_rotation: The roll, pitch, and yaw of the camera (degrees).
             camera_offset: The amount to offset the camera position in order to
                 match the camera position that the model was trained on.
+            camera_directed_offset: The position offset to apply in the direction of 
+                the camera forward vector.
             img_height: The height of the image.
             img_width: The width of the image.
             data_height: The height of the input data to the model.
@@ -61,6 +64,7 @@ class VisionInference:
             position=camera_position,
             rotation=camera_rotation,
             offset=camera_offset,
+            directed_offset=camera_directed_offset,
         )
 
         options = self.get_options()
@@ -127,7 +131,7 @@ class VisionInference:
         Returns:
             batch_data: A torch tensor of size [B, C, H, W].
         """
-        rgb, mask = self.camera.get_rgb_and_mask(p=self.p)
+        rgb, mask = self.camera.get_rgb_and_mask()
         batch_data = torch.zeros(
             size=(len(oids), 6, self.data_height, self.data_width)
         )
