@@ -184,13 +184,17 @@ class DashObject:
         str_list = []
         json_dict = self.to_json()
         for k, v in json_dict.items():
+            # Convert to cm and set precision to 1 decimal point.
             if k in ["radius", "height", "position"]:
                 if type(v) == list:
                     v = [float(f"{v_i * 100:.1f}") for v_i in v]
                 elif type(v) == float:
                     v = f"{v * 100:.1f}"
                 k = f"{k} (cm)"
-            if k in ["img_id", "orientation", "up_vector", "oid"]:
+            # Set precision to 1 decimal point.
+            elif k in ["up_vector"]:
+                v = [float(f"{v_i:.1f}") for v_i in v]
+            elif k in ["img_id", "orientation", "oid"]:
                 continue
             str_list.append(f"{k}: {v}")
         return str_list
