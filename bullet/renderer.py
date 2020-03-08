@@ -29,7 +29,7 @@ SHAPE2PATH = {
     "can": "can.obj",
 }
 
-URDF_SHAPES = ["table", "lego"]
+URDF_SHAPES = ["tabletop", "lego"]
 MESH_SHAPES = ["soda_can", "cup", "can"]
 
 MESH_MEASUREMENTS = {
@@ -109,7 +109,7 @@ class BulletRenderer:
                 shape=o.shape,
                 position=o.position,
                 orientation=o.orientation,
-                color=color,
+                color=o.color,
                 use_fixed_base=use_fixed_base,
             )
         return oid

@@ -434,7 +434,7 @@ def from_json(json_dict: Dict) -> DashObject:
 
 class DashTable(DashObject):
     def __init__(self):
-        self.shape = "table"
+        self.shape = "tabletop"
         self.size = None
         self.color = "grey"
         self.position = [0.25, 0.0, 0.0]  # [0.25, 0.2, 0.0]
