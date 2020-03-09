@@ -43,7 +43,9 @@ def main(args: argparse.Namespace):
         f.write(create_caption_row(scene_tags + object_tags))
 
         rows = []
-        for img_id, scene_paths in img_id2paths.items():
+        img_ids = [int(img_id) for img_id in img_id2paths.keys()]
+        for img_id in sorted(img_ids):
+            scene_paths = img_id2paths[str(img_id)]
             scene_row = create_img_row(
                 paths=[scene_paths[t] for t in scene_tags]
             )
