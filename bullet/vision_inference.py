@@ -120,6 +120,10 @@ class VisionInference:
                 odict["position"] = list(
                     np.array(odict["position"]) + np.array(self.camera_offset)
                 )
+
+            odict["errors"] = self.compute_object_errors(
+                oid=oids[i], odict=odict
+            )
             odicts.append(odict)
         return odicts
 
@@ -146,3 +150,22 @@ class VisionInference:
             )
             batch_data[i] = self.transforms(data)
         return batch_data
+
+    def compute_object_errors(
+        self, oid: int, odict: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Computes object-level errors.
+
+        Args:
+            oid: The object ID.
+            odict: The dictionary of predictions for the object.
+        
+        Returns:
+            errors_dict: A dictionary of errors for various attributes.
+        """
+        errors_dict = {}
+        gt_pos, gt_orn = self.p.getBasePositionAndOrientation(oid)
+        errors_dict["position (cm)"] = (
+            np.abs(np.array(odict["position"]) - np.array(gt_pos)) * 100
+        )
+        return errors_dict
