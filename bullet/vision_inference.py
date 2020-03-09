@@ -27,12 +27,13 @@ class VisionInference:
         ],
         camera_rotation: List[float] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = None,
-        camera_directed_offset: Optional[List[float]] = [0.02, 0.0, 0.0],
+        camera_directed_offset: Optional[List[float]] = [0.0, 0.0, 0.0],
         img_height: int = 320,
         img_width: int = 480,
         data_height: int = 480,
         data_width: int = 480,
         coordinate_frame: Optional[str] = "camera",
+        apply_offset_to_preds: Optional[bool] = None,
         html_dir: Optional[str] = "/home/michelle/html/vision_inference",
     ):
         """A class for performing vision inference.
@@ -52,6 +53,9 @@ class VisionInference:
             data_width: The width of the input data to the model.
             coordinate_frame: The coordinate frame the model predictions are 
                 in.
+            apply_offset_to_preds: Whether to apply `camera_offset` to the 
+                predictions. If the vision module was trained without the 
+                offset, then this should be true.
             html_dir: The directory to save HTML results in.
         """
         self.p = p
@@ -62,6 +66,7 @@ class VisionInference:
         self.data_height = data_height
         self.data_width = data_width
         self.coordinate_frame = coordinate_frame
+        self.apply_offset_to_preds = apply_offset_to_preds
         self.html_dir = html_dir
 
         # Camera initialization.
@@ -130,7 +135,7 @@ class VisionInference:
             )
 
             # Apply the camera offset.
-            if self.camera_offset is not None:
+            if self.camera_offset is not None and self.apply_offset_to_preds:
                 odict["position"] = list(
                     np.array(odict["position"]) + np.array(self.camera_offset)
                 )
