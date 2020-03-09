@@ -20,8 +20,6 @@ def main():
     model = get_model(opt)
     model.eval_mode()
 
-    # print(f"Warning: Predictions are not currently being saved.")
-
     count = 0
     preds = []
     start = time.time()

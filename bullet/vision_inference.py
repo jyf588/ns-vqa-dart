@@ -1,13 +1,16 @@
 """Contains the class definition for getting vision inferences."""
 from argparse import Namespace
+import imageio
 import numpy as np
+import os
 import pybullet_utils.bullet_client as bc
 import torch
 import torchvision.transforms as transforms
 from typing import *
 
-from bullet.camera import BulletCamera
 from bullet import dash_object
+from bullet.camera import BulletCamera
+import bullet.util
 from scene_parse.attr_net.model import get_model
 from scene_parse.attr_net.options import BaseOptions
 
@@ -30,6 +33,7 @@ class VisionInference:
         data_height: int = 480,
         data_width: int = 480,
         coordinate_frame: Optional[str] = "camera",
+        html_dir: Optional[str] = "/home/michelle/html/vision_inference",
     ):
         """A class for performing vision inference.
 
@@ -48,6 +52,7 @@ class VisionInference:
             data_width: The width of the input data to the model.
             coordinate_frame: The coordinate frame the model predictions are 
                 in.
+            html_dir: The directory to save HTML results in.
         """
         self.p = p
         self.checkpoint_path = checkpoint_path
@@ -57,6 +62,7 @@ class VisionInference:
         self.data_height = data_height
         self.data_width = data_width
         self.coordinate_frame = coordinate_frame
+        self.html_dir = html_dir
 
         # Camera initialization.
         self.camera = BulletCamera(
@@ -77,6 +83,13 @@ class VisionInference:
                 transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
             ]
         )
+
+        # HTML-related settings.
+        os.makedirs(html_dir, exist_ok=True)
+        # Stores paths for HTML visualizations. Structure:
+        # {<img_id>: <tag>: <path>}
+        self.paths_dict = {}
+        self.img_id = 0
 
     def get_options(self):
         """Creates the options namespace to define the vision model.
@@ -102,7 +115,8 @@ class VisionInference:
             odicts: A list of object dictionaries, in the order of the input
                 oids.
         """
-        data = self.get_data(oids=oids)
+        rgb, mask = self.camera.get_rgb_and_mask()
+        data = self.get_data(oids=oids, rgb=rgb, mask=mask)
         self.model.set_input(data)
         self.model.forward()
         pred = self.model.get_pred()
@@ -125,18 +139,23 @@ class VisionInference:
                 oid=oids[i], odict=odict
             )
             odicts.append(odict)
+        self.save_html(rgb=rgb)
+        self.img_id += 1
         return odicts
 
-    def get_data(self, oids: List[int]) -> torch.Tensor:
+    def get_data(
+        self, oids: List[int], rgb: np.ndarray, mask: np.ndarray
+    ) -> torch.Tensor:
         """Gets the data for the current bullet scene.
 
         Args:
             oids: A list of object IDs to get data for.
+            rgb: The RGB image.
+            mask: Object-level mask.
 
         Returns:
             batch_data: A torch tensor of size [B, C, H, W].
         """
-        rgb, mask = self.camera.get_rgb_and_mask()
         batch_data = torch.zeros(
             size=(len(oids), 6, self.data_height, self.data_width)
         )
@@ -169,3 +188,25 @@ class VisionInference:
             np.abs(np.array(odict["position"]) - np.array(gt_pos)) * 100
         )
         return errors_dict
+
+    def save_html(self, rgb: np.ndarray):
+        """Saves HTML results."""
+        img_dir = os.path.join(self.html_dir, f"images/{self.img_id}")
+        os.makedirs(img_dir, exist_ok=True)
+
+        gt_world_path_rel = f"images/{self.img_id}/gt_world.png"
+        pred_path_rel = f"images/{self.img_id}/pred.png"
+
+        gt_world_path_abs = os.path.join(self.html_dir, gt_world_path_rel)
+        pred_path_abs = os.path.join(self.html_dir, pred_path_rel)
+
+        self.paths_dict[str(self.img_id)] = {
+            "gt_world": gt_world_path_rel,
+            "pred": pred_path_rel,
+        }
+
+        imageio.imwrite(gt_world_path_abs, rgb)
+        imageio.imwrite(pred_path_abs, np.zeros((320, 480), dtype=np.uint8))
+
+        path = os.path.join(self.html_dir, "paths.json")
+        bullet.util.save_json(path=path, data=self.paths_dict)
