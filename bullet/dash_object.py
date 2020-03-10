@@ -396,18 +396,9 @@ def y_dict_to_object(
     Returns:
         o: The corresponding DashObject.
     """
-    if gt_orientation is None:
-        print(f"Warning: GT orientation is not supplied.")
-        rotation = util.orientation_to_rotation(orientation=gt_orientation)
-        rotation = np.array(rotation).reshape((3, 3))
-    else:
-        rotation = np.zeros((3, 3))
-
-    # Set the up vector.
-    rotation[:, -1] = y_dict["up_vector"]
-
-    # Convert to orientation.
-    orientation = util.rotation_to_quaternion(rotation=rotation)
+    orientation = util.up_to_orientation(
+        up=y_dict["up_vector"], gt_orientation=gt_orientation
+    )
 
     o = DashObject(
         img_id=img_id,

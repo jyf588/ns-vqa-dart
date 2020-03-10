@@ -69,6 +69,33 @@ def orientation_to_up(orientation: List[float]) -> List[float]:
     return up
 
 
+def up_to_orientation(
+    up: List[float], gt_orientation: Optional[List[float]] = None
+) -> List[float]:
+    """Converts an up vector to an orientation, in quaternion format.
+
+    Args:
+        up: The up vector.
+        gt_orientation: If supplied, uses the x and y rotation from GT to
+            compose the final orientation.
+    
+    Returns:
+        orientation: The orientation in xyzw quaternion format.
+    """
+    if gt_orientation is None:
+        rotation = np.zeros((3, 3))
+    else:
+        rotation = orientation_to_rotation(orientation=gt_orientation)
+        rotation = np.array(rotation).reshape((3, 3))
+
+    # Set the up vector.
+    rotation[:, -1] = up
+
+    # Convert to orientation.
+    orientation = rotation_to_quaternion(rotation=rotation)
+    return orientation
+
+
 def orientation_to_rotation(orientation: List[float]) -> List[float]:
     """Converts an orientation vector into a rotation matrix.
 
@@ -78,8 +105,8 @@ def orientation_to_rotation(orientation: List[float]) -> List[float]:
     Returns:
         rotation: The 3x3 rotation matrix.
     """
-    p = create_bullet_client(mode="direct")
-    rotation = p.getMatrixFromQuaternion(quaternion=orientation)
+    # p = create_bullet_client(mode="direct")
+    rotation = pybullet.getMatrixFromQuaternion(quaternion=orientation)
     return rotation
 
 
