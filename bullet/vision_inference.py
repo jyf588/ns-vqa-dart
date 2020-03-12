@@ -10,6 +10,7 @@ from typing import *
 
 from bullet import dash_object
 from bullet.camera import BulletCamera
+import bullet.html_images
 import bullet.util
 from scene_parse.attr_net.model import get_model
 from scene_parse.attr_net.options import BaseOptions
@@ -20,20 +21,17 @@ class VisionInference:
         self,
         p: bc.BulletClient,
         checkpoint_path: str,
-        camera_position: List[float] = [  # Robot head position
-            -0.2237938867122504,
-            0.03198004185028341,
-            0.5425,
-        ],
+        camera_position: List[float],
         camera_rotation: List[float] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = None,
-        camera_directed_offset: Optional[List[float]] = [0.0, 0.0, 0.0],
+        camera_directed_offset: Optional[List[float]] = None,
         img_height: int = 320,
         img_width: int = 480,
         data_height: int = 480,
         data_width: int = 480,
         coordinate_frame: Optional[str] = "camera",
         apply_offset_to_preds: Optional[bool] = None,
+        assets_dir: Optional[str] = "my_pybullet_envs/assets",
         html_dir: Optional[str] = "/home/michelle/html/vision_inference",
     ):
         """A class for performing vision inference.
@@ -56,6 +54,7 @@ class VisionInference:
             apply_offset_to_preds: Whether to apply `camera_offset` to the 
                 predictions. If the vision module was trained without the 
                 offset, then this should be true.
+            assets_dir: The directory containing bullet assets for rerendering.
             html_dir: The directory to save HTML results in.
         """
         self.p = p
@@ -67,6 +66,7 @@ class VisionInference:
         self.data_width = data_width
         self.coordinate_frame = coordinate_frame
         self.apply_offset_to_preds = apply_offset_to_preds
+        self.assets_dir = assets_dir
         self.html_dir = html_dir
 
         # Camera initialization.
@@ -144,7 +144,7 @@ class VisionInference:
                 oid=oids[i], odict=odict
             )
             odicts.append(odict)
-        self.save_html(rgb=rgb)
+        self.generate_html(rgb=rgb, pred_odicts=odicts)
         self.img_id += 1
         return odicts
 
@@ -194,24 +194,47 @@ class VisionInference:
         )
         return errors_dict
 
-    def save_html(self, rgb: np.ndarray):
-        """Saves HTML results."""
+    def generate_html(
+        self, rgb: np.ndarray, pred_odicts: List[Dict[str, Any]]
+    ):
+        """Saves HTML results.
+        
+        Args:
+            rgb: The RGB image containing the ground truth scene, that is input
+                to the vision module.
+            pred_odicts: A list of predicted object dictionaries to render.
+        """
+        # First, rerender the predictions.
+        pred_objects = [
+            dash_object.y_dict_to_object(odict) for odict in pred_odicts
+        ]
+        rerendered_pred, rerendered_pred_z = bullet.html_images.rerender(
+            objects=pred_objects,
+            camera=self.camera,
+            assets_dir=self.assets_dir,
+            check_sizes=False,
+        )
+
         img_dir = os.path.join(self.html_dir, f"images/{self.img_id}")
         os.makedirs(img_dir, exist_ok=True)
 
         gt_world_path_rel = f"images/{self.img_id}/gt_world.png"
         pred_path_rel = f"images/{self.img_id}/pred.png"
+        pred_z_path_rel = f"images/{self.img_id}/pred_z.png"
 
         gt_world_path_abs = os.path.join(self.html_dir, gt_world_path_rel)
         pred_path_abs = os.path.join(self.html_dir, pred_path_rel)
+        pred_z_path_abs = os.path.join(self.html_dir, pred_z_path_rel)
 
         self.paths_dict[str(self.img_id)] = {
             "gt_world": gt_world_path_rel,
             "pred": pred_path_rel,
+            "pred_z": pred_z_path_rel,
         }
 
         imageio.imwrite(gt_world_path_abs, rgb)
-        imageio.imwrite(pred_path_abs, np.zeros((320, 480), dtype=np.uint8))
+        imageio.imwrite(pred_path_abs, rerendered_pred)
+        imageio.imwrite(pred_z_path_abs, rerendered_pred_z)
 
         path = os.path.join(self.html_dir, "paths.json")
         bullet.util.save_json(path=path, data=self.paths_dict)
