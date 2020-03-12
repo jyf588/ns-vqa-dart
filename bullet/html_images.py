@@ -225,8 +225,11 @@ def rerender(
         for o in objects + [DashTable(offset=[0.0, 0.2, 0.0])]
     ]
 
-    camera.set_bullet_client(p=p)
-    rerendered, _ = camera.get_rgb_and_mask()
+    # We create a copy because we don't want to override the bullet client of
+    # the input camera.
+    rerender_cam = bullet.camera.from_json(camera.to_json())
+    rerender_cam.set_bullet_client(p=p)
+    rerendered, _ = rerender_cam.get_rgb_and_mask()
 
     # Create a camera just to get the z axis view.
     rerendered_z, _ = BulletCamera(p=p, init_type="z_axis").get_rgb_and_mask()
