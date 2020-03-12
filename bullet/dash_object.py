@@ -449,7 +449,7 @@ class DashRobot:
         head_tilt_joint_name: str = "head_tilt_joint",
         head_pan_joint_name: str = "head_pan_joint",
         cam_position_joint_name: str = "eyes_pan_joint",
-        cam_offset: List[float] = [0.02, 0.0, 0.0],
+        cam_directed_offset: List[float] = [0.02, 0.0, 0.0],
     ):
         """
         Args:
@@ -460,9 +460,9 @@ class DashRobot:
             head_tilt_joint_name: The joint representing head tilt.
             head_pan_joint_name: The joint representing head pan.
             cam_position_joint_name: The joint representing the camera position.
-            cam_offset: The offset to add to the camera joint as the final 
-                camera position (e.g., if the joint is within the eye, we want
-                to offset it such that it's at the surface of the eye).
+            cam_directed_offset: The offset to add to the camera joint as the 
+                final camera position (e.g., if the joint is within the eye, we
+                want to offset it such that it's at the surface of the eye).
         """
         self.p = p
         self.urdf_path = urdf_path
@@ -470,7 +470,7 @@ class DashRobot:
         self.robot_id = self.load_robot()
 
         # The robot's head camera.
-        self.camera = BulletCamera(offset=cam_offset)
+        self.camera = BulletCamera(p=p, directed_offset=cam_directed_offset)
 
         self.axis2joint_name = {
             "roll": head_roll_joint_name,

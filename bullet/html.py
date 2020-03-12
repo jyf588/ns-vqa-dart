@@ -31,7 +31,7 @@ def main(args: argparse.Namespace):
 
     with open(index_path, "w") as f:
         f.write(HEADER)
-        scene_tags = ["gt_world", "pred"]
+        scene_tags = ["gt_world", "pred", "pred_z"]
         object_tags = [
             "input_seg",
             "input_rgb",
