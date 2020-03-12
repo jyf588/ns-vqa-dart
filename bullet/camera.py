@@ -136,8 +136,16 @@ class BulletCamera:
             position: The xyz position of the camera.
             rotation: The xyz rotation of the camera.
         """
+        # print(f"set_pose / before offset / position: {position}")
+        # print(f"set_pose / before offset / offset: {self.offset}")
+
         if self.offset is not None:
             position = list(np.array(position) + np.array(self.offset))
+
+        # print(f"set_pose / before directed_offset / position: {position}")
+        # print(
+        #     f"set_pose / before directed_offset / directed_offset: {self.directed_offset}"
+        # )
 
         # Apply to offset to the camera position.
         if self.directed_offset is not None:
@@ -147,6 +155,10 @@ class BulletCamera:
 
         self.position = position
         self.rotation = rotation
+
+        # print(f"set_pose / position: {self.position}")
+        # print(f"set_pose / rotation: {self.rotation}")
+
         self.target_position = self.compute_target_position(
             position=position, rotation=rotation
         )
@@ -155,6 +167,9 @@ class BulletCamera:
 
     def compute_view_matrix(self) -> List[float]:
         """Computes the view matrix based on the camera attributes."""
+        # print(f"compute_view_matrix / position: {self.position}")
+        # print(f"compute_view_matrix / target_position: {self.target_position}")
+        # print(f"compute_view_matrix / up_vector: {self.up_vector}")
         view_mat = pybullet.computeViewMatrix(
             cameraEyePosition=self.position,
             cameraTargetPosition=self.target_position,
@@ -196,7 +211,6 @@ class BulletCamera:
         return list(vector)
 
     def get_rgb_and_mask(self):
-        view_mat = np.array(self.view_mat).reshape((4, 4))
         img = self.p.getCameraImage(
             self.H,
             self.W,
@@ -204,6 +218,7 @@ class BulletCamera:
             projectionMatrix=self.proj_mat,
             renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
         )
+        # print(f"get_rgb_and_mask / self.view_mat: {self.view_mat}")
         rgb = np.reshape(img[2], (self.W, self.H, 4))[:, :, :3]
         mask = np.reshape(img[4], (self.W, self.H))
         return rgb, mask
