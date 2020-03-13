@@ -22,6 +22,7 @@ class PlacingDatasetGenerator:
         ],
         camera_rotation: Optional[List[float]] = [0.0, 50.0, 0.0],
         camera_offset: Optional[List[float]] = [0.0, 0.0, 0.0],
+        frequency: int = 1,
     ):
         """
         Args:
@@ -31,6 +32,7 @@ class PlacingDatasetGenerator:
             camera_rotation: The roll, pitch, and yaw of the camera (degrees).
             camera_offset: The amount to offset the camera position compared to
                 the camera position that the vision module was trained on.
+            frequency: How often to save frames.
         
         Attributes:
             p: The bullet client to use for generating the dataset.
@@ -38,6 +40,8 @@ class PlacingDatasetGenerator:
                 scene.
         """
         self.p = p
+        self.frequency = frequency
+
         self.dataset = DashDataset(dataset_dir=dataset_dir)
         self.camera = BulletCamera(
             p=p,
@@ -48,9 +52,14 @@ class PlacingDatasetGenerator:
 
         self.oid2object: Dict[int, DashObject] = {}
 
+        # Tracks the times generate_example is called. Used to determine
+        # whether to save an example, according to `self.frequency`.
+        self.i = 0
+
     def reset(self):
         """Resets the list of stored objects."""
         self.oid2object = {}
+        self.i = 0
 
     def track_object(self, o: DashObject):
         """Adds an object to track for dataset saving.
@@ -61,10 +70,13 @@ class PlacingDatasetGenerator:
         self.oid2object[o.oid] = o
 
     def generate_example(self):
-        """Generates a dataset example from the current bullet state."""
-        self.update_state()
-        objects = list(self.oid2object.values())
-        self.dataset.save_example(objects=objects, camera=self.camera)
+        """Generates a dataset example from the current bullet state. Skips
+        the current example according to the dataset frequency."""
+        if self.i % self.frequency == 0:
+            self.update_state()
+            objects = list(self.oid2object.values())
+            self.dataset.save_example(objects=objects, camera=self.camera)
+        self.i += 1
 
     def update_state(self):
         """Updates the current state. Currently, only the position and 
