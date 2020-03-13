@@ -20,11 +20,11 @@ time python run_train.py \
 time python run_test.py \
     --dataset dash \
     --run_dir ~/outputs/ego_v009 \
-    --dataset_dir /media/michelle/68B62784B62751BC/datasets/ego_v009 \
+    --dataset_dir ~/datasets/ego_v009 \
     --output_path ~/outputs/ego_v009/test.json \
     --load_checkpoint_path ~/outputs/ego_v009/checkpoint_best.pt \
-    --start_id 20000 \
-    --end_id 21999 \
+    --eval_start_id 20000 \
+    --eval_end_id 22000 \
     --height 480 \
     --width 480 \
     --pred_attr \
