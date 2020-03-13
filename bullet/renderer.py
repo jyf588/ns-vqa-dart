@@ -174,7 +174,7 @@ class BulletRenderer:
         except pybullet.error as e:
             print(
                 f"Attempted rendering of invalid object. "
-                f"Shape: {shape}\t"
+                f"Shape: {geom}\t"
                 f"Radius: {r}\t"
                 f"Height: {h}\t"
                 f"Half_extents: {half_extents}"

@@ -6,6 +6,7 @@ import json
 from matplotlib.pyplot import cm
 import numpy as np
 import os
+import random
 from tqdm import tqdm
 from typing import *
 
@@ -29,6 +30,11 @@ def main(args: argparse.Namespace):
     print(f"Number of total predictions: {len(pred_dicts)}")
     print(f"Number of objects to visualize: {args.n_objects}")
     img_id2oid2pred_object = {}
+
+    # Shuffle
+    idxs = list(range(len(pred_dicts)))
+    random.shuffle(pred_dicts)
+
     if args.n_objects is not None:
         pred_dicts = pred_dicts[: args.n_objects]
 
@@ -57,6 +63,7 @@ def main(args: argparse.Namespace):
 
     # For each example, load the rgb image and mask.
     img_id2paths = {}
+    print(f"Generating images for each image example...")
     for img_id in tqdm(pred_img_ids):
         img_id2paths[img_id] = {}
 
