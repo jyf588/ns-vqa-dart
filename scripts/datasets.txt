@@ -11,3 +11,6 @@ ego_v007: Same as ego v5 and 6, but with inputs that are:
     replicate padding instead of zero padding.
 ego_v008: Same as 7 but with fixed segs.
 ego_v009: Updated from z position=H/2 to z position=0.
+
+stacking_v001: Using v6 env
+stacking_v002: Using v8 env (which has delay), cylinder

@@ -1,0 +1,1 @@
+time rsync -azP /home/michelle/datasets/stacking_v001 /media/michelle/68B62784B62751BC/datasets/
