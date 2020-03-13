@@ -229,7 +229,7 @@ def rerender(
 
     [
         renderer.render_object(o=o, check_sizes=check_sizes)
-        for o in objects + [DashTable(offset=[0.0, 0.2, 0.0])]
+        for o in objects + [DashTable(position=[0.2, 0.2, 0.0])]
     ]
 
     # We create a copy because we don't want to override the bullet client of

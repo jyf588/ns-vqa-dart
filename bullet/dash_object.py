@@ -428,11 +428,15 @@ def from_json(json_dict: Dict) -> DashObject:
 
 
 class DashTable(DashObject):
-    def __init__(self, offset: List[float] = None):
+    def __init__(
+        self,
+        position: Optional[List[float]] = [0.25, 0.0, 0.0],
+        offset: Optional[List[float]] = None,
+    ):
         self.shape = "tabletop"
         self.size = None
         self.color = "grey"
-        self.position = [0.25, 0.0, 0.0]  # [0.25, 0.2, 0.0]
+        self.position = position  # [0.25, 0.2, 0.0]
         self.orientation = [0.0, 0.0, 0.0, 1.0]
 
         if offset is not None:
