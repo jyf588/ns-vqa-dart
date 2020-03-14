@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from numpy.linalg import inv
+import pickle
 import pybullet
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
@@ -137,7 +138,7 @@ def rotation_to_quaternion(rotation: List[float]) -> List[float]:
     return list(quaternion)
 
 
-""" JSON functions. """
+""" JSON and pickle I/O utility functions. """
 
 
 def load_json(path: str) -> Any:
@@ -161,3 +162,13 @@ def load_json(path: str) -> Any:
 def save_json(path: str, data: Any):
     with open(path, "w") as f:
         json.dump(data, f, sort_keys=True, indent=2, separators=(",", ": "))
+
+
+def save_pickle(path: str, data: Any):
+    """
+    Args:
+        path: The path of the pickle file to save.
+        data: The data to save.
+    """
+    with open(path, "wb") as f:
+        pickle.dump(data, f)
