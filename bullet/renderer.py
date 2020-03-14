@@ -8,10 +8,11 @@ import numpy as np
 import os
 import pybullet
 import pybullet_utils.bullet_client as bc
+import random
 from typing import *
 
-from .camera import BulletCamera
-from .dash_object import DashObject, DashTable
+from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.bullet.dash_object import DashObject, DashTable
 
 
 PRIMITIVE2GEOM = {
@@ -55,6 +56,7 @@ MESH_MEASUREMENTS = {
     },
 }
 
+OBJECT_COLORS = ["red", "yellow", "blue", "green"]
 COLOR2RGBA = {
     "red": [0.8, 0.0, 0.0, 1.0],
     "grey": [0.4, 0.4, 0.4, 1.0],
@@ -65,13 +67,60 @@ COLOR2RGBA = {
 
 
 class BulletRenderer:
-    def __init__(self, p, assets_dir="bullet/assets"):
+    def __init__(self, p, assets_dir="my_pybullet_envs/assets"):
         self.p = p
         self.assets_dir = assets_dir
+
+    def remove_objects(self, objects: List[DashObject]):
+        """Removes objects from the scene.
+        
+        Args:
+            objects: A list of DashObjects to be removed from the scene.
+        """
+        for o in objects:
+            assert o.oid is not None
+            self.p.removeBody(o.oid)
+
+    def render_objects(
+        self,
+        objects: List[DashObject],
+        position_mode: str,
+        base_mass: Optional[float] = 3.5,
+        use_fixed_base: Optional[bool] = False,
+        check_sizes: Optional[bool] = True,
+    ) -> List[DashObject]:
+        """Renders multiple Dash Objects.
+
+        Args:
+            objects: A list of DashObject's to render.
+            position_mode: Whether the position represents the base or the COM.
+            base_mass: The mass of the object.
+            use_fixed_base: Whether to force the base of the loaded object to
+                be static. Used for loading URDF objects.
+            check_sizes: Whether to check sizes of the object, e.g. that the
+                height of a sphere should be 2*r.
+
+        Returns:
+            objects_w_oid: The same list of input objects, but with the object
+                IDs set.
+        """
+        objects_w_oid = []
+        for o in objects:
+            oid = self.render_object(
+                o=o,
+                position_mode=position_mode,
+                base_mass=base_mass,
+                use_fixed_base=use_fixed_base,
+                check_sizes=check_sizes,
+            )
+            o.oid = oid
+            objects_w_oid.append(o)
+        return objects_w_oid
 
     def render_object(
         self,
         o: DashObject,
+        position_mode: str,
         base_mass: Optional[float] = 3.5,
         use_fixed_base: Optional[bool] = False,
         check_sizes: Optional[bool] = True,
@@ -81,6 +130,7 @@ class BulletRenderer:
         Args:
             o: A DashObject, with all attributes except for oid and img_id 
                 filled.
+            position_mode: Whether the position represents the base or the COM.
             base_mass: The mass of the object.
             use_fixed_base: Whether to force the base of the loaded object to
                 be static. Used for loading URDF objects.
@@ -97,7 +147,8 @@ class BulletRenderer:
         if o.shape in PRIMITIVE2GEOM:
             oid = self.create_primitive(
                 geom=PRIMITIVE2GEOM[o.shape],
-                base_position=o.position,
+                position_mode=position_mode,
+                position=o.position,
                 orientation=o.orientation,
                 r=o.radius,
                 h=o.height,
@@ -117,7 +168,8 @@ class BulletRenderer:
     def create_primitive(
         self,
         geom: Any,
-        base_position: List[float],
+        position_mode: str,
+        position: List[float],
         orientation: List[float],
         r: float,
         h: float,
@@ -129,8 +181,9 @@ class BulletRenderer:
 
         Args:
             geom: The bullet GEOM_{shape} enum.
-            base_position: The (x, y, z) base position of the object, in 
-                world coordinates.
+            position_mode: Whether the position represents the base or the COM.
+            position: The (x, y, z) position of the object, in world 
+                coordinates.
             orientation: The orientation of the object, in [x, y, z, w] 
                 quaternion format.
             r: The radius of the object.
@@ -157,8 +210,13 @@ class BulletRenderer:
 
         # Update the position to be defined for the COM, since that's what
         # PyBullet expects. So we offset the z position by half of the height.
-        com_position = base_position.copy()
-        com_position[2] += h / 2
+        if position_mode == "com":
+            com_position = position
+        elif position_mode == "base":
+            com_position = position.copy()
+            com_position[2] += h / 2
+        else:
+            raise ValueError(f"Invalid position mode: {position_mode}")
 
         # Create the shape.
         try:
@@ -341,3 +399,8 @@ class BulletRenderer:
         """
         path = os.path.join(self.assets_dir, SHAPE2PATH[obj_name])
         return path
+
+
+def gen_rand_obj_color() -> str:
+    color = random.choice(OBJECT_COLORS)
+    return color

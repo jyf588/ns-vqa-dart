@@ -18,16 +18,6 @@ class RandomSceneGenerator:
         render_mode: str,
         egocentric: bool,
         dataset_dir: str,
-        n_objs_bounds: Tuple[int],
-        obj_dist_thresh: float,
-        max_retries: int,
-        shapes: List[str],
-        colors: List[str],
-        radius_bounds: Tuple[float],
-        height_bounds: Tuple[float],
-        x_bounds: Tuple[float],
-        y_bounds: Tuple[float],
-        z_bounds: Tuple[float],
         roll_bounds: Tuple[float],
         tilt_bounds: Tuple[float],
         pan_bounds: Tuple[float],
@@ -68,9 +58,6 @@ class RandomSceneGenerator:
             robot: The DashRobot for egocentric views.
             camera: A BulletCamera for generating images in non-egocentric mode.
         """
-        # Set the seed for random number generators.
-        np.random.seed(seed)
-        random.seed(seed)
 
         self.obj_dist_thresh = obj_dist_thresh
         self.max_retries = max_retries
@@ -113,60 +100,15 @@ class RandomSceneGenerator:
             n: The number of scenes to generate.
         """
         for _ in tqdm(range(n)):
-            objects = self.generate_tabletop_objects()
+            objects = self.generate_tabletop_objects(
+                n_objs_bounds=self.n_objs_bounds
+            )
+            objects = self.renderer.render_objects(objects=objects)
             if self.egocentric:
                 self.generate_and_set_new_camera_view()
             camera = self.robot.camera if self.egocentric else self.camera
             self.dataset.save_example(objects=objects, camera=camera)
-            self.remove_objects(objects=objects)
-
-    def remove_objects(self, objects: List[DashObject]):
-        """Removes objects from the scene.
-        
-        Args:
-            objects: A list of DashObjects to be removed from the scene.
-        """
-        for o in objects:
-            assert o.oid is not None
-            self.p.removeBody(o.oid)
-
-    def generate_tabletop_objects(self) -> List[DashObject]:
-        """Generates a single random scene.
-        
-        Returns:
-            objects: A list of DashObjects generated in the scene.
-        """
-        # Randomly select the number of objects to generate.
-        # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
-        # inclusive, so that's why we subtract one from the max.
-        min_objs, max_objs = self.n_objs_bounds
-        if min_objs == max_objs:
-            n_objects = min_objs
-        else:
-            n_objects = random.randint(min_objs, max_objs - 1)
-
-        objects = []
-        n_tries = 0
-        while len(objects) < n_objects and n_tries < self.max_retries:
-            o: DashObject = self.generate_object()
-
-            # Check if generated object is too close to others.
-            close_arr = [
-                self.is_close(
-                    ax=o.position[0],
-                    ay=o.position[1],
-                    bx=other.position[0],
-                    by=other.position[1],
-                )
-                for other in objects
-            ]
-            if any(close_arr):
-                n_tries += 1
-            else:
-                oid = self.renderer.render_object(o)
-                o.oid = oid
-                objects.append(o)
-        return objects
+            self.renderer.remove_objects(objects=objects)
 
     def generate_and_set_new_camera_view(self):
         """Generates and sets new camera viewpoint."""
@@ -177,82 +119,3 @@ class RandomSceneGenerator:
             roll=roll, tilt=tilt, pan=pan, degrees=self.degrees
         )
 
-    def generate_object(self) -> DashObject:
-        """Generates a random DashObject.
-        
-        Returns:
-            o: The randomly generated DashObject.
-        """
-        shape = random.choice(self.shapes)
-        radius, height = self.generate_random_size(shape=shape)
-        color = random.choice(self.colors)
-        position = self.generate_random_xyz(
-            self.x_bounds, self.y_bounds, self.z_bounds
-        )
-        o = DashObject(
-            shape=shape,
-            radius=radius,
-            height=height,
-            color=color,
-            position=position,
-            orientation=[0.0, 0.0, 0.0, 1.0],
-        )
-        return o
-
-    def generate_random_size(self, shape: str) -> Tuple[float, float]:
-        """Generates a random radius and height.
-
-        Args:
-            shape: The shape we are generating a size for.
-
-        Returns:
-            radius: The radius of the object.
-            height: The height of the object. This is 2*r for sphere.
-        """
-        min_r, max_r = self.radius_bounds
-        min_h, max_h = self.height_bounds
-        radius = self.uniform_sample(low=min_r, high=max_r)
-        if shape == "sphere":
-            height = radius * 2
-        else:
-            height = self.uniform_sample(low=min_h, high=max_h)
-        return radius, height
-
-    def generate_random_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:
-        """Generates a random xyz based on axis bounds.
-
-        Returns:
-            xyz: The randomly generated xyz values.
-        """
-        xyz = []
-        for (axis_min, axis_max) in [x_bounds, y_bounds, z_bounds]:
-            axis_value = self.uniform_sample(low=axis_min, high=axis_max)
-            xyz.append(axis_value)
-        return xyz
-
-    def uniform_sample(self, low: float, high: float) -> float:
-        if low == high:  # No randomization.
-            value = low
-        elif low < high:
-            value = np.random.uniform(low=low, high=high)
-        else:
-            raise ValueError(
-                f"Invalid bounds for uniform sample: ({low}, {high})"
-            )
-        return value
-
-    def is_close(self, ax: float, ay: float, bx: float, by: float) -> bool:
-        """Checks whether two (x, y) points are within a certain threshold 
-        distance of each other.
-
-        Args:
-            ax: The x position of the first point.
-            ay: The y position of the first point.
-            bx: The x position of the second point.
-            by: The y position of the second point.
-        
-        Returns:
-            Whether the distance between the two points is less than or equal
-                to the threshold distance.
-        """
-        return (ax - bx) ** 2 + (ay - by) ** 2 <= self.obj_dist_thresh ** 2
