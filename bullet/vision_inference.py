@@ -7,13 +7,14 @@ import pybullet_utils.bullet_client as bc
 import torch
 import torchvision.transforms as transforms
 from typing import *
+import sys
 
-from bullet import dash_object
-from bullet.camera import BulletCamera
-import bullet.html_images
-import bullet.util
-from scene_parse.attr_net.model import get_model
-from scene_parse.attr_net.options import BaseOptions
+from ns_vqa_dart.bullet import dash_object
+from ns_vqa_dart.bullet import html_images
+from ns_vqa_dart.bullet import util
+from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.scene_parse.attr_net.model import get_model
+from ns_vqa_dart.scene_parse.attr_net.options import BaseOptions
 
 
 class VisionInference:

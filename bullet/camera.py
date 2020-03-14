@@ -3,8 +3,11 @@ import pybullet
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
 from typing import *
+import sys
 
-from . import util
+# sys.path.append("./")
+# from . import util
+from ns_vqa_dart.bullet import util
 
 
 class BulletCamera:

@@ -34,7 +34,15 @@ class StateSaver:
 
     def save(self):
         """Saves the current state of the bullet scene for tracked objects."""
-        data = []
+        data = [
+            {
+                "shape": "cylinder",
+                "radius": 0.05,
+                "height": 0.18,
+                "position": (0.0, 0.0, 0.0),
+                "orientation": (0.0, 0.0, 0.0, 1.0),
+            }
+        ]
         path = os.path.join(self.dataset_dir, f"{self.i:06}.p")
         util.save_pickle(path=path, data=data)
         self.i += 1

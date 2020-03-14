@@ -7,12 +7,13 @@ import pybullet_utils.bullet_client as bc
 import time
 from tqdm import tqdm
 from typing import *
+import sys
 
-from . import dash_object, util
-from .camera import BulletCamera
-from .dash_object import DashObject
-from .profiler import Profiler
-from . import camera as bullet_camera
+from ns_vqa_dart.bullet import dash_object, util
+from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.bullet.dash_object import DashObject
+from ns_vqa_dart.bullet.profiler import Profiler
+import ns_vqa_dart.bullet.camera as bullet_camera
 
 KEY2EXT = {"rgb": "png", "mask": "npy", "json": "json", "input_data": "npy"}
 

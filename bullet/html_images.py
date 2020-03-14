@@ -9,13 +9,13 @@ import os
 import random
 from tqdm import tqdm
 from typing import *
+import sys
 
-from bullet.camera import BulletCamera
-from bullet.dash_dataset import DashDataset
-import bullet.dash_object
-from bullet.dash_object import DashObject, DashTable
-from bullet.renderer import BulletRenderer
-import bullet.util
+from ns_vqa_dart.bullet import dash_object, util
+from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.bullet.dash_dataset import DashDataset
+from ns_vqa_dart.bullet.dash_object import DashObject, DashTable
+from ns_vqa_dart.bullet.renderer import BulletRenderer
 
 
 def main(args: argparse.Namespace):

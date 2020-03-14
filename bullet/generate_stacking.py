@@ -2,7 +2,9 @@
 import os
 import random
 
-from .camera import BulletCamera
+from camera import BulletCamera
+from dash_dataset import DashDataset
+import util
 
 
 def main():
@@ -17,9 +19,11 @@ def main():
     ]
     n_examples_per_state = 10
 
+    bc = util.create_bullet_client(mode="direct")
+
     # Camera
     camera = BulletCamera(
-        p=p,
+        p=bc,
         position=[-0.2237938867122504, 0.03198004185028341, 0.5425],
         rotation=[0.0, 50.0, 0.0],
         offset=[0.0, 0.0, 0.0],
@@ -28,12 +32,11 @@ def main():
     dataset = DashDataset(dataset_dir=dataset_dir)
 
     dataset_paths = []
-    for state_name in state_names:
-        states_dir = os.path.join(datasets_dir, state_name)
+    for state_dir in state_dirs:
 
         paths = []
-        for fname in os.listdir(states_dir):
-            path = os.path.join(states_dir, fname)
+        for fname in os.listdir(state_dir):
+            path = os.path.join(state_dir, fname)
             paths.append(path)
 
         # Sample a subset.
@@ -43,6 +46,8 @@ def main():
         dataset_paths += paths
 
     for path in dataset_paths:
+        objects = util.load_pickle(path=path)
+        # renderer.render_object()
         objects = []
         dataset.save_example(objects=objects, camera=camera)
 

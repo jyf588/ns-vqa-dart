@@ -5,10 +5,14 @@ import os
 import pybullet_utils.bullet_client as bc
 import pycocotools.mask as mask_util
 from typing import Any, Dict, List, Optional, Tuple
+import sys
 
-from .camera import BulletCamera
-from . import util
+# sys.path.append("./")
+# from .camera import BulletCamera
+# from . import util
 
+from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.bullet import util
 
 # Note: order matters!
 ATTR_NAME2LIST = {

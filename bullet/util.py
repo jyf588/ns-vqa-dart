@@ -164,6 +164,19 @@ def save_json(path: str, data: Any):
         json.dump(data, f, sort_keys=True, indent=2, separators=(",", ": "))
 
 
+def load_pickle(path: str) -> Any:
+    """
+    Args:
+        path: The path of the pickle file to load.
+    
+    Returns:
+        data: The data in the pickle file.
+    """
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
 def save_pickle(path: str, data: Any):
     """
     Args:
