@@ -6,7 +6,7 @@ from typing import *
 
 from camera import BulletCamera
 from dash_dataset import DashDataset
-from dash_object import DashObject, DashTable
+from dash_object import DashObject, DashTable, DashRobot
 import dash_object, util
 from random_objects import RandomObjectsGenerator
 from renderer import BulletRenderer
@@ -24,7 +24,7 @@ class StackingDatasetGenerator:
             "/home/michelle/datasets/delay_box_states",
             "/home/michelle/datasets/delay_cyl_states",
         ]
-        self.n_examples_per_state = 10
+        self.n_examples_per_state = 11000
 
         bc = util.create_bullet_client(mode="direct")
 
@@ -48,6 +48,21 @@ class StackingDatasetGenerator:
             position_mode=self.position_mode,
         )
 
+        # Real arm
+        self.robot = DashRobot(
+            p=bc,
+            urdf_path="my_pybullet_envs/assets/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_1_revolute_head.urdf",
+            position=[-0.3, 0.5, -1.25],
+        )
+
+        # Green arm
+        # self.robot = DashRobot(
+        #     p=bc,
+        #     urdf_path="my_pybullet_envs/assets/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_2.urdf",
+        #     position=[-0.30, 0.348, 0.272],
+        #     include_head=False,
+        # )
+
         # Camera
         self.camera = BulletCamera(
             p=bc,
@@ -63,7 +78,7 @@ class StackingDatasetGenerator:
         for state_dir in self.state_dirs:
 
             paths = []
-            for fname in os.listdir(state_dir):
+            for fname in sorted(os.listdir(state_dir)):
                 path = os.path.join(state_dir, fname)
                 paths.append(path)
 
@@ -73,14 +88,17 @@ class StackingDatasetGenerator:
 
             dataset_paths += paths
 
+        # Shuffle the paths so that box and cyl are interleaved.
+        random.shuffle(dataset_paths)
+
         for path in tqdm(dataset_paths):
             self.generate_example(path=path)
 
     def generate_example(self, path: str):
-        odicts = util.load_pickle(path=path)
+        state = util.load_pickle(path=path)
 
         state_objects = []
-        for odict in odicts:
+        for odict in state["objects"]:
             odict["oid"], odict["img_id"] = None, None
             odict["color"] = bullet_renderer.gen_rand_obj_color()
             o = dash_object.from_json(odict)
@@ -96,6 +114,10 @@ class StackingDatasetGenerator:
         self.renderer.render_objects(
             objects=objects, position_mode=self.position_mode
         )
+
+        # Set the robot pose.
+        state["robot"]
+        self.robot.set_state(state=state["robot"])
 
         self.dataset.save_example(objects=objects, camera=self.camera)
         self.renderer.remove_objects(objects=objects)

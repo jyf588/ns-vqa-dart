@@ -453,6 +453,7 @@ class DashRobot:
         p: bc.BulletClient,
         urdf_path: str = "bullet/assets/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_1_revolute_head.urdf",
         position: List[float] = [-0.3, 0.0, -1.25],
+        include_head: bool = True,
         head_roll_joint_name: str = "head_roll_joint",
         head_tilt_joint_name: str = "head_tilt_joint",
         head_pan_joint_name: str = "head_pan_joint",
@@ -477,19 +478,23 @@ class DashRobot:
         self.position = position
         self.robot_id = self.load_robot()
 
-        # The robot's head camera.
-        self.camera = BulletCamera(p=p, directed_offset=cam_directed_offset)
-
-        self.axis2joint_name = {
-            "roll": head_roll_joint_name,
-            "tilt": head_tilt_joint_name,
-            "pan": head_pan_joint_name,
-        }
-        self.cam_position_joint_name = cam_position_joint_name
         self.joint_name2id = self.get_joint_name2id()
 
-        # Initialize the head and camera to zero rotation.
-        self.set_head_and_camera(roll=0, tilt=0, pan=0, degrees=True)
+        # The robot's head camera.
+        if include_head:
+            self.camera = BulletCamera(
+                p=p, directed_offset=cam_directed_offset
+            )
+
+            self.axis2joint_name = {
+                "roll": head_roll_joint_name,
+                "tilt": head_tilt_joint_name,
+                "pan": head_pan_joint_name,
+            }
+            self.cam_position_joint_name = cam_position_joint_name
+
+            # Initialize the head and camera to zero rotation.
+            self.set_head_and_camera(roll=0, tilt=0, pan=0, degrees=True)
 
     def load_robot(self) -> int:
         """Renders the robot in bullet.
@@ -563,3 +568,13 @@ class DashRobot:
         position = self.p.getLinkState(self.robot_id, joint_id)[0]
         print(f"robot head position: {position}")
         return position
+
+    def set_state(self, state: Dict[str, float]):
+        """Sets the robot state.
+
+        Args:
+            state: The robot state.
+        """
+        for joint_name, joint_angle in state.items():
+            joint_id = self.joint_name2id[joint_name]
+            self.p.resetJointState(self.robot_id, joint_id, joint_angle)

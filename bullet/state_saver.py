@@ -15,14 +15,18 @@ class StateSaver:
         self.dataset_dir = dataset_dir
         os.makedirs(self.dataset_dir, exist_ok=True)
 
-        self.oid2odict = {}
+        self.oid2attr = {}
+        self.robot_id = None
 
         # A counter for example IDs.
         self.i = 0
 
     def reset(self):
         """Clears the list of tracked objects."""
-        self.oid2odict = {}
+        self.oid2attr = {}
+
+    def set_robot_id(self, robot_id: int):
+        self.robot_id = robot_id
 
     def track_object(self, oid: int, shape: str, radius: float, height: float):
         """Stores an object's metadata for tracking.
@@ -33,7 +37,7 @@ class StateSaver:
             radius: The radius of the object.
             height: The height of the object.
         """
-        self.oid2odict[oid] = {
+        self.oid2attr[oid] = {
             "shape": shape,
             "radius": radius,
             "height": height,
@@ -41,36 +45,33 @@ class StateSaver:
 
     def save(self):
         """Saves the current state of the bullet scene for tracked objects."""
-        self.update_state()
-        data = list(self.oid2odict.values())
-        # data = [
-        #     {
-        #         "shape": "cylinder",
-        #         "radius": 0.05,
-        #         "height": 0.18,
-        #         "position": [0.0, 0.0, 0.0],
-        #         "orientation": [0.0, 0.0, 0.0, 1.0],
-        #     },
-        #     {
-        #         "shape": "box",
-        #         "radius": 0.04,
-        #         "height": 0.16,
-        #         "position": [0.1, 0.1, 0.0],
-        #         "orientation": [0.0, 0.0, 0.0, 1.0],
-        #     },
-        # ]
+        state = self.get_current_state()
         path = os.path.join(self.dataset_dir, f"{self.i:06}.p")
-        util.save_pickle(path=path, data=data)
+        util.save_pickle(path=path, data=state)
         self.i += 1
 
-    def update_state(self):
+    def get_current_state(self):
         """Update the state (position and orientation) of objects we are
         tracking.
 
         Note that position is based on the COM of the object.
         """
-        for oid, odict in self.oid2odict.items():
+        state = {"objects": [], "robot": {}}
+
+        # Get object states.
+        for oid, odict in self.oid2attr.items():
             position, orientation = p.getBasePositionAndOrientation(oid)
             odict["position"] = list(position)
             odict["orientation"] = list(orientation)
-            self.oid2odict[oid] = odict
+            state["objects"].append(odict)
+
+        # Get robot state.
+        for joint_idx in range(p.getNumJoints(self.robot_id)):
+            joint_name = p.getJointInfo(self.robot_id, joint_idx)[1].decode(
+                "utf-8"
+            )
+            joint_angle = p.getJointState(
+                bodyUniqueId=self.robot_id, jointIndex=joint_idx
+            )[0]
+            state["robot"][joint_name] = joint_angle
+        return state
