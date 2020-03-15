@@ -12,7 +12,8 @@ import random
 from typing import *
 
 from ns_vqa_dart.bullet.camera import BulletCamera
-from ns_vqa_dart.bullet.dash_object import DashObject, DashTable
+import ns_vqa_dart.bullet.dash_object as dash_object
+from ns_vqa_dart.bullet.dash_object import DashObject, DashTable, DashRobot
 
 
 PRIMITIVE2GEOM = {
@@ -67,19 +68,52 @@ COLOR2RGBA = {
 
 
 class BulletRenderer:
-    def __init__(self, p, assets_dir="my_pybullet_envs/assets"):
+    def __init__(
+        self, p=None, assets_dir: Optional[str] = "my_pybullet_envs/assets"
+    ):
         self.p = p
         self.assets_dir = assets_dir
 
-    def remove_objects(self, objects: List[DashObject]):
+    def set_bullet_client(self, p):
+        self.p = p
+
+    def remove_objects(self, ids: List[int]):
         """Removes objects from the scene.
         
         Args:
             objects: A list of DashObjects to be removed from the scene.
         """
-        for o in objects:
-            assert o.oid is not None
-            self.p.removeBody(o.oid)
+        for id_to_del in ids:
+            assert id_to_del is not None
+            self.p.removeBody(id_to_del)
+
+    def load_objects_from_state(self, ostates: List[Dict], position_mode: str):
+        """Loads objects from object state.
+
+        Args:
+            ostates: A list of dictionaries representing object states.
+            position_mode: Whether the position represents the base or the COM.
+
+        Returns:
+            oids: A list of object ids loaded, with order corresponding to 
+                input ostates.
+        """
+        ostates = copy.deepcopy(ostates)
+
+        objects = []
+        for odict in ostates:
+            odict["oid"], odict["img_id"] = None, None
+
+            # Convert to DashObject.
+            o = dash_object.from_json(odict)
+            objects.append(o)
+
+        # Render objects.
+        objects = self.render_objects(
+            objects=objects, position_mode=position_mode
+        )
+        oids = [o.oid for o in objects]
+        return oids
 
     def render_objects(
         self,
@@ -399,8 +433,3 @@ class BulletRenderer:
         """
         path = os.path.join(self.assets_dir, SHAPE2PATH[obj_name])
         return path
-
-
-def gen_rand_obj_color() -> str:
-    color = random.choice(OBJECT_COLORS)
-    return color

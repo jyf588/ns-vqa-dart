@@ -566,7 +566,6 @@ class DashRobot:
         """
         joint_id = self.joint_name2id[self.cam_position_joint_name]
         position = self.p.getLinkState(self.robot_id, joint_id)[0]
-        print(f"robot head position: {position}")
         return position
 
     def set_state(self, state: Dict[str, float]):

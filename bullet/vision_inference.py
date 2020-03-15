@@ -13,6 +13,9 @@ from ns_vqa_dart.bullet import dash_object
 from ns_vqa_dart.bullet import html_images
 from ns_vqa_dart.bullet import util
 from ns_vqa_dart.bullet.camera import BulletCamera
+from ns_vqa_dart.bullet.dash_object import DashTable, DashRobot
+from ns_vqa_dart.bullet.renderer import BulletRenderer
+from ns_vqa_dart.bullet.state_saver import StateSaver
 from ns_vqa_dart.scene_parse.attr_net.model import get_model
 from ns_vqa_dart.scene_parse.attr_net.options import BaseOptions
 
@@ -20,7 +23,8 @@ from ns_vqa_dart.scene_parse.attr_net.options import BaseOptions
 class VisionInference:
     def __init__(
         self,
-        p: bc.BulletClient,
+        # p: bc.BulletClient,
+        state_saver: StateSaver,
         checkpoint_path: str,
         camera_position: List[float],
         camera_rotation: List[float] = [0.0, 50.0, 0.0],
@@ -32,13 +36,14 @@ class VisionInference:
         data_width: int = 480,
         coordinate_frame: Optional[str] = "camera",
         apply_offset_to_preds: Optional[bool] = None,
-        assets_dir: Optional[str] = "my_pybullet_envs/assets",
-        html_dir: Optional[str] = "/home/michelle/html/vision_inference",
+        html_dir: Optional[str] = None,
+        save_html_freq: Optional[int] = 5,
     ):
         """A class for performing vision inference.
 
         Args:
-            p: The bullet client to use.
+            p: The bullet client to use, provided by the client.
+            state_saver: Tracks the state of the client scene.
             checkpoint_path: The path to the model checkpoint.
             camera_position: The position of the camera.
             camera_rotation: The roll, pitch, and yaw of the camera (degrees).
@@ -55,10 +60,10 @@ class VisionInference:
             apply_offset_to_preds: Whether to apply `camera_offset` to the 
                 predictions. If the vision module was trained without the 
                 offset, then this should be true.
-            assets_dir: The directory containing bullet assets for rerendering.
             html_dir: The directory to save HTML results in.
         """
-        self.p = p
+        # self.client_p = p
+        self.state_saver = state_saver
         self.checkpoint_path = checkpoint_path
         self.camera_offset = camera_offset
         self.img_height = img_height
@@ -67,12 +72,29 @@ class VisionInference:
         self.data_width = data_width
         self.coordinate_frame = coordinate_frame
         self.apply_offset_to_preds = apply_offset_to_preds
-        self.assets_dir = assets_dir
         self.html_dir = html_dir
+        self.save_html_freq = save_html_freq
+
+        # Create own bullet client for reconstructing.
+        self.vision_p = util.create_bullet_client(mode="direct")
+
+        # Initialize renderer.
+        self.renderer = BulletRenderer(p=self.vision_p)
+
+        self.robot = DashRobot(
+            p=self.vision_p,
+            urdf_path="my_pybullet_envs/assets/inmoov_ros/inmoov_description/robots/inmoov_shadow_hand_v2_1_revolute_head.urdf",
+            position=[-0.3, 0.5, -1.25],
+        )
+
+        # Render tabletop.
+        _ = self.renderer.render_object(
+            o=DashTable(position=[0.2, 0.2, 0.0]), position_mode="com"
+        )
 
         # Camera initialization.
         self.camera = BulletCamera(
-            p=p,
+            p=self.vision_p,
             position=camera_position,
             rotation=camera_rotation,
             offset=camera_offset,
@@ -91,15 +113,15 @@ class VisionInference:
         )
 
         # HTML-related settings.
-        os.makedirs(html_dir, exist_ok=True)
+        if self.html_dir is not None:
+            os.makedirs(html_dir, exist_ok=True)
         # Stores paths for HTML visualizations. Structure:
         # {<img_id>: <tag>: <path>}
         self.paths_dict = {}
         self.img_id = 0
 
     def get_options(self):
-        """Creates the options namespace to define the vision model.
-        """
+        """Creates the options namespace to define the vision model."""
         options = Namespace(
             inference_only=True,
             load_checkpoint_path=self.checkpoint_path,
@@ -111,43 +133,77 @@ class VisionInference:
         options = BaseOptions().parse(opt=options, save_options=False)
         return options
 
-    def predict(self, oids: List[int]) -> List[Dict]:
-        """Gets a snapshot of the current scene and gets model predictions.
+    def predict(self, client_oids: List[int]) -> List[Dict]:
+        """Reconstructs the client's scene and retrieves model predictions.
 
         Args:
-            oids: A list of object IDs to get data for.
+            oids: A list of object IDs to make predictions for.
 
         Returns:
             odicts: A list of object dictionaries, in the order of the input
                 oids.
         """
+        # 1. Get the current state of the client scene.
+        state = self.state_saver.get_current_state()
+
+        # 2. Load objects with their states.
+        vision_oids = self.renderer.load_objects_from_state(
+            ostates=state["objects"], position_mode="com"
+        )
+
+        # 3. Update robot state.
+        self.robot.set_state(state=state["robot"])
+
+        # Convert from client's oids to predict into vision oids, since the
+        # reconstructed vision scene could have different oids.
+        client2vision_oids = {}
+        for i in range(len(state["objects"])):
+            client_oid = state["objects"][i]["oid"]
+            vision_oid = vision_oids[i]
+            client2vision_oids[client_oid] = vision_oid
+
+        oids_to_predict = [
+            client2vision_oids[client_oid] for client_oid in client_oids
+        ]
+
+        # Get a snapshot of the scene.
         rgb, mask = self.camera.get_rgb_and_mask()
+
+        # 3. Create the input data to the model from the scene, and run forward
+        # prediction.
+        pred = self.predict_scene(oids=oids_to_predict, rgb=rgb, mask=mask)
+
+        # Convert vector predictions into dictionary format.
+        odicts = self.process_predictions(pred=pred)
+
+        # Optionally generate visuals.
+        if (
+            self.html_dir is not None
+            and self.img_id % self.save_html_freq == 0
+        ):
+            self.generate_html(rgb=rgb, pred_odicts=odicts)
+
+        self.img_id += 1
+
+        self.renderer.remove_objects(ids=vision_oids)
+
+        return odicts
+
+    def predict_scene(self, oids: List[int], rgb, mask) -> np.ndarray:
+        """From the current scenes, constructs input data and runs forward pass
+        through the model to retrieve predictions.
+
+        Args:
+            oids: A list of object IDs to make predictions for.
+        
+        Returns:
+            pred: A vector format of model output predictions.
+        """
         data = self.get_data(oids=oids, rgb=rgb, mask=mask)
         self.model.set_input(data)
         self.model.forward()
         pred = self.model.get_pred()
-
-        odicts = []
-        for i in range(len(pred)):
-            odict = dash_object.y_vec_to_dict(
-                y=list(pred[i]),
-                coordinate_frame=self.coordinate_frame,
-                camera=self.camera,
-            )
-
-            # Apply the camera offset.
-            if self.camera_offset is not None and self.apply_offset_to_preds:
-                odict["position"] = list(
-                    np.array(odict["position"]) + np.array(self.camera_offset)
-                )
-
-            odict["errors"] = self.compute_object_errors(
-                oid=oids[i], odict=odict
-            )
-            odicts.append(odict)
-        self.generate_html(rgb=rgb, pred_odicts=odicts)
-        self.img_id += 1
-        return odicts
+        return pred
 
     def get_data(
         self, oids: List[int], rgb: np.ndarray, mask: np.ndarray
@@ -175,6 +231,40 @@ class VisionInference:
             )
             batch_data[i] = self.transforms(data)
         return batch_data
+
+    def process_predictions(self, pred: np.ndarray) -> List[Dict]:
+        """Converts vector predictions output by the model into an 
+        interpretable dictionary of object predictions. Additional things 
+        include:
+            1. Applying an offset to predictions (e.g., if the camera during 
+                test time is offset compared to the camera during training)
+            2. Computing object prediction errors.
+        
+        Args:
+            pred: A vector format of model output predictions.
+
+        Returns:
+            odicts: A list of dictionaries containing object predictions.
+        """
+        odicts = []
+        for i in range(len(pred)):
+            odict = dash_object.y_vec_to_dict(
+                y=list(pred[i]),
+                coordinate_frame=self.coordinate_frame,
+                camera=self.camera,
+            )
+
+            # Apply the camera offset to predictions if specified.
+            if self.camera_offset is not None and self.apply_offset_to_preds:
+                odict["position"] = list(
+                    np.array(odict["position"]) + np.array(self.camera_offset)
+                )
+
+            # odict["errors"] = self.compute_object_errors(
+            #     oid=odict["oid"], odict=odict
+            # )
+            odicts.append(odict)
+        return odicts
 
     def compute_object_errors(
         self, oid: int, odict: Dict[str, Any]
@@ -209,11 +299,8 @@ class VisionInference:
         pred_objects = [
             dash_object.y_dict_to_object(odict) for odict in pred_odicts
         ]
-        rerendered_pred, rerendered_pred_z = bullet.html_images.rerender(
-            objects=pred_objects,
-            camera=self.camera,
-            assets_dir=self.assets_dir,
-            check_sizes=False,
+        rerendered_pred, rerendered_pred_z = html_images.rerender(
+            objects=pred_objects, camera=self.camera, check_sizes=False
         )
 
         img_dir = os.path.join(self.html_dir, f"images/{self.img_id}")
@@ -238,4 +325,4 @@ class VisionInference:
         imageio.imwrite(pred_z_path_abs, rerendered_pred_z)
 
         path = os.path.join(self.html_dir, "paths.json")
-        bullet.util.save_json(path=path, data=self.paths_dict)
+        util.save_json(path=path, data=self.paths_dict)

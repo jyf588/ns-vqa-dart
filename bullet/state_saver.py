@@ -1,17 +1,19 @@
 """A class that tracks objects and saves states."""
+import copy
 import os
-import pybullet as p
 from typing import *
 
 from . import util
+from . import random_objects
 
 
 class StateSaver:
-    def __init__(self, dataset_dir: str):
+    def __init__(self, p, dataset_dir: str):
         """
         Args:
             dataset_dir: The directory to save the states in.
         """
+        self.p = p
         self.dataset_dir = dataset_dir
         os.makedirs(self.dataset_dir, exist_ok=True)
 
@@ -28,7 +30,17 @@ class StateSaver:
     def set_robot_id(self, robot_id: int):
         self.robot_id = robot_id
 
-    def track_object(self, oid: int, shape: str, radius: float, height: float):
+    def set_tabletop_id(self, tabletop_id: int):
+        self.tabletop_id = tabletop_id
+
+    def track_object(
+        self,
+        oid: int,
+        shape: str,
+        radius: float,
+        height: float,
+        color: Optional[str] = None,
+    ):
         """Stores an object's metadata for tracking.
         
         Args:
@@ -36,9 +48,12 @@ class StateSaver:
             shape: The shape of the object.
             radius: The radius of the object.
             height: The height of the object.
+            color: The color of the object. If not set, a color is randomly
+                chosen.
         """
         self.oid2attr[oid] = {
             "shape": shape,
+            "color": random_objects.generate_random_color(),
             "radius": radius,
             "height": height,
         }
@@ -55,23 +70,36 @@ class StateSaver:
         tracking.
 
         Note that position is based on the COM of the object.
+
+        Returns:
+            state: A dictionary of the scene state. Expected format:
+                {
+                    "objects": [{<attr>: <value>}]
+                    "robot": {<joint_name>: <joint_angle>}
+                    "tabletop": {<attr>: <value>}
+                }
         """
-        state = {"objects": [], "robot": {}}
+        state = {"objects": [], "robot": {}, "tabletop": {}}
 
         # Get object states.
         for oid, odict in self.oid2attr.items():
-            position, orientation = p.getBasePositionAndOrientation(oid)
+            position, orientation = self.p.getBasePositionAndOrientation(oid)
+            odict["oid"] = oid
             odict["position"] = list(position)
             odict["orientation"] = list(orientation)
             state["objects"].append(odict)
 
         # Get robot state.
-        for joint_idx in range(p.getNumJoints(self.robot_id)):
-            joint_name = p.getJointInfo(self.robot_id, joint_idx)[1].decode(
-                "utf-8"
-            )
-            joint_angle = p.getJointState(
+        for joint_idx in range(self.p.getNumJoints(self.robot_id)):
+            joint_name = self.p.getJointInfo(self.robot_id, joint_idx)[
+                1
+            ].decode("utf-8")
+            joint_angle = self.p.getJointState(
                 bodyUniqueId=self.robot_id, jointIndex=joint_idx
             )[0]
             state["robot"][joint_name] = joint_angle
-        return state
+
+        # Get tabletop state.
+        # position, _ = self.p.getBasePositionAndOrientation(oid)
+        # state["tabletop"]["position"] = list(position)
+        return copy.deepcopy(state)

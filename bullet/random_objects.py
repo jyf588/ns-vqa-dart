@@ -3,6 +3,7 @@ import random
 from typing import *
 
 from ns_vqa_dart.bullet.dash_object import DashObject
+import ns_vqa_dart.bullet.renderer as bullet_renderer
 
 
 class RandomObjectsGenerator:
@@ -112,7 +113,7 @@ class RandomObjectsGenerator:
         """
         shape = random.choice(self.shapes)
         radius, height = self.generate_random_size(shape=shape)
-        color = random.choice(self.colors)
+        color = generate_random_color()
         position = self.generate_random_xyz(
             self.x_bounds, self.y_bounds, self.z_bounds
         )
@@ -190,3 +191,8 @@ class RandomObjectsGenerator:
                 f"Invalid bounds for uniform sample: ({low}, {high})"
             )
         return value
+
+
+def generate_random_color():
+    color = random.choice(bullet_renderer.OBJECT_COLORS)
+    return color

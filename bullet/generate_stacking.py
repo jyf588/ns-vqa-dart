@@ -97,42 +97,41 @@ class StackingDatasetGenerator:
     def generate_example(self, path: str):
         state = util.load_pickle(path=path)
 
-        state_objects = []
-        for odict in state["objects"]:
-            odict["oid"], odict["img_id"] = None, None
-            odict["color"] = bullet_renderer.gen_rand_obj_color()
-            o = dash_object.from_json(odict)
-            state_objects.append(o)
+        # Randomly set object colors if it's not already set.
+        for i in range(len(state["objects"])):
+            odict = state["objects"][i]
+            if "color" not in odict:
+                odict["color"] = gen_rand_obj_color()
+            state["objects"][i] = odict
 
-        surround_objects = self.gen_surround_objects(
-            existing_objects=state_objects
+        # Generate surrounding objects that don't clash with existing objects.
+        surround_odicts = self.gen_surround_objects(
+            existing_odicts=state["objects"]
         )
 
-        objects = state_objects + surround_objects
+        # Add surrounding objects to the list of state objects.
+        state["objects"] = state["objects"] + surround_odicts
 
-        # Render objects.
-        self.renderer.render_objects(
-            objects=objects, position_mode=self.position_mode
-        )
-
-        # Set the robot pose.
-        state["robot"]
-        self.robot.set_state(state=state["robot"])
+        self.renderer.reconstruct_from_state(state=state)
 
         self.dataset.save_example(objects=objects, camera=self.camera)
         self.renderer.remove_objects(objects=objects)
 
-    def gen_surround_objects(self, existing_objects: List[DashObject]):
+    def gen_surround_objects(self, existing_odicts: List[Dict]) -> List[Dict]:
         """Generates random surrounding objects.
 
+        Args:
+            existing_odicts: A list of dictionaries of objects that already
+                exist.
+
         Returns:
-            objects: A list of randomly object dictionaries of surrounding
-                objects.
+            odicts: A list of randomly generated object dictionaries of
+                surrounding objects.
         """
-        objects = self.objects_generator.generate_tabletop_objects(
-            existing_objects=existing_objects
+        odicts = self.objects_generator.generate_tabletop_objects(
+            existing_odicts=existing_odicts
         )
-        return objects
+        return odicts
 
 
 if __name__ == "__main__":
