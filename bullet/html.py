@@ -16,8 +16,8 @@ import os
 from tqdm import tqdm
 from typing import *
 
-from bullet.dash_dataset import DashDataset
-import bullet.util
+from ns_vqa_dart.bullet.dash_dataset import DashDataset
+from ns_vqa_dart.bullet import util
 
 HEADER = "<html><head><style>* {font-size: 15px;}</style></head><body><table><tbody>"
 FOOTER = "</tbody></table></body></html>"
@@ -25,7 +25,7 @@ FOOTER = "</tbody></table></body></html>"
 
 def main(args: argparse.Namespace):
     path = os.path.join(args.html_dir, "paths.json")
-    img_id2paths = bullet.util.load_json(path=path)
+    img_id2paths = util.load_json(path=path)
 
     index_path = os.path.join(args.html_dir, "index.html")
 
@@ -64,9 +64,7 @@ def main(args: argparse.Namespace):
 
                     captions = []
                     for cap_key in ["gt_caption", "pred_caption"]:
-                        caption = bullet.util.load_json(
-                            path=obj_paths[cap_key]
-                        )
+                        caption = util.load_json(path=obj_paths[cap_key])
                         caption = "<br>".join(caption)
                         captions.append(caption)
 
