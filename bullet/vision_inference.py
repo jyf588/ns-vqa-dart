@@ -120,6 +120,9 @@ class VisionInference:
         self.paths_dict = {}
         self.img_id = 0
 
+    def close(self):
+        self.vision_p.disconnect()
+
     def get_options(self):
         """Creates the options namespace to define the vision model."""
         options = Namespace(

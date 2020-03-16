@@ -8,14 +8,15 @@ from . import random_objects
 
 
 class StateSaver:
-    def __init__(self, p, dataset_dir: str):
+    def __init__(self, p, dataset_dir: Optional[str] = None):
         """
         Args:
             dataset_dir: The directory to save the states in.
         """
         self.p = p
         self.dataset_dir = dataset_dir
-        os.makedirs(self.dataset_dir, exist_ok=True)
+        if self.dataset_dir is not None:
+            os.makedirs(self.dataset_dir, exist_ok=True)
 
         self.oid2attr = {}
         self.robot_id = None
@@ -29,9 +30,6 @@ class StateSaver:
 
     def set_robot_id(self, robot_id: int):
         self.robot_id = robot_id
-
-    def set_tabletop_id(self, tabletop_id: int):
-        self.tabletop_id = tabletop_id
 
     def track_object(
         self,
@@ -51,15 +49,19 @@ class StateSaver:
             color: The color of the object. If not set, a color is randomly
                 chosen.
         """
+        if color is None:
+            color = random_objects.generate_random_color()
         self.oid2attr[oid] = {
             "shape": shape,
-            "color": random_objects.generate_random_color(),
+            "color": color,
             "radius": radius,
             "height": height,
         }
 
     def save(self):
         """Saves the current state of the bullet scene for tracked objects."""
+        if self.dataset_dir is None:
+            raise ValueError(f"self.dataset_dir is None.")
         state = self.get_current_state()
         path = os.path.join(self.dataset_dir, f"{self.i:06}.p")
         util.save_pickle(path=path, data=state)
@@ -90,14 +92,15 @@ class StateSaver:
             state["objects"].append(odict)
 
         # Get robot state.
-        for joint_idx in range(self.p.getNumJoints(self.robot_id)):
-            joint_name = self.p.getJointInfo(self.robot_id, joint_idx)[
-                1
-            ].decode("utf-8")
-            joint_angle = self.p.getJointState(
-                bodyUniqueId=self.robot_id, jointIndex=joint_idx
-            )[0]
-            state["robot"][joint_name] = joint_angle
+        if self.robot_id is not None:
+            for joint_idx in range(self.p.getNumJoints(self.robot_id)):
+                joint_name = self.p.getJointInfo(self.robot_id, joint_idx)[
+                    1
+                ].decode("utf-8")
+                joint_angle = self.p.getJointState(
+                    bodyUniqueId=self.robot_id, jointIndex=joint_idx
+                )[0]
+                state["robot"][joint_name] = joint_angle
 
         # Get tabletop state.
         # position, _ = self.p.getBasePositionAndOrientation(oid)
