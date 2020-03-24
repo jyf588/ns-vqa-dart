@@ -1,3 +1,6 @@
+import os
+import json
+
 from torch.utils.data import DataLoader
 from .dash_object_loader import DashTorchDataset
 from .clevr_object import ClevrObjectDataset
@@ -6,31 +9,14 @@ from .clevr_dart_object import ClevrDartObjectDataset
 
 def get_dataset(opt, split):
     if opt.dataset == "dash":
-        if split in ["val", "test"]:
-            min_img_id = opt.eval_start_id
-            max_img_id = opt.eval_end_id
-        elif split in ["train"]:
-            min_img_id = opt.train_start_id
-            max_img_id = opt.train_end_id
-        else:
-            raise ValueError(f"Invalid split: {split}.")
-
-        assert min_img_id is not None
-        assert max_img_id is not None
-        assert min_img_id < max_img_id
+        with open(os.path.join(opt.dataset_dir, "partition.json"), "r") as f:
+            partition = json.load(f)
 
         ds = DashTorchDataset(
             dataset_dir=opt.dataset_dir,
+            paths=partition[split],
             height=opt.height,
             width=opt.width,
-            min_img_id=min_img_id,
-            max_img_id=max_img_id,
-            use_attr=opt.pred_attr,
-            use_size=opt.pred_size,
-            use_position=opt.pred_position,
-            use_up_vector=opt.pred_up_vector,
-            coordinate_frame=opt.coordinate_frame,
-            split=split,
         )
 
     elif opt.dataset == "clevr":

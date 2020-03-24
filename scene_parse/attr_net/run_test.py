@@ -1,6 +1,19 @@
+"""Runs forward prediction on a test set.
+
+Outputs a json file with the following format: {
+    <sid>: {
+        <oid>: {
+            "pred": <pred: List>,
+            "labels": <labels: List>
+        }
+    }
+}
+"""
+
 import json
 import numpy as np
 import os
+import pprint
 import sys
 import time
 from tqdm import tqdm
@@ -9,9 +22,8 @@ from options import get_options
 from datasets import get_dataloader
 from model import get_model
 
-import bullet.util
-
-import bullet.metrics
+from ns_vqa_dart.bullet import util
+from ns_vqa_dart.bullet import metrics
 
 
 def main():
@@ -21,34 +33,40 @@ def main():
     model.eval_mode()
 
     count = 0
-    preds = []
+    sid2info = {}
     start = time.time()
-    for batch_iter, (data, img_ids, oids) in enumerate(tqdm(test_loader)):
+    for batch_iter, (data, labels, sids, oids, paths) in enumerate(
+        tqdm(test_loader)
+    ):
         model.set_input(data)
         model.forward()
         pred = model.get_pred()
-
         for i in range(pred.shape[0]):
-            img_id = img_ids[i].item()
+            path = paths[i]
+            sid = sids[i].item()
             oid = oids[i].item()
-            pred_vec = pred[i].tolist()
-            preds.append({"img_id": img_id, "oid": oid, "pred": pred_vec})
-        assert oids.size(0) == pred.shape[0]
-        count += oids.size(0)
+            if sid not in sid2info:
+                sid2info[sid] = {}
+            sid2info[sid][oid] = {
+                "pred": pred[i].tolist(),
+                "labels": labels[i].tolist(),
+            }
+        count += pred.shape[0]
     total_time = time.time() - start
+
+    # pprint.pprint(sid2info)
 
     print("%d / %d objects processed" % (count, len(test_loader.dataset)))
     print("| saving annotation file to %s" % opt.output_path)
-    bullet.util.save_json(path=opt.output_path, data=preds)
+    util.save_json(path=opt.output_path, data=sid2info)
 
     print("Computing metrics:")
-    bullet.metrics.compute_metrics(
+    metrics.compute_metrics(
         dataset_dir=opt.dataset_dir,
-        pred_dicts=preds,
+        sid2info=sid2info,
         coordinate_frame=opt.coordinate_frame,
     )
 
 
 if __name__ == "__main__":
     main()
-

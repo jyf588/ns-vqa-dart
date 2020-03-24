@@ -1,12 +1,15 @@
 import argparse
 import copy
 import numpy as np
+import os
+import pickle
 from tqdm import tqdm
 from typing import *
 
-from bullet.dash_dataset import DashDataset
-import bullet.dash_object
-import bullet.util
+from ns_vqa_dart.bullet.dash_dataset import DashDataset
+from ns_vqa_dart.bullet import dash_object
+from ns_vqa_dart.bullet import gen_dataset
+from ns_vqa_dart.bullet import util
 
 AXIS_NAMES = ["x", "y", "z"]
 MULTIPLIER = {"radius": 100, "height": 100, "position": 100, "height": 100}
@@ -20,14 +23,14 @@ UNITS = {
 
 
 def main(args: argparse.Namespace):
-    pred_dicts = bullet.util.load_json(path=args.pred_path)
+    pred_dicts = util.load_json(path=args.pred_path)
     compute_metrics(
         pred_dicts=pred_dicts, coordinate_frame=args.coordinate_frame
     )
 
 
 def compute_metrics(
-    dataset_dir: str, pred_dicts: List[Dict], coordinate_frame: str
+    dataset_dir: str, sid2info: List[Dict], coordinate_frame: str
 ):
     dataset = DashDataset(dataset_dir=dataset_dir)
 
@@ -45,43 +48,44 @@ def compute_metrics(
     }
     n_total = 0
 
-    for pred_dict in tqdm(pred_dicts):
-        o = dataset.load_object_for_img_id_and_oid(
-            img_id=pred_dict["img_id"], oid=pred_dict["oid"]
-        )
-        odict = o.to_json()
+    for sid in sid2info.keys():
+        for oid, info in sid2info[sid].items():
+            sid, oid = int(sid), int(oid)
+            pred = info["pred"]
+            labels = info["labels"]
 
-        camera = dataset.load_camera_for_eid(eid=pred_dict["img_id"])
-        y_dict = bullet.dash_object.y_vec_to_dict(
-            y=pred_dict["pred"],
-            coordinate_frame=coordinate_frame,
-            camera=camera,
-        )
+            # Convert from vectors to dictionaries.
+            gt_y_dict = dash_object.y_vec_to_dict(
+                y=labels, coordinate_frame=coordinate_frame
+            )
+            pred_y_dict = dash_object.y_vec_to_dict(
+                y=pred, coordinate_frame=coordinate_frame
+            )
 
-        for k in cls_correct.keys():
-            if odict[k] == y_dict[k]:
-                cls_correct[k] += 1
+            for k in cls_correct.keys():
+                if gt_y_dict[k] == pred_y_dict[k]:
+                    cls_correct[k] += 1
 
-        for k in errors.keys():
-            diff = np.array(y_dict[k]) - np.array(odict[k])
-            pos_diff = diff.copy()
-            neg_diff = diff.copy()
+            for k in errors.keys():
+                diff = np.array(pred_y_dict[k]) - np.array(gt_y_dict[k])
+                pos_diff = diff.copy()
+                neg_diff = diff.copy()
 
-            if type(diff) == np.float64:
-                pos_diff = diff if diff >= 0.0 else 0.0
-                neg_diff = diff if diff <= 0.0 else 0.0
-            elif type(diff) == np.ndarray:
-                pos_diff[pos_diff < 0] = 0.0
-                neg_diff[neg_diff > 0] = 0.0
-            else:
-                raise ValueError(f"Invalid type: {type(diff)}")
+                if type(diff) == np.float64:
+                    pos_diff = diff if diff >= 0.0 else 0.0
+                    neg_diff = diff if diff <= 0.0 else 0.0
+                elif type(diff) == np.ndarray:
+                    pos_diff[pos_diff < 0] = 0.0
+                    neg_diff[neg_diff > 0] = 0.0
+                else:
+                    raise ValueError(f"Invalid type: {type(diff)}")
 
-            l1 = np.abs(diff)
-            reg_error["pos"][k] += pos_diff
-            reg_error["neg"][k] += neg_diff
-            reg_error["abs"][k] += l1
+                l1 = np.abs(diff)
+                reg_error["pos"][k] += pos_diff
+                reg_error["neg"][k] += neg_diff
+                reg_error["abs"][k] += l1
 
-        n_total += 1
+            n_total += 1
 
     np.set_printoptions(2)
 

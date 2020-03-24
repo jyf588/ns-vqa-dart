@@ -6,9 +6,6 @@ import torch.nn as nn
 import torchvision.models as models
 import sys
 
-sys.path.append("/home/michelle/workspace/ns-vqa-dart")
-from bullet.profiler import Profiler
-
 
 PYTORCH_VER = torch.__version__
 
@@ -19,7 +16,6 @@ class AttributeNetwork:
         Args:
             opt: Various options to the network.
         """
-        self.profiler = Profiler()
         self.mode = None
 
         if opt.concat_img:
@@ -49,14 +45,10 @@ class AttributeNetwork:
             }
             if opt.dataset in ["dash", "clevr_dart"]:
                 output_dim = 0
-                if opt.pred_attr:
-                    output_dim += label2dim["attr"]
-                if opt.pred_size:
-                    output_dim += label2dim["size"]
-                if opt.pred_position:
-                    output_dim += label2dim["position"]
-                if opt.pred_up_vector:
-                    output_dim += label2dim["up_vector"]
+                output_dim += label2dim["attr"]
+                output_dim += label2dim["size"]
+                output_dim += label2dim["position"]
+                output_dim += label2dim["up_vector"]
                 assert output_dim > 0
                 self.output_dim = output_dim
             elif opt.dataset == "clevr":

@@ -56,10 +56,10 @@ class BaseOptions:
             help="The dataset directory",
         )
         self.parser.add_argument(
-            "--height", required=True, type=int, help="The image height."
+            "--height", type=int, default=480, help="The image height."
         )
         self.parser.add_argument(
-            "--width", required=True, type=int, help="The image width"
+            "--width", type=int, default=480, help="The image width"
         )
         # self.parser.add_argument('--clevr_mini_img_dir', default='../../data/raw/CLEVR_mini/images', type=str, help='clevr-mini image directory')
         # self.parser.add_argument('--clevr_mini_ann_path', default='../../data/attr_net/objects/clevr_mini_objs.json', type=str, help='clevr-mini objects annotation file')
@@ -76,26 +76,26 @@ class BaseOptions:
             type=int,
             help="include depth info (rgbd)",
         )
-        self.parser.add_argument(
-            "--pred_attr",
-            action="store_true",
-            help="If true, predicts the object attributes (shape, size, color).",
-        )
-        self.parser.add_argument(
-            "--pred_size",
-            action="store_true",
-            help="If true, predicts the size (radius and height) of objects.",
-        )
-        self.parser.add_argument(
-            "--pred_position",
-            action="store_true",
-            help="If true, predicts the object position (x, y, z) in world coordinates.",
-        )
-        self.parser.add_argument(
-            "--pred_up_vector",
-            action="store_true",
-            help="If true, predicts the z direction vector in world coordinates.",
-        )
+        # self.parser.add_argument(
+        #     "--pred_attr",
+        #     action="store_true",
+        #     help="If true, predicts the object attributes (shape, size, color).",
+        # )
+        # self.parser.add_argument(
+        #     "--pred_size",
+        #     action="store_true",
+        #     help="If true, predicts the size (radius and height) of objects.",
+        # )
+        # self.parser.add_argument(
+        #     "--pred_position",
+        #     action="store_true",
+        #     help="If true, predicts the object position (x, y, z) in world coordinates.",
+        # )
+        # self.parser.add_argument(
+        #     "--pred_up_vector",
+        #     action="store_true",
+        #     help="If true, predicts the z direction vector in world coordinates.",
+        # )
         self.parser.add_argument(
             "--coordinate_frame",
             required=True,

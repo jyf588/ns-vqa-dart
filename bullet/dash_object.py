@@ -116,7 +116,7 @@ class DashObject:
         """
         y = []
         if use_attr:
-            y += list(self.construct_attr_vec())
+            y += self.construct_attr_vec(shape=self.shape, color=self.color)
 
         if use_size:
             y += list([self.radius, self.height])
@@ -136,19 +136,6 @@ class DashObject:
         else:
             raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
         return np.array(y)
-
-    def construct_attr_vec(self) -> np.ndarray:
-        """Constructs the attributes vector.
-        
-        Returns:
-            attr_vec: The attributes vector, which is a binary vector that 
-                assigns 1 to owned attributes and 0 everywhere else.
-        """
-        attr_vec = np.zeros((len(ATTR2IDX),))
-        for attr in [self.shape, self.color]:
-            shape_idx = ATTR2IDX[attr]
-            attr_vec[shape_idx] = 1
-        return attr_vec
 
     def compute_up_vector(self) -> List[float]:
         """Computes the up vector for the current object.
@@ -185,26 +172,29 @@ class DashObject:
         Returns:
             str_list: A list of strings.
         """
-        str_list = []
-        json_dict = self.to_json()
-        for k, v in json_dict.items():
-            # Convert to cm and set precision to 1 decimal point.
-            if k in ["radius", "height", "position"]:
-                if type(v) == list:
-                    v = [float(f"{v_i * 100:.1f}") for v_i in v]
-                elif type(v) == float:
-                    v = f"{v * 100:.1f}"
-                k = f"{k} (cm)"
-            # Set precision to 1 decimal point.
-            elif k in ["up_vector"]:
-                v = [float(f"{v_i:.1f}") for v_i in v]
-            elif k in ["img_id", "orientation", "oid"]:
-                continue
-            str_list.append(f"{k}: {v}")
-        return str_list
+        return to_caption(json_dict=self.to_json())
 
 
-def compute_data_from_rgb_and_mask(
+def to_caption(json_dict: Dict):
+    str_list = []
+    for k, v in json_dict.items():
+        # Convert to cm and set precision to 1 decimal point.
+        if k in ["radius", "height", "position"]:
+            if type(v) == list:
+                v = [float(f"{v_i * 100:.1f}") for v_i in v]
+            elif type(v) == float:
+                v = f"{v * 100:.1f}"
+            k = f"{k} (cm)"
+        # Set precision to 1 decimal point.
+        elif k in ["up_vector"]:
+            v = [float(f"{v_i:.1f}") for v_i in v]
+        elif k in ["img_id", "orientation", "oid"]:
+            continue
+        str_list.append(f"{k}: {v}")
+    return str_list
+
+
+def compute_X(
     oid: int,
     rgb: np.ndarray,
     mask: np.ndarray,
@@ -268,6 +258,60 @@ def compute_data_from_rgb_and_mask(
         data[:, :, :3] = seg_padded
     data[80:400, :, 3:6] = input_rgb
     return data
+
+
+def compute_y(
+    odict: Dict, coordinate_frame: str, camera: Optional[BulletCamera] = None
+) -> np.ndarray:
+    """Constructs the label vector for an object.
+
+    Args:
+        odict: A dictionary of object labels.
+        coordinate_frame: The coordinate frame to use, either "world" or
+            "camera" coordinate frame.
+        camera: The BulletCamera for computing values in camera coordinate 
+            frame.
+    
+    Returns:
+        y: Labels for the example.
+    """
+    y = []
+    y += construct_attr_vec(shape=odict["shape"], color=odict["color"])
+    y += [odict["radius"], odict["height"]]
+
+    position = odict["position"]
+    up_vector = util.orientation_to_up(odict["orientation"])
+
+    if coordinate_frame == "camera":
+        position = util.world_to_cam(xyz=position, camera=camera)
+        up_vector = util.world_to_cam(xyz=up_vector, camera=camera)
+    elif coordinate_frame == "world":
+        pass
+    else:
+        raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
+
+    y += position
+    y += up_vector
+
+    return np.array(y, dtype=np.float32)
+
+
+def construct_attr_vec(shape: str, color: str) -> List[int]:
+    """Constructs the attributes vector.
+    
+    Args:
+        shape: The shape of the object.
+        color: The color of the object.
+
+    Returns:
+        attr_vec: The attributes vector, which is a binary vector that 
+            assigns 1 to owned attributes and 0 everywhere else.
+    """
+    attr_vec = np.zeros((len(ATTR2IDX),))
+    for attr in [shape, color]:
+        shape_idx = ATTR2IDX[attr]
+        attr_vec[shape_idx] = 1
+    return list(attr_vec)
 
 
 def compute_bbox(oid: int, mask: np.ndarray) -> Tuple[int]:

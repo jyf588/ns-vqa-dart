@@ -58,7 +58,9 @@ class DashDataset:
         mask = self.load_mask(eid=eid)
         return objects, camera, rgb, mask
 
-    def save_example(self, objects: List[DashObject], camera: BulletCamera):
+    def save_example(
+        self, objects: List[DashObject], rgb: np.ndarray, mask: np.ndarray
+    ):
         """Saves an example scene.
 
         Before saving, it does the following processing:
@@ -70,7 +72,7 @@ class DashDataset:
             camera: The camera of the scene.
         """
         # Generate RGB and mask images.
-        rgb, mask = camera.get_rgb_and_mask()
+        # rgb, mask = camera.get_rgb_and_mask()
 
         # Filter out objects that are out-of-view.
         objects = self.filter_objects_by_area(
@@ -117,7 +119,7 @@ class DashDataset:
             max_img_id: The maximum image ID, exclusive.
         
         Returns:
-            objects: A list of DashObject's.
+            objects: A list of DashObjects.
         """
         print(
             f"Loading objects with img IDs in range [{min_img_id}, {max_img_id})"

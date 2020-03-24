@@ -41,7 +41,7 @@ class Trainer:
         start_time = time.time()
         while t < self.num_iters:
             epoch += 1
-            for data, label, _, _ in self.train_loader:
+            for data, label in self.train_loader:
                 t += 1
                 self.model.set_input(data, label)
                 self.model.step()
@@ -88,7 +88,7 @@ class Trainer:
         self.model.eval_mode()
         loss = 0
         t = 0
-        for x, y, _, _ in self.val_loader:
+        for x, y in self.val_loader:
             self.model.set_input(x, y)
             self.model.forward()
             loss += self.model.get_loss()
