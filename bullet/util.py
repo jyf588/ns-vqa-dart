@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from numpy.linalg import inv
+import os
 import pickle
 import pybullet
 import pybullet_utils.bullet_client as bc
@@ -183,5 +184,6 @@ def save_pickle(path: str, data: Any):
         path: The path of the pickle file to save.
         data: The data to save.
     """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         pickle.dump(data, f)

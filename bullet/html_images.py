@@ -64,20 +64,38 @@ class HTMLImageGenerator:
         tag2img = {}
         for sid_str in tqdm(sid2info.keys()):
             sid = int(sid_str)
-            tag2img[sid] = {
-                "scene": self.generate_scene_images(sid=sid),
-                "objects": {},
-            }
+            tag2img[sid] = {"scene": {}, "objects": {}}
+            gt_ostates = []
+            pred_ostates = []
             for oid, info in sid2info[sid_str].items():
                 oid = int(oid)
+
+                # Convert from vectors to state dictionaries.
+                gt_state = dash_object.y_vec_to_dict(
+                    y=info["labels"],
+                    coordinate_frame=self.args.coordinate_frame,
+                )
+                pred_state = dash_object.y_vec_to_dict(
+                    y=info["pred"], coordinate_frame=self.args.coordinate_frame
+                )
+                gt_ostates.append(gt_state)
+                pred_ostates.append(pred_state)
+
+                # Generate object-level images.
                 tag2img[sid]["objects"][oid] = self.generate_object_images(
-                    sid=sid, oid=oid
+                    sid=sid, oid=oid, gt_state=gt_state, pred_state=pred_state
                 )
 
                 # Write captions.
                 self.generate_captions(
-                    gt_y=info["labels"], pred_y=info["pred"], sid=sid, oid=oid
+                    sid=sid, oid=oid, gt_state=gt_state, pred_state=pred_state
                 )
+
+            # Generate scene-level images. We do this after processing objects
+            # because we need the object states.
+            tag2img[sid]["scene"] = self.generate_scene_images(
+                sid=sid, gt_ostates=gt_ostates, pred_ostates=pred_ostates
+            )
             if i > args.n_objects:
                 break
             i += 1
@@ -95,7 +113,9 @@ class HTMLImageGenerator:
             data=self.captions,
         )
 
-    def generate_scene_images(self, sid: int) -> Dict[str, np.ndarray]:
+    def generate_scene_images(
+        self, sid: int, gt_ostates: List[Dict], pred_ostates: List[Dict]
+    ) -> Dict[str, np.ndarray]:
         """Generates scene-level images.
 
         Args:
@@ -107,18 +127,30 @@ class HTMLImageGenerator:
                     <tag>: <image>
                 }
         """
-        rgb = gen_dataset.load_rgb(dataset_dir=self.args.dataset_dir, sid=sid)
-        tag2img = {"rgb": rgb}
+        rgb, seg = gen_dataset.load_rgb_and_seg(
+            img_dir=self.args.img_dir, sid=sid
+        )
+        gt_rgb = self.rerender(states=gt_ostates)
+        pred_rgb = self.rerender(states=pred_ostates)
+        tag2img = {"rgb": rgb, "seg": seg, "gt": gt_rgb, "pred": pred_rgb}
         return tag2img
 
     def generate_object_images(
-        self, sid: int, oid: int
+        self,
+        sid: int,
+        oid: int,
+        gt_state: Dict[str, Any],
+        pred_state: Dict[str, Any],
     ) -> Dict[str, np.ndarray]:
         """Generates object-level images.
 
         Args:
             sid: The scene ID.
             oid: The object ID.
+            state: Object state with the format: 
+            {
+                <tag>: <path>
+            }
 
         Returns:
             tag2img: A dictionary with the following format:
@@ -132,8 +164,39 @@ class HTMLImageGenerator:
         )
         X, _, _, _, _ = util.load_pickle(path=pickle_path)
         mask = X[:, :, :3]
-        tag2img = {"mask": X[:, :, :3], "rgb": X[:, :, 3:6]}
+
+        # Rerender the prediction.
+        gt_rgb = self.rerender(states=[gt_state])
+        pred_rgb = self.rerender(states=[pred_state])
+
+        tag2img = {
+            "seg": X[:, :, :3],
+            "rgb": X[:, :, 3:6],
+            "gt": gt_rgb,
+            "pred": pred_rgb,
+        }
         return tag2img
+
+    def rerender(self, states: List[Dict]):
+        bc = util.create_bullet_client(mode="direct")
+        renderer = BulletRenderer(p=bc)
+
+        # Compute the orientation from the up vector because it is what the
+        # renderer expects.
+        for s in states:
+            s["orientation"] = util.up_to_orientation(up=s["up_vector"])
+        renderer.load_objects_from_state(ostates=states, position_mode="com")
+        renderer.render_object(
+            o=DashTable(position=[0.2, 0.2, 0.0]), position_mode="com"
+        )
+        camera = BulletCamera(
+            p=bc,
+            position=[-0.2237938867122504, 0.0, 0.5425],
+            rotation=[0.0, 50.0, 0.0],
+            offset=[0.0, 0.2, 0.0],
+        )
+        rgb, _ = camera.get_rgb_and_mask()
+        return rgb
 
     def save_tagged_images(self, tag2img: Dict):
         """
@@ -175,15 +238,11 @@ class HTMLImageGenerator:
                     os.makedirs(os.path.dirname(abs_path), exist_ok=True)
                     imageio.imwrite(abs_path, img)
 
-    def generate_captions(self, gt_y: List, pred_y: List, sid: int, oid: int):
-        gt_dict = dash_object.y_vec_to_dict(
-            y=gt_y, coordinate_frame=self.args.coordinate_frame
-        )
-        pred_dict = dash_object.y_vec_to_dict(
-            y=pred_y, coordinate_frame=self.args.coordinate_frame
-        )
-        gt_caption = dash_object.to_caption(json_dict=gt_dict)
-        pred_caption = dash_object.to_caption(json_dict=pred_dict)
+    def generate_captions(
+        self, sid: int, oid: int, gt_state: Dict, pred_state: Dict
+    ):
+        gt_caption = dash_object.to_caption(json_dict=gt_state)
+        pred_caption = dash_object.to_caption(json_dict=pred_state)
         if sid not in self.captions:
             self.captions[sid] = {}
         self.captions[sid][oid] = {"gt_y": gt_caption, "pred_y": pred_caption}
@@ -431,6 +490,12 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The path to the predictions JSON.",
+    )
+    parser.add_argument(
+        "--img_dir",
+        type=str,
+        required=True,
+        help="The directory containing original RGB and segmentation images.",
     )
     parser.add_argument(
         "--html_dir",

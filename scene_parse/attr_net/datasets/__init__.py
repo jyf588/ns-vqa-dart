@@ -13,10 +13,7 @@ def get_dataset(opt, split):
             partition = json.load(f)
 
         ds = DashTorchDataset(
-            dataset_dir=opt.dataset_dir,
-            paths=partition[split],
-            height=opt.height,
-            width=opt.width,
+            paths=partition[split], height=opt.height, width=opt.width
         )
 
     elif opt.dataset == "clevr":

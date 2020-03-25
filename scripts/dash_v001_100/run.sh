@@ -1,5 +1,5 @@
 ROOT_DIR=/media/michelle/68B62784B62751BC
-SET=dash_v001
+SET=dash_v001_100
 DATA_DIR=$ROOT_DIR/data/datasets/$SET/data
 RUN_DIR=$ROOT_DIR/outputs/$SET
 PRED_PATH=$RUN_DIR/pred.json

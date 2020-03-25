@@ -1,17 +1,17 @@
-SET=dash_v001
-DATA_DIR=~/datasets/$SET
-RUN_DIR=~/outputs/$SET
+ROOT_DIR=/media/michelle/68B62784B62751BC
+SET=dash_v001_100
+DATA_DIR=$ROOT_DIR/data/datasets/$SET/data
+RUN_DIR=$ROOT_DIR/outputs/$SET
 PRED_PATH=$RUN_DIR/pred.json
-HTML_DIR=~/html/$SET
+HTML_DIR=$ROOT_DIR/html/$SET
+IMG_DIR=$ROOT_DIR/data/datasets/$SET/images
 
 CHECKPOINT_EVERY=2000
-NUM_ITERS=100
+NUM_ITERS=20
 COORD_FRAME=world
 HTML_N_OBJECTS=100
 
-cd ns_vqa_dart/scene_parse/attr_net
-
-time python run_train.py \
+time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
@@ -31,6 +31,7 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
 
 python ns_vqa_dart/bullet/html_images.py \
     --dataset_dir $DATA_DIR \
+    --img_dir $IMG_DIR \
 	--pred_path $PRED_PATH \
     --html_dir $HTML_DIR \
     --coordinate_frame $COORD_FRAME \

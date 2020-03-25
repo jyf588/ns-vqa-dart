@@ -46,8 +46,8 @@ def main(args: argparse.Namespace):
 
     with open(index_path, "w") as f:
         f.write(HEADER)
-        scene_tags = ["rgb"]
-        object_tags = ["rgb", "mask"]
+        scene_tags = ["rgb", "gt", "pred"]
+        object_tags = ["seg", "rgb", "gt", "pred"]
         f.write(create_caption_row(scene_tags + object_tags))
 
         rows = []

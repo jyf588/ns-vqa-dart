@@ -13,13 +13,10 @@ import torchvision.transforms as transforms
 
 
 class DashTorchDataset(Dataset):
-    def __init__(
-        self, dataset_dir: str, paths: List[str], height: int, width: int
-    ):
+    def __init__(self, paths: List[str], height: int, width: int):
         """A Pytorch Dataset for DASH objects.
 
         Args:
-            dataset_dir: The directory to load data from.
             paths: A list of pickle filepaths containing example data.
             height: The height to resize the image to.
             width: The width to resize the image to.
@@ -29,7 +26,6 @@ class DashTorchDataset(Dataset):
             width: The width to resize the image to.
             transforms: The transform to apply to the loaded images.
         """
-        self.dataset_dir = dataset_dir
         self.paths = paths
         self.height = height
         self.width = width

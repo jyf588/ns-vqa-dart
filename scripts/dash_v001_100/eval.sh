@@ -1,5 +1,5 @@
 ROOT_DIR=/media/michelle/68B62784B62751BC
-SET=dash_v001
+SET=dash_v001_100
 DATA_DIR=$ROOT_DIR/data/datasets/$SET/data
 RUN_DIR=$ROOT_DIR/outputs/$SET
 PRED_PATH=$RUN_DIR/pred.json
@@ -9,16 +9,7 @@ IMG_DIR=$ROOT_DIR/data/datasets/$SET/images
 CHECKPOINT_EVERY=2000
 NUM_ITERS=60000
 COORD_FRAME=world
-HTML_N_OBJECTS=100
-
-time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
-    --dataset dash \
-    --run_dir $RUN_DIR \
-    --dataset_dir $DATA_DIR \
-    --checkpoint_every $CHECKPOINT_EVERY \
-    --num_iters $NUM_ITERS \
-    --coordinate_frame $COORD_FRAME \
-    --num_workers 8
+HTML_N_OBJECTS=2
 
 time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \

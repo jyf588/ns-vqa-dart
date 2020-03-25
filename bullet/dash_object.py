@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pybullet_utils.bullet_client as bc
 import pycocotools.mask as mask_util
-from typing import Any, Dict, List, Optional, Tuple
+from typing import *
 import sys
 
 # sys.path.append("./")
@@ -196,68 +196,156 @@ def to_caption(json_dict: Dict):
 
 def compute_X(
     oid: int,
-    rgb: np.ndarray,
-    mask: np.ndarray,
+    img: np.ndarray,
+    seg: np.ndarray,
     data_height: Optional[int] = 480,
     data_width: Optional[int] = 480,
 ) -> np.ndarray:
     """Constructs the data tensor for an object.
 
     Args:
-        oid: The object ID.
-        rgb: The RGB image of the entire scene.
-        mask: A 2D mask where each pixel holds the object ID it belongs to.
-        data_height: The height of the data tensor.
-        data_width: The width of the data tensor.
+        oid: The ID of the object that we are generating data for.
+        img: An image of a scene.
+        seg: A 2D segmentation map where each pixel stores the object 
+            ID it belongs to.
+        data_height: The desired height of the generated data tensor.
+        data_width: The desired width of the generated data tensor.
     
     Returns:
-        data: The final data, which contains a cropped image of the object
-            concatenated with the original image of the scene, with the
-            object cropped out. (RGB, HWC)
+        data (np.ndarray, type=np.uint8): The final data, which contains two 
+            concatenated images:
+            (1) An image of the object only, cropped using its segmentation
+                mask, and maximally enlarged such that the aspect ratio of the
+                object is maintained. Shape (`data_height`, `data_width`, 3).
+            (2) The original image of the scene, with the segmentation area of
+                the object cropped out. Shape (`data_height`, `data_width`, 3).
 
             Note: If the object bbox area is zero, the input RGB is simply the
             original RGB image, and the object segmentation image is all zeros.
     """
-    rgb = rgb.copy()
-    bbox = compute_bbox(oid=oid, mask=mask)
+    # Verify that the RGB image and the segmentation have proper dimensions.
+    img_H, img_W, C = img.shape
+    seg_H, seg_W = seg.shape
+    assert img_H == seg_H
+    assert img_W == seg_W
+
+    # Initialize the generated data tensor, which we will fill with the
+    # appropriate data.
     data = np.zeros((data_height, data_width, 6)).astype(np.uint8)
-    input_rgb = rgb.copy()
+
+    # Generate the object's input image.
+    input_object_img = compute_input_object_img(
+        oid=oid,
+        img=img,
+        seg=seg,
+        data_height=data_height,
+        data_width=data_width,
+    )
+
+    # Generate the modified scene image, where object pixels are zeroed out.
+    input_scene_img = compute_input_scene_img(
+        oid=oid, img=img, seg=seg, H=data_height, W=data_width
+    )
+
+    # Assign the images to the final data tensor.
+    data[:, :, :3] = input_object_img
+    data[:, :, 3:6] = input_scene_img
+    return data
+
+
+def compute_input_scene_img(
+    oid: int, img: np.ndarray, seg: np.ndarray, H: int, W: int
+) -> np.ndarray:
+    """Generate the modified input scene, where the object's pixels are zeroed
+    out. Note that if the object has zero pixels in the segmentation, the input
+    image is simply the full, original scene.
+
+    Args:
+        oid: The ID of the object that we are generating data for.
+        img: An image of the scene.
+        segmentation: A 2D segmentation map where each pixel stores the object 
+            ID it belongs to.
+        H: The desired height of the generated data tensor.
+        W: The desired width of the generated data tensor.
+    
+    Returns:
+        input_img: The generated input image for the scene.
+    """
+    # Initialize a tensor of specified size for the image we will generate.
+    input_img = np.zeros((H, W, 3), dtype=np.uint8)
+
+    # Zero out the object's pixels from the scene.
+    img[seg == oid] = 0.0
+
+    # Compute the offset of the original image's dimensions compared to the
+    # desired output size. If original image is smaller, boundaries are padded
+    # equally on all edges.
+    img_H, img_W, _ = img.shape
+    y_offset = (H - img_H) // 2
+    x_offset = (W - img_W) // 2
+    assert y_offset >= 0
+    assert x_offset >= 0
+    input_img[y_offset : img_H + y_offset, x_offset : img_W + x_offset] = img
+    return input_img
+
+
+def compute_input_object_img(
+    oid: int,
+    img: np.ndarray,
+    seg: np.ndarray,
+    data_height: int,
+    data_width: int,
+):
+    """Generates the input object image.
+
+    Args:
+        oid: The ID of the object that we are generating data for.
+        img: An image of the scene.
+        segmentation: A 2D segmentation map where each pixel stores the object 
+            ID it belongs to.
+        data_height: The desired height of the generated data tensor.
+        data_width: The desired width of the generated data tensor.
+    
+    Returns:
+        input_object_img: The generated input image for the object. If the 
+            object does not have any pixels in the segmentation, the returned
+            image is all zeros.
+    """
+    # Initialize the tensor that we will modify and return to the user.
+    input_object_img = np.zeros((data_height, data_width, 3), dtype=np.uint8)
+
+    # First, zero out all pixels outside of the object's segmentation area.
+    img_without_background = img.copy()
+    img_without_background[seg != oid] = 0.0
+
+    # Crop the segmentation out using its bbox.
+    bbox = compute_bbox(oid=oid, mask=seg)
+
+    # If bbox is None, this means that no pixels contain the object, so we are
+    # done. We return an all-zero image.
     if bbox is None:
         print(f"Bbox is None. Object ID: {oid}")
+        return input_object_img
+
+    x, y, w, h = bbox
+    seg = img_without_background[y : y + h, x : x + w, :]
+
+    # Compute the new dimensions to resize the segmentation to.
+    if h > w:
+        aspect_ratio = h / w
+        resize_dims = (data_height, int(data_width / aspect_ratio))
     else:
-        x, y, w, h = bbox
+        aspect_ratio = w / h
+        resize_dims = (int(data_height / aspect_ratio), data_width)
+    H_, W_ = resize_dims
 
-        # Set the object seg to zeros in the original RGB image.
-        input_rgb[mask == oid] = 0.0
+    # Resize the segmentation while maintaining aspect ratio.
+    seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
+    top_pad = (data_height - H_) // 2
+    left_pad = (data_width - W_) // 2
 
-        # Create the segmentation image (maintain aspect ratio, use
-        # replicate padding).
-        # First, zero out everything in the RGB image except for the object
-        # segmentation.
-        rgb_with_only_seg = rgb.copy()
-        rgb_with_only_seg[mask != oid] = 0.0
-
-        # Crop the segmentation out using its bbox.
-        seg = rgb_with_only_seg[y : y + h, x : x + w, :]
-
-        # Compute the new dimensions to resize the segmentation to.
-        if h > w:
-            aspect_ratio = h / w
-            resize_dims = (data_height, int(data_width / aspect_ratio))
-        else:
-            aspect_ratio = w / h
-            resize_dims = (int(data_height / aspect_ratio), data_width)
-        H_, W_ = resize_dims
-
-        # Resize the segmentation while maintaining aspect ratio.
-        seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
-        seg_padded = np.zeros((data_height, data_width, 3), dtype=np.uint8)
-        top_pad = (data_height - H_) // 2
-        left_pad = (data_width - W_) // 2
-        seg_padded[top_pad : top_pad + H_, left_pad : left_pad + W_] = seg
-        data[:, :, :3] = seg_padded
-    data[80:400, :, 3:6] = input_rgb
-    return data
+    input_object_img[top_pad : top_pad + H_, left_pad : left_pad + W_] = seg
+    return input_object_img
 
 
 def compute_y(
@@ -266,14 +354,34 @@ def compute_y(
     """Constructs the label vector for an object.
 
     Args:
-        odict: A dictionary of object labels.
+        odict: A dictionary of object labels with the format: 
+            {
+                "shape": <shape>,
+                "color": <color>,
+                "radius": <radius>,
+                "height": <height>,
+                "position": <position>,
+                "orientation": <orientation
+            }
         coordinate_frame: The coordinate frame to use, either "world" or
             "camera" coordinate frame.
         camera: The BulletCamera for computing values in camera coordinate 
             frame.
     
     Returns:
-        y: Labels for the example.
+        y: Labels for the example, a 1-D array with the following structure:
+            np.ndarray([
+                <one_hot_shape>,
+                <one_hot_color>,
+                <radius>,
+                <height>,
+                <x_pos>,
+                <y_pos>,
+                <z_pos>,
+                <up_vector[0]>,
+                <up_vector[1]>,
+                <up_vector[2]>,
+            ])
     """
     y = []
     y += construct_attr_vec(shape=odict["shape"], color=odict["color"])
