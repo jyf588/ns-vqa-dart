@@ -27,6 +27,7 @@ paths.json: {
 import argparse
 import os
 import pprint
+import random
 from tqdm import tqdm
 from typing import *
 
@@ -52,7 +53,8 @@ def main(args: argparse.Namespace):
 
         rows = []
         sids = [int(sid) for sid in sid2paths.keys()]
-        for sid in sorted(sids):
+        random.shuffle(sids)
+        for sid in sids:
             scene_paths = sid2paths[str(sid)]["scene"]
             scene_row = []
             for t in scene_tags:

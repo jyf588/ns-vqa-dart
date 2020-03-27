@@ -113,31 +113,15 @@ def load_rgb_and_seg(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray]:
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    sid_img_dir = os.path.join(img_dir, f"{sid:06}")
-    rgb_path = os.path.join(sid_img_dir, "test_img.png")
-    seg_path = os.path.join(sid_img_dir, "test_id.png")
+    rgb_path = os.path.join(img_dir, "rgb", f"{sid:06}.png")
+    seg_path = os.path.join(img_dir, "seg", f"{sid:06}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
-
-    # HACK: Resize images.
-    # rgb = cv2.resize(rgb, (480, 320), interpolation=cv2.INTER_AREA)
-    # seg_img = cv2.resize(seg_img, (480, 320), interpolation=cv2.INTER_AREA)
-    # rgb = np.zeros((320, 480, 3), dtype=np.uint8)
-    # seg_img = np.zeros((320, 480, 3), dtype=np.uint8)
-    # rgb = rgb_large[:320, :480]
-    # seg_img = seg_img_large[:320, :480]
 
     # Convert the segmentation image into an array.
     # TODO: Do this before saving the segmentation.
     H, W, _ = seg_img.shape
     seg = np.full((H, W), -1, dtype=np.uint8)
-    # for i in range(H):
-    #     for j in range(W):
-    #         rgb_value = tuple(seg_img[i, j])
-    #         if rgb_value == (0, 0, 0):  # Black, used as background
-    #             continue
-    #         oid = RGB2ID[rgb_value]
-    #         seg[i, j] = oid
     for rgb_value, oid in RGB2ID.items():
         idxs = np.where(
             np.logical_and(

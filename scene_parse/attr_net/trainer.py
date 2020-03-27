@@ -42,12 +42,25 @@ class Trainer:
         while t < self.num_iters:
             epoch += 1
             for data, label, _, _, _ in self.train_loader:
+                # print(data.size())
+                # print(label.size())
+                # print("starting iter")
                 t += 1
+                start_set_input = time.time()
                 self.model.set_input(data, label)
-                self.model.step()
-                loss = self.model.get_loss()
+                # print(f"t:{t}\tset_input: {time.time() - start_set_input}")
 
+                start_step = time.time()
+                self.model.step()
+                # print(f"t:{t}\tstep: {time.time() - start_step}")
+
+                start_loss = time.time()
+                loss = self.model.get_loss()
+                # print(f"t:{t}\tloss: {time.time() - start_loss}")
+
+                # print("right before display")
                 if t % self.display_every == 0:
+                    # print(f"display")
                     self.stats["train_losses"].append(loss)
                     avg_iter_time = (time.time() - start_time) / t
                     print(
@@ -57,7 +70,9 @@ class Trainer:
                     )
                     self.stats["train_losses_ts"].append(t)
 
+                # print("right before checkpoint")
                 if t % self.checkpoint_every == 0 or t >= self.num_iters:
+                    # print("checkpoint")
                     if self.val_loader is not None:
                         print("| checking validation loss")
                         val_loss = self.check_val_loss()
@@ -83,6 +98,7 @@ class Trainer:
 
                 if t >= self.num_iters:
                     break
+                # print("finish iter")
 
     def check_val_loss(self):
         self.model.eval_mode()

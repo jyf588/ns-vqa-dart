@@ -5,4 +5,4 @@ python ns_vqa_dart/bullet/gen_dataset.py \
     --img_dir $ROOT_DIR/data/datasets/dash_v001/images \
     --dst_dir $ROOT_DIR/data/datasets/dash_v001/data \
     --start_sid 0 \
-    --end_sid 100
+    --end_sid 10000

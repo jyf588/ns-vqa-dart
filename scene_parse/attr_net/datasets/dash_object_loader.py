@@ -1,6 +1,7 @@
 import json
 import os
 import pickle
+import random
 import sys
 import time
 from typing import *
@@ -56,10 +57,37 @@ class DashTorchDataset(Dataset):
                 concatenated with the original image of the scene, with the
                 object cropped out.
             y: Labels for the example.
+        
+        Raises:
+            EOFError: If the pickle file is empty.
         """
         path = self.paths[idx]
-        with open(path, "rb") as f:
-            X, y, sid, oid, path = pickle.load(f)
+        try:
+            with open(path, "rb") as f:
+                X, y, sid, oid, path = pickle.load(f)
+        except EOFError as e:
+            print(
+                f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example."
+            )
+            # Regenerate idxs until we get successful loading.
+            retries = 0
+            while 1:
+                retries += 1
+                path = self.paths[random.randint(0, self.__len__())]
+                try:
+                    with open(path, "rb") as f:
+                        X, y, sid, oid, path = pickle.load(f)
+                    break
+                except EOFError:
+                    print(
+                        f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example. Retries: {retries}"
+                    )
 
         X = transforms.Compose(self.normalize)(X)
         return X, y, sid, oid, path
+
+
+def load_file(path: str):
+    with open(path, "rb") as f:
+        X, y, sid, oid, path = pickle.load(f)
+    return
