@@ -14,7 +14,7 @@ class RandomObjectsGenerator:
         obj_dist_thresh: float,
         max_retries: int,
         shapes: List[str],
-        colors: List[str],
+        # colors: List[str],
         radius_bounds: Tuple[float],
         height_bounds: Tuple[float],
         x_bounds: Tuple[float],
@@ -23,24 +23,25 @@ class RandomObjectsGenerator:
         position_mode: str,
     ):
         """
-        n_objs_bounds: 2-tuple of min and max bounds for the number of 
-            objects per scene.
-        obj_dist_thresh: The minimum threshold distance between different 
-            objects in the scene to enforced.
-        max_retries: The maximum number of times to retry generating 
-            values until certain criteria is met.
-        shapes: A list of shapes to sample from.
-        sizes: A list of sizes to sample from.
-        colors: A list of colors to sample from.
-        radius_bounds: 2-tuple of the min and max bounds for shape radius.
-        height_bounds: 2-tuple of the min and max bounds for shape height.
-        x_bounds: 2-tuple of the min and max bounds for the x position.
-        y_bounds: 2-tuple of the min and max bounds for the y position.
-        z_bounds: 2-tuple of the min and max bounds for the z position. Note 
-            that this represents the base Z position. The final generated Z
-            position will be offset by +H/2 if the `position_mode` is set to
-            "com".
-        position_mode: Whether the position represents the base or the COM.
+        Args:
+            n_objs_bounds: 2-tuple of min (inclusive) and max (exclusive) bounds 
+                for the number of objects per scene.
+            obj_dist_thresh: The minimum threshold distance between different 
+                objects in the scene to enforced.
+            max_retries: The maximum number of times to retry generating 
+                values until certain criteria is met.
+            shapes: A list of shapes to sample from.
+            sizes: A list of sizes to sample from.
+            # colors: A list of colors to sample from.
+            radius_bounds: 2-tuple of the min and max bounds for shape radius.
+            height_bounds: 2-tuple of the min and max bounds for shape height.
+            x_bounds: 2-tuple of the min and max bounds for the x position.
+            y_bounds: 2-tuple of the min and max bounds for the y position.
+            z_bounds: 2-tuple of the min and max bounds for the z position. Note 
+                that this represents the base Z position. The final generated Z
+                position will be offset by +H/2 if the `position_mode` is set to
+                "com".
+            position_mode: Whether the position represents the base or the COM.
         """
         # Set the seed for random number generators.
         np.random.seed(seed)
@@ -49,7 +50,7 @@ class RandomObjectsGenerator:
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds
         self.shapes = shapes
-        self.colors = colors
+        # self.colors = colors
         self.radius_bounds = radius_bounds
         self.height_bounds = height_bounds
         self.x_bounds = x_bounds
@@ -61,55 +62,68 @@ class RandomObjectsGenerator:
         self.position_mode = position_mode
 
     def generate_tabletop_objects(
-        self, existing_objects: Optional[List[DashObject]] = None
+        self, existing_odicts: Optional[List[Dict]] = None
     ) -> List[DashObject]:
         """Generates a single random scene.
         
         Args:
-            existing_objects: A list of existing objects to consider when 
-                checking closeness.
+            existing_odicts: A list of existing objects to include in the
+                closeness tests so that new objects are not too close to the
+                existing objects. Expected format: 
+                [
+                    {
+                        "position": [x, y, z],
+                        ...
+                    },
+                    ...
+                ]
 
         Returns:
-            objects: A list of DashObjects generated in the scene.
+            odicts: A list of newly generated objects. Format:
+            [
+                {
+                    "shape": <shape>,
+                    "color": <color>,
+                    "radius": <radius>,
+                    "height": <height>,
+                    "position": <position>,
+                    "orientation": [0.0, 0.0, 0.0, 1.0]
+                }
+            ]
         """
-        if existing_objects is None:
-            existing_objects = []
+        if existing_odicts is None:
+            existing_odicts = []
 
         # Randomly select the number of objects to generate.
-        # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
-        # inclusive, so that's why we subtract one from the max.
-        min_objs, max_objs = self.n_objs_bounds
-        if min_objs == max_objs:
-            n_objects = min_objs
-        else:
-            n_objects = random.randint(min_objs, max_objs - 1)
+        n_objects = self.generate_n_objects()
 
-        objects = []
-        n_tries = 0
-        while len(objects) < n_objects and n_tries < self.max_retries:
-            o: DashObject = self.generate_object()
+        odicts, n_tries = [], 0
+        while len(odicts) < n_objects and n_tries < self.max_retries:
+            odict = self.generate_object()
 
             # Check if generated object is too close to others.
-            close_arr = [
-                self.is_close(
-                    ax=o.position[0],
-                    ay=o.position[1],
-                    bx=other.position[0],
-                    by=other.position[1],
-                )
-                for other in objects + existing_objects
-            ]
-            if any(close_arr):
+            if self.any_close(
+                src_odict=odict, other_odicts=odicts + existing_odicts
+            ):
                 n_tries += 1
             else:
-                objects.append(o)
-        return objects
+                odicts.append(odict)
+        return odicts
 
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.
         
         Returns:
-            o: The randomly generated DashObject.
+            odict: The randomly generated object, in the format:
+                {
+                    "shape": <shape>,
+                    "color": <color>,
+                    "radius": <radius>,
+                    "height": <height>,
+                    "position": <position>,
+                    "orientation": [0.0, 0.0, 0.0, 1.0]
+                }
+
         """
         shape = random.choice(self.shapes)
         radius, height = self.generate_random_size(shape=shape)
@@ -124,15 +138,25 @@ class RandomObjectsGenerator:
         else:
             raise ValueError(f"Invalid position mode: {self.position_mode}")
 
-        o = DashObject(
-            shape=shape,
-            radius=radius,
-            height=height,
-            color=color,
-            position=position,
-            orientation=[0.0, 0.0, 0.0, 1.0],
-        )
-        return o
+        odict = {
+            "shape": shape,
+            "color": color,
+            "radius": radius,
+            "height": height,
+            "position": position,
+            "orientation": [0.0, 0.0, 0.0, 1.0],
+        }
+        return odict
+
+    def generate_n_objects(self) -> int:
+        # `self.n_objs_bounds[1]` is exclusive while `random.randint` is
+        # inclusive, so that's why we subtract one from the max.
+        min_objs, max_objs = self.n_objs_bounds
+        if min_objs == max_objs:
+            n_objects = min_objs
+        else:
+            n_objects = random.randint(min_objs, max_objs - 1)
+        return n_objects
 
     def generate_random_size(self, shape: str) -> Tuple[float, float]:
         """Generates a random radius and height.
@@ -164,6 +188,40 @@ class RandomObjectsGenerator:
             axis_value = self.uniform_sample(low=axis_min, high=axis_max)
             xyz.append(axis_value)
         return xyz
+
+    def any_close(self, src_odict: Dict, other_odicts: List[Dict]) -> bool:
+        """Checks if the source object is close to any of the other objects.
+
+        Args:
+            src_odict: The source object dictionary, with the format:
+                {
+                    "position": [x, y, z],
+                    ...
+                }
+            other_odicts: The other object dictionaries, with the format:
+                [
+                    {
+                        "position": [x, y, z],
+                        ...
+                    },
+                    ...
+                ]
+        
+        Returns:
+            is_close: Whether the source object is close to any of the other 
+                objects in xy space.
+        """
+        close_arr = [
+            self.is_close(
+                ax=src_odict["position"][0],
+                ay=src_odict["position"][1],
+                bx=other_odict["position"][0],
+                by=other_odict["position"][1],
+            )
+            for other_odict in other_odicts
+        ]
+        is_close = any(close_arr)
+        return is_close
 
     def is_close(self, ax: float, ay: float, bx: float, by: float) -> bool:
         """Checks whether two (x, y) points are within a certain threshold 
