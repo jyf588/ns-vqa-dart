@@ -583,6 +583,35 @@ def from_json(json_dict: Dict) -> DashObject:
     return o
 
 
+def assign_ids_to_odicts(odicts: List[Dict], start_id: int):
+    """Assigns object IDs to object dictionaries.
+
+    Args:
+        odicts: A list of object dictionaries, with the format:
+            [
+                {
+                    <attr>: <value>
+                }
+            ]
+        start_id: The starting ID to assign object IDs.
+    
+    Returns:
+        oid2odict: A mapping from assigned object ID to dictionary, with the 
+            format: {
+                <oid>: {
+                    <attr>: <value>
+                }
+            }
+    """
+    next_id_to_assn = start_id
+    oid2odict = {}
+    for odict in odicts:
+        oid = next_id_to_assn
+        oid2odict[oid] = odict
+        next_id_to_assn += 1
+    return oid2odict
+
+
 class DashTable(DashObject):
     def __init__(
         self,

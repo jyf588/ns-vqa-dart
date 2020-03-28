@@ -37,6 +37,7 @@ import os
 from tqdm import tqdm
 from typing import *
 
+import ns_vqa_dart.bullet.dash_object as dash_object
 from ns_vqa_dart.bullet.random_objects import RandomObjectsGenerator
 import ns_vqa_dart.bullet.util as util
 import my_pybullet_envs.utils as env_utils
@@ -72,7 +73,7 @@ def main(args: argparse.Namespace):
         # Assign object IDs to the new objects.
         # Object IDs are assigned starting after the maximum existing
         # object ID in the source objects.
-        oid2odicts = assign_ids_to_odicts(
+        oid2odicts = dash_object.assign_ids_to_odicts(
             odicts=new_odicts, start_id=max(src_oids) + 1
         )
 
@@ -84,35 +85,6 @@ def main(args: argparse.Namespace):
         util.save_pickle(
             path=os.path.join(args.dst_dir, fname), data=src_state
         )
-
-
-def assign_ids_to_odicts(odicts: List[Dict], start_id: int):
-    """Assigns object IDs to object dictionaries.
-
-    Args:
-        odicts: A list of object dictionaries, with the format:
-            [
-                {
-                    <attr>: <value>
-                }
-            ]
-        start_id: The starting ID to assign object IDs.
-    
-    Returns:
-        oid2odict: A mapping from assigned object ID to dictionary, with the 
-            format: {
-                <oid>: {
-                    <attr>: <value>
-                }
-            }
-    """
-    next_id_to_assn = start_id
-    oid2odict = {}
-    for odict in odicts:
-        oid = next_id_to_assn
-        oid2odict[oid] = odict
-        next_id_to_assn += 1
-    return oid2odict
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import argparse
 import os
 import random
 import shutil
+from tqdm import tqdm
 from typing import *
 
 
@@ -25,6 +26,8 @@ def main(args: argparse.Namespace):
     n_states_per_set = args.n_states // n_src_sets
     idx2path = {}
     start_idx = 0
+
+    print("Sampling states from each set...")
     for dir_i, src_dir in enumerate(args.src_dirs):
         # If it's the last partition, grab everything until the end.
         if dir_i == n_src_sets - 1:
@@ -40,19 +43,23 @@ def main(args: argparse.Namespace):
         for i, idx in enumerate(range(start_idx, end_idx)):
             idx2path[idx] = paths[i]
 
-        print(f"Source dir: {src_dir}")
-        print(f"\tRange: [{start_idx}, {end_idx})")
-        print(f"\tTotal examples: {n_examples}")
+        # print(f"Source dir: {src_dir}")
+        # print(f"\tRange: [{start_idx}, {end_idx})")
+        # print(f"\tTotal examples: {n_examples}")
 
         start_idx = end_idx
 
     # Copy source files to the destination directory.
+    print(f"Copying selected states to {args.dst_dir}...")
     os.makedirs(args.dst_dir, exist_ok=True)
-    for idx, src_path in idx2path.items():
+    idxs = list(idx2path.keys())
+    random.shuffle(idxs)
+    for idx in tqdm(idxs):
+        src_path = idx2path[idx]
         dst_path = os.path.join(args.dst_dir, f"{idx:06}.p")
-        print(src_path)
-        # print(dst_path)
         shutil.copyfile(src_path, dst_path)
+    print(f"Idxs:")
+    print(idxs)
 
 
 def sample_states(src_dir: str, n_samples: int) -> List[str]:

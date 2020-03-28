@@ -3,19 +3,19 @@
 Step 1. Generate states for planning and placing.
 
 ```
-# First, generate states for planning and stacking. (ETA: XX:XX)
-./scripts/states/planning_v003.sh  # TODO
-./scripts/states/stacking_v003_box.sh
-./scripts/states/stacking_v003_cyl.sh
+# First, generate states for planning and stacking.
+./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
+./ns_vqa_dart/scripts/states/stacking_v003_box.sh
+./ns_vqa_dart/scripts/states/stacking_v003_cyl.sh
 
 # Next, complete the stacking states by assigning values to attributes that are
 missing from the states (e.g., color, object ID). (ETA: 15 seconds)
 ./scripts/states/complete_states.sh
 
-# Add surrounding objects to the stacking states. (ETA: XX)
+# Add surrounding objects to the stacking states. (ETA: 16 minutes)
 ./scripts/states/add_surrounding_states.sh
 
-# Subsample and merge into a single set of states. (ETA: 1 second)
+# Subsample and merge into a single set of states. (ETA: 15 seconds)
 ./scripts/states/combine.sh
 ```
 
@@ -24,10 +24,10 @@ running Unity.
 
 ```
 # Zip up the states.
-time zip -r ~/data/states/full/dash_v001.zip dash_v001  # ETA: 1 second
+time zip -r /media/michelle/68B62784B62751BC/data/states/full/dash_v002.zip dash_v002  # ETA: 1 second
 
 # Transfer the states.
-time rsync -azP sydney:~/data/states/full/dash_v001.zip ~/workspace/lucas/states  # ETA: 3 minutes
+time rsync -azP sydney:/media/michelle/68B62784B62751BC/data/states/full/dash_v002.zip ~/workspace/lucas/states/  # ETA: 28 seconds
 
 # Unzip the states.
 unzip ~/workspace/lucas/states/dash_v001.zip
