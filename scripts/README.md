@@ -5,12 +5,11 @@ Step 1. Generate states for planning and placing.
 ```
 # First, generate states for planning and stacking.
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
-./ns_vqa_dart/scripts/states/stacking_v003_box.sh
-./ns_vqa_dart/scripts/states/stacking_v003_cyl.sh
+./ns_vqa_dart/scripts/states/placing.sh (ETA: 2 minutes)
 
 # Next, complete the stacking states by assigning values to attributes that are
 missing from the states (e.g., color, object ID). (ETA: 15 seconds)
-./scripts/states/complete_states.sh
+./ns_vqa_dart/states/complete_states.sh
 
 # Add surrounding objects to the stacking states. (ETA: 16 minutes)
 ./scripts/states/add_surrounding_states.sh
