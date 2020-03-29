@@ -65,7 +65,6 @@ class HTMLImageGenerator:
         sid_strings = list(sid2info.keys())
         random.shuffle(sid_strings)
         for sid_str in tqdm(sid_strings):
-            print(f"sid: {sid_str}")
             sid = int(sid_str)
             tag2img[sid] = {"scene": {}, "objects": {}}
             gt_ostates = []

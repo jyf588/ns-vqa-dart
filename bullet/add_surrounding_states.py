@@ -34,6 +34,7 @@ Generated output structure of <args.dst_dir>:
 """
 import argparse
 import os
+import pprint
 from tqdm import tqdm
 from typing import *
 
@@ -44,9 +45,11 @@ import my_pybullet_envs.utils as env_utils
 
 
 def main(args: argparse.Namespace):
+    # For n_objs: We want at least 2 objects total, and minimum number of
+    # existing objects is 1 (placing).
     objects_generator = RandomObjectsGenerator(
         seed=1,
-        n_objs_bounds=(0, 6),
+        n_objs_bounds=(1, 6),
         obj_dist_thresh=0.1,
         max_retries=50,
         shapes=["box", "cylinder", "sphere"],
@@ -57,13 +60,19 @@ def main(args: argparse.Namespace):
         z_bounds=(0.0, 0.0),
         position_mode="com",
     )
+
+    original_count = 0
+    new_count = 0
+
     # Loop over states in the source directory.
-    for fname in tqdm(os.listdir(args.src_dir)):
+    fnames = os.listdir(args.src_dir)
+    for fname in tqdm(fnames):
         # Load the current state file.
         src_state = util.load_pickle(path=os.path.join(args.src_dir, fname))
         src_oid2odict = src_state["objects"]
         src_oids = list(src_oid2odict.keys())
         src_odicts = list(src_oid2odict.values())
+        n_objs_orig = len(src_state["objects"])
 
         # Generate random surrounding objects around existing objects.
         new_odicts = objects_generator.generate_tabletop_objects(
@@ -80,11 +89,19 @@ def main(args: argparse.Namespace):
         # Combine new objects with existing objects.
         for oid, odict in oid2odicts.items():
             src_state["objects"][oid] = odict
+        n_objs_new = len(src_state["objects"])
 
         # Save the new state file into the destination directory.
         util.save_pickle(
             path=os.path.join(args.dst_dir, fname), data=src_state
         )
+
+        original_count += n_objs_orig
+        new_count += n_objs_new
+
+    print(f"Number of scenes: {len(fnames)}")
+    print(f"Original number of objects: {original_count}")
+    print(f"New number of objects: {new_count}")
 
 
 if __name__ == "__main__":
@@ -102,4 +119,7 @@ if __name__ == "__main__":
         help="The directory containing original states.",
     )
     args = parser.parse_args()
+
+    print("Arguments:")
+    pprint.pprint(vars(args))
     main(args)

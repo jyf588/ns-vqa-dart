@@ -12,6 +12,7 @@ Generated format of destination state directory:
 """
 import argparse
 import os
+import pprint
 import random
 import shutil
 from tqdm import tqdm
@@ -28,6 +29,7 @@ def main(args: argparse.Namespace):
     start_idx = 0
 
     print("Sampling states from each set...")
+    paths = []
     for dir_i, src_dir in enumerate(args.src_dirs):
         # If it's the last partition, grab everything until the end.
         if dir_i == n_src_sets - 1:
@@ -37,29 +39,18 @@ def main(args: argparse.Namespace):
 
         # Subsample paths from the current directory.
         n_examples = end_idx - start_idx
-        paths = sample_states(src_dir=src_dir, n_samples=n_examples)
-
-        # Assign paths of indexes in the final set of states.
-        for i, idx in enumerate(range(start_idx, end_idx)):
-            idx2path[idx] = paths[i]
-
-        # print(f"Source dir: {src_dir}")
-        # print(f"\tRange: [{start_idx}, {end_idx})")
-        # print(f"\tTotal examples: {n_examples}")
+        set_paths = sample_states(src_dir=src_dir, n_samples=n_examples)
+        paths += set_paths
 
         start_idx = end_idx
 
     # Copy source files to the destination directory.
     print(f"Copying selected states to {args.dst_dir}...")
     os.makedirs(args.dst_dir, exist_ok=True)
-    idxs = list(idx2path.keys())
-    random.shuffle(idxs)
-    for idx in tqdm(idxs):
-        src_path = idx2path[idx]
-        dst_path = os.path.join(args.dst_dir, f"{idx:06}.p")
+    random.shuffle(paths)
+    for sid, src_path in enumerate(tqdm(paths)):
+        dst_path = os.path.join(args.dst_dir, f"{sid:06}.p")
         shutil.copyfile(src_path, dst_path)
-    print(f"Idxs:")
-    print(idxs)
 
 
 def sample_states(src_dir: str, n_samples: int) -> List[str]:
@@ -73,6 +64,10 @@ def sample_states(src_dir: str, n_samples: int) -> List[str]:
         filepaths: A list of sampled filepaths.
     """
     fnames = os.listdir(src_dir)
+
+    print(f"Directory: {src_dir}")
+    print(f"\tTotal states: {len(fnames)}")
+    print(f"\tN samples: {n_samples}")
 
     # Sample without replacement, in sorted order.
     fnames = sorted(random.sample(fnames, n_samples))
@@ -103,4 +98,6 @@ if __name__ == "__main__":
         required=True,
     )
     args = parser.parse_args()
+    print(f"Arguments:")
+    pprint.pprint(vars(args))
     main(args=args)

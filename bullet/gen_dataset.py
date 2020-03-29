@@ -113,8 +113,8 @@ def load_rgb_and_seg(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray]:
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "rgb", f"{sid:06}.png")
-    seg_path = os.path.join(img_dir, "seg", f"{sid:06}.png")
+    rgb_path = os.path.join(img_dir, "img", f"{sid:06}.png")
+    seg_path = os.path.join(img_dir, "id", f"{sid:06}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
 
