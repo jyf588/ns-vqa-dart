@@ -87,12 +87,19 @@ class BulletRenderer:
             assert id_to_del is not None
             self.p.removeBody(id_to_del)
 
-    def load_objects_from_state(self, ostates: List[Dict], position_mode: str):
+    def load_objects_from_state(
+        self,
+        ostates: List[Dict],
+        position_mode: str,
+        check_sizes: Optional[bool] = True,
+    ):
         """Loads objects from object state.
 
         Args:
             ostates: A list of dictionaries representing object states.
             position_mode: Whether the position represents the base or the COM.
+            check_sizes: Whether to check sizes of the object, e.g. that the
+                height of a sphere should be 2*r.
 
         Returns:
             oids: A list of object ids loaded, with order corresponding to 
@@ -110,7 +117,9 @@ class BulletRenderer:
 
         # Render objects.
         objects = self.render_objects(
-            objects=objects, position_mode=position_mode
+            objects=objects,
+            position_mode=position_mode,
+            check_sizes=check_sizes,
         )
         oids = [o.oid for o in objects]
         return oids

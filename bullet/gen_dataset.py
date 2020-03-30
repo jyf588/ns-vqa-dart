@@ -18,9 +18,12 @@ Expects the following file structure for <args.states_dir>:
 
 Expects the following file structure for <args.image_dir>:
     <args.img_dir>/
-        <sid>/
-            test_rgb.png
-            test_seg.png
+        img/
+            <sid>_<oid>.png
+            ...
+        id/
+            <sid>_<oid>.png
+            ...
 # Note that IDs in the mask must correspond to the IDs in object states.
 
 Generates the dataset to <args.dst_dir> in the following structure/format:
@@ -71,12 +74,11 @@ def main(args: argparse.Namespace):
             path=os.path.join(args.states_dir, f"{sid:06}.p")
         )
 
-        # Load the image and segmentation of the scene.
-        # TODO: Change to converting from png to numpy for segmentation.
-        rgb, seg = load_rgb_and_seg(img_dir=args.img_dir, sid=sid)
-
         # Save the input data.
         for oid, odict in state["objects"].items():
+            # Load the image and segmentation for the object.
+            rgb, seg = load_rgb_and_seg(img_dir=args.img_dir, sid=sid, oid=oid)
+
             # TODO: Exclude example if mask area is zero.
             X = dash_object.compute_X(oid=oid, img=rgb, seg=seg)
             y = dash_object.compute_y(odict=odict, coordinate_frame="world")
@@ -101,20 +103,30 @@ def main(args: argparse.Namespace):
     print(f"Saved partition. Train: {train}\tValidation: {val}\tTest: {test}")
 
 
-def load_rgb_and_seg(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray]:
+def load_rgb_and_seg(
+    img_dir: str, sid: int, oid: int
+) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the RGB image and segmentation map for a given scene.
 
     Args:
-        img_dir: The directory containing the images.
+        img_dir: The directory containing the images with the structure:
+            <img_dir>/
+                img/
+                    <sid>_<oid>.png
+                    ...
+                id/
+                    <sid>_<oid>.png
+                    ...
         sid: The scene ID.
+        oid: The object ID.
 
     Returns:
         rgb: The RGB image, of shape (H, W, 3)
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "img", f"{sid:06}.png")
-    seg_path = os.path.join(img_dir, "id", f"{sid:06}.png")
+    rgb_path = os.path.join(img_dir, "img", f"{sid:06}_{oid:02}.png")
+    seg_path = os.path.join(img_dir, "id", f"{sid:06}_{oid:02}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
 

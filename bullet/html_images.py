@@ -95,9 +95,9 @@ class HTMLImageGenerator:
 
             # Generate scene-level images. We do this after processing objects
             # because we need the object states.
-            tag2img[sid]["scene"] = self.generate_scene_images(
-                sid=sid, gt_ostates=gt_ostates, pred_ostates=pred_ostates
-            )
+            # tag2img[sid]["scene"] = self.generate_scene_images(
+            #     sid=sid, gt_ostates=gt_ostates, pred_ostates=pred_ostates
+            # )
             if i > args.n_objects:
                 break
             i += 1
@@ -168,8 +168,8 @@ class HTMLImageGenerator:
         mask = X[:, :, :3]
 
         # Rerender the prediction.
-        gt_rgb = self.rerender(states=[gt_state])
-        pred_rgb = self.rerender(states=[pred_state])
+        gt_rgb = self.rerender(states=[gt_state], check_dims=True)
+        pred_rgb = self.rerender(states=[pred_state], check_dims=False)
 
         tag2img = {
             "seg": X[:, :, :3],
@@ -179,7 +179,7 @@ class HTMLImageGenerator:
         }
         return tag2img
 
-    def rerender(self, states: List[Dict]):
+    def rerender(self, states: List[Dict], check_dims: bool):
         bc = util.create_bullet_client(mode="direct")
         renderer = BulletRenderer(p=bc)
 
@@ -187,7 +187,9 @@ class HTMLImageGenerator:
         # renderer expects.
         for s in states:
             s["orientation"] = util.up_to_orientation(up=s["up_vector"])
-        renderer.load_objects_from_state(ostates=states, position_mode="com")
+        renderer.load_objects_from_state(
+            ostates=states, position_mode="com", check_sizes=False
+        )
         renderer.render_object(
             o=DashTable(position=[0.2, 0.2, 0.0]), position_mode="com"
         )
@@ -298,113 +300,6 @@ def main(args: argparse.Namespace):
     path = os.path.join(args.html_dir, "paths.json")
     util.save_json(path=path, data=img_id2paths)
     return
-
-    # pred_img_ids = list(img_id2oid2pred_object.keys())
-
-    # # For each example, load the rgb image and mask.
-    # img_id2paths = {}
-    # print(f"Generating images for each image example...")
-    # for img_id in tqdm(pred_img_ids):
-    #     img_id2paths[img_id] = {}
-
-    #     gt_objects_world, camera, rgb, mask = dataset.load_example_for_eid(
-    #         eid=img_id
-    #     )
-
-    #     # Rerender the scene from the GT labels.
-    #     rend_gt_world, rend_gt_world_z = rerender(
-    #         objects=gt_objects_world, camera=camera
-    #     )
-
-    #     # Rerender GT using world -> cam -> world.
-    #     gt_objects_cam = world2cam2world(
-    #         world_objects=gt_objects_world, camera=camera
-    #     )
-    #     rend_gt_cam, _ = rerender(objects=gt_objects_cam, camera=camera)
-
-    #     # Rerender the scene from the model predictions.
-    #     oid2pred_object = img_id2oid2pred_object[img_id]
-    #     pred_objects = list(oid2pred_object.values())
-    #     rend_pred, rend_pred_z = rerender(
-    #         objects=pred_objects, camera=camera, check_sizes=False
-    #     )
-
-    #     name2img = {
-    #         "rgb": rgb,
-    #         "mask": convert_mask_to_img(mask=mask),
-    #         "gt_world": rend_gt_world,
-    #         "gt_world_z": rend_gt_world_z,
-    #         "gt_cam": rend_gt_cam,
-    #         "pred": rend_pred,
-    #         "pred_z": rend_pred_z,
-    #     }
-
-    #     rel_img_dir = os.path.join("images", f"{img_id:05}")
-    #     abs_img_dir = os.path.join(args.html_dir, rel_img_dir)
-    #     os.makedirs(abs_img_dir, exist_ok=True)
-
-    #     # Write the scene-level information.
-    #     for k, img in name2img.items():
-    #         rel_path = os.path.join(rel_img_dir, f"{k}.png")
-    #         abs_path = os.path.join(abs_img_dir, f"{k}.png")
-    #         imageio.imwrite(abs_path, img)
-    #         img_id2paths[img_id][k] = rel_path
-
-    #     # Write object-level images.
-    #     object_paths = {}
-    #     oid2gt_objects_world = {o.oid: o for o in gt_objects_world}
-    #     for oid, o in oid2pred_object.items():
-    #         data = dataset.load_object_x(o=o)
-
-    #         # Get the GT and pred objects.
-    #         gt_o = oid2gt_objects_world[oid]
-    #         pred_o = oid2pred_object[oid]
-
-    #         gt, gt_z = rerender(
-    #             objects=[gt_o], camera=camera, check_sizes=False
-    #         )
-    #         pred, pred_z = rerender(
-    #             objects=[pred_o], camera=camera, check_sizes=False
-    #         )
-
-    #         name2img = {
-    #             "input_seg": data[:, :, :3],
-    #             "input_rgb": data[:, :, 3:6],
-    #             "gt": gt,
-    #             "pred": pred,
-    #             "gt_z": gt_z,
-    #             "pred_z": pred_z,
-    #         }
-
-    #         rel_obj_dir = os.path.join(rel_img_dir, "objects", f"{oid:02}")
-    #         abs_obj_dir = os.path.join(abs_img_dir, "objects", f"{oid:02}")
-    #         os.makedirs(abs_obj_dir, exist_ok=True)
-    #         object_paths[oid] = {}
-    #         for k, img in name2img.items():
-    #             if img is not None:
-    #                 rel_path = os.path.join(rel_obj_dir, f"{k}.png")
-    #                 abs_path = os.path.join(abs_obj_dir, f"{k}.png")
-    #                 imageio.imwrite(abs_path, img)
-    #                 object_paths[oid][k] = rel_path
-    #             else:
-    #                 object_paths[oid][k] = None
-
-    #         # HACK: Change GT's z position to be H/2.
-    #         # print("Warning: Changing GT's z position to be H/2.")
-    #         # gt_o.position[2] = gt_o.height / 2
-
-    #         gt_cap_path = os.path.join(abs_obj_dir, "gt_caption.json")
-    #         pred_cap_path = os.path.join(abs_obj_dir, "pred_caption.json")
-    #         util.save_json(path=gt_cap_path, data=gt_o.to_caption())
-    #         util.save_json(path=pred_cap_path, data=pred_o.to_caption())
-    #         object_paths[oid]["gt_caption"] = gt_cap_path
-    #         object_paths[oid]["pred_caption"] = pred_cap_path
-
-    #     img_id2paths[img_id]["objects"] = object_paths
-
-    # # Save the paths.
-    # path = os.path.join(args.html_dir, "paths.json")
-    # util.save_json(path=path, data=img_id2paths)
 
 
 def rerender(

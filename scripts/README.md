@@ -38,7 +38,7 @@ unzip ~/workspace/lucas/states/dash_v002.zip  # ETA: 1 second
 Step 3. Generate Unity images from the states.
 
 ```
-python scripts/server.py
+time python scripts/server.py (ETA: 1 minute)
 ```
 
 Step 4. Zip up and scp the generated Unity images to the machine where 
@@ -48,7 +48,7 @@ training will occur.
 # Zip up the images (ETA: 1 second)
 time zip -r dash_v002_images.zip first
 
-# Transfer the the images (ETA: 14 seconds)
+# Transfer the the images (ETA: 1 minute)
 time rsync -azP dash_v002_images.zip sydney:~/mguo/data/datasets/dash_v002/
 
 # Unzip the images. (ETA: 1 second)
@@ -60,7 +60,7 @@ mv dash_v002_images images
 Step 5. Generate the dataset for training and testing. (ETA: 7 hours)
 
 ```
-# To generate the full set (ETA: 4 seconds):
+# To generate the full set (ETA: 9 seconds):
 ./ns_vqa_dart/scripts/dash_v002/generate.sh
 ```
 
