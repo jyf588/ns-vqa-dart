@@ -62,7 +62,7 @@ def main():
 
     print("Computing metrics:")
     metrics.compute_metrics(
-        dataset_dir=opt.dataset_dir,
+        cam_dir=opt.cam_dir,
         sid2info=sid2info,
         coordinate_frame=opt.coordinate_frame,
     )

@@ -47,7 +47,7 @@ def main(args: argparse.Namespace):
 
     with open(index_path, "w") as f:
         f.write(HEADER)
-        scene_tags = ["rgb", "gt", "pred"]
+        scene_tags = ["third_person"]
         object_tags = ["seg", "rgb", "gt", "pred"]
         f.write(create_caption_row(scene_tags + object_tags))
 
@@ -55,11 +55,11 @@ def main(args: argparse.Namespace):
         sids = [int(sid) for sid in sid2paths.keys()]
         random.shuffle(sids)
         for sid in sids:
-            # scene_paths = sid2paths[str(sid)]["scene"]
+            scene_paths = sid2paths[str(sid)]["scene"]
             scene_row = []
-            # for t in scene_tags:
-            #     scene_row.append((scene_paths[t], "image"))
-            # rows.append(create_row(row_contents=scene_row))
+            for t in scene_tags:
+                scene_row.append((scene_paths[t], "image"))
+            rows.append(create_row(row_contents=scene_row))
 
             if args.show_objects:
                 oid2obj_paths = sid2paths[str(sid)]["objects"]

@@ -10,5 +10,5 @@ time python enjoy.py \
     --n_best_cand 2 \
     --cotrain_stack_place 1 \
     --save_states 1 \
-    --n_trials 20
+    --n_trials 100
     

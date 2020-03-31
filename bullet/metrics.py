@@ -29,11 +29,7 @@ def main(args: argparse.Namespace):
     )
 
 
-def compute_metrics(
-    dataset_dir: str, sid2info: List[Dict], coordinate_frame: str
-):
-    dataset = DashDataset(dataset_dir=dataset_dir)
-
+def compute_metrics(cam_dir: str, sid2info: List[Dict], coordinate_frame: str):
     cls_correct = {k: 0 for k in ["shape", "color"]}
     errors = {
         "radius": 0.0,
@@ -55,11 +51,14 @@ def compute_metrics(
             labels = info["labels"]
 
             # Convert from vectors to dictionaries.
+            camera = gen_dataset.create_camera(
+                cam_dir=cam_dir, sid=sid, oid=oid
+            )
             gt_y_dict = dash_object.y_vec_to_dict(
-                y=labels, coordinate_frame=coordinate_frame
+                y=labels, coordinate_frame=coordinate_frame, camera=camera
             )
             pred_y_dict = dash_object.y_vec_to_dict(
-                y=pred, coordinate_frame=coordinate_frame
+                y=pred, coordinate_frame=coordinate_frame, camera=camera
             )
 
             for k in cls_correct.keys():

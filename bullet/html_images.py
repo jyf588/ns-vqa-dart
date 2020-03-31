@@ -56,7 +56,7 @@ class HTMLImageGenerator:
         print("Loading predictions...")
         sid2info = util.load_json(path=self.args.pred_path)
         print(f"Number of total predictions: {len(sid2info)}")
-        print(f"Number of objects to visualize: {args.n_objects}")
+        print(f"Number of scenes to visualize: {args.n_scenes}")
 
         # For each scene, generate scene-level and object-level images.
         # Note that sid keys are strings because they were loaded from json.
@@ -73,12 +73,18 @@ class HTMLImageGenerator:
                 oid = int(oid)
 
                 # Convert from vectors to state dictionaries.
+                camera = gen_dataset.create_camera(
+                    args.cam_dir, sid=sid, oid=oid
+                )
                 gt_state = dash_object.y_vec_to_dict(
                     y=info["labels"],
                     coordinate_frame=self.args.coordinate_frame,
+                    camera=camera,
                 )
                 pred_state = dash_object.y_vec_to_dict(
-                    y=info["pred"], coordinate_frame=self.args.coordinate_frame
+                    y=info["pred"],
+                    coordinate_frame=self.args.coordinate_frame,
+                    camera=camera,
                 )
                 gt_ostates.append(gt_state)
                 pred_ostates.append(pred_state)
@@ -95,10 +101,10 @@ class HTMLImageGenerator:
 
             # Generate scene-level images. We do this after processing objects
             # because we need the object states.
-            # tag2img[sid]["scene"] = self.generate_scene_images(
-            #     sid=sid, gt_ostates=gt_ostates, pred_ostates=pred_ostates
-            # )
-            if i > args.n_objects:
+            tag2img[sid]["scene"] = self.generate_scene_images(
+                sid=sid, gt_ostates=gt_ostates, pred_ostates=pred_ostates
+            )
+            if i >= args.n_scenes - 1:
                 break
             i += 1
         self.save_tagged_images(tag2img=tag2img)
@@ -122,6 +128,8 @@ class HTMLImageGenerator:
 
         Args:
             sid: The scene ID.
+            gt_ostates: The ground truth object states.
+            pred_ostates: The predicted object states.
 
         Returns:
             tag2img: A dictionary with the following format:
@@ -129,12 +137,18 @@ class HTMLImageGenerator:
                     <tag>: <image>
                 }
         """
-        rgb, seg = gen_dataset.load_rgb_and_seg(
-            img_dir=self.args.img_dir, sid=sid
-        )
-        gt_rgb = self.rerender(states=gt_ostates)
-        pred_rgb = self.rerender(states=pred_ostates)
-        tag2img = {"rgb": rgb, "seg": seg, "gt": gt_rgb, "pred": pred_rgb}
+        path = os.path.join(self.args.img_dir, "third/img", f"{sid:06}.png")
+        third_person = imageio.imread(path)
+        # rgb, seg = gen_dataset.load_rgb_and_seg(
+        #     img_dir=self.args.img_dir, sid=sid
+        # )
+        gt_rgb = self.rerender(states=gt_ostates, check_dims=True)
+        pred_rgb = self.rerender(states=pred_ostates, check_dims=False)
+        tag2img = {
+            "third_person": third_person,
+            "gt": gt_rgb,
+            "pred": pred_rgb,
+        }
         return tag2img
 
     def generate_object_images(
@@ -383,6 +397,12 @@ if __name__ == "__main__":
         help="The directory containing the dataset.",
     )
     parser.add_argument(
+        "--cam_dir",
+        type=str,
+        required=True,
+        help="The directory containing the camera parameters.",
+    )
+    parser.add_argument(
         "--pred_path",
         type=str,
         required=True,
@@ -408,9 +428,9 @@ if __name__ == "__main__":
         help="The coordinate frame that predictions are in.",
     )
     parser.add_argument(
-        "--n_objects",
+        "--n_scenes",
         type=int,
-        help="Number of example objects to generate images for.",
+        help="Number of example scenes to generate images for.",
     )
     args = parser.parse_args()
     generator = HTMLImageGenerator(args=args)

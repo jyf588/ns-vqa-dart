@@ -5,62 +5,47 @@ Step 1. Generate states for planning and placing.
 ```
 # First, generate states for planning and stacking.
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
-./ns_vqa_dart/scripts/states/placing.sh (ETA: 30 seconds)
+./ns_vqa_dart/scripts/states/placing.sh (ETA: 3 minutes)
 
 # Process and combine states.
-./ns_vqa_dart/scripts/states/process_and_combine.sh (ETA 1 second)
-
-# Next, complete the stacking states by assigning values to attributes that are
-missing from the states (e.g., color, object ID). (ETA: 1 second)
-<!-- ./ns_vqa_dart/states/complete_states.sh -->
-
-# Add surrounding objects to the stacking states. (ETA: 1 second)
-<!-- ./ns_vqa_dart/scripts/states/add_surrounding_states.sh -->
-
-# Subsample and merge into a single set of states. (ETA: 1 second)
-<!-- ./ns_vqa_dart/scripts/states/combine.sh -->
+./ns_vqa_dart/scripts/states/process_and_combine.sh (ETA 4 seconds)
 ```
 
 Step 2. Transfer the states (23 M) to the machine where you will be
 running Unity.
 
 ```
-# Zip up the states.
-time zip -r ~/mguo/data/states/full/dash_v002.zip dash_v002  # ETA: 1 second
-
 # Transfer the states.
-time rsync -azP sydney:~/mguo/data/states/full/dash_v002.zip ~/workspace/lucas/states/  # ETA: 1 second
+time rsync -azP sydney:~/mguo/data/states/full/dash_v002_5K.zip ~/workspace/lucas/states/  # ETA: 1 second
 
 # Unzip the states.
-unzip ~/workspace/lucas/states/dash_v002.zip  # ETA: 1 second
+unzip ~/workspace/lucas/states/dash_v002_5K.zip  # ETA: 1 second
 ```
 
 Step 3. Generate Unity images from the states.
 
 ```
-time python scripts/server.py (ETA: 1 minute)
+time python scripts/server.py (ETA: 18 minutes)
 ```
 
-Step 4. Zip up and scp the generated Unity images to the machine where 
+Step 4. Zip up and scp the generated Unity data to the machine where 
 training will occur.
 
 ```
-# Zip up the images (ETA: 1 second)
-time zip -r dash_v002_images.zip first
+# Zip up the data (ETA: 2 minutes)
+time zip -r dash_v002_100.zip dash_v002_100
 
-# Transfer the the images (ETA: 1 minute)
-time rsync -azP dash_v002_images.zip sydney:~/mguo/data/datasets/dash_v002/
+# Transfer the the data (ETA: 36 minutes)
+time rsync -azP dash_v002_5K.zip sydney:~/mguo/data/datasets/dash_v002_5K/
 
-# Unzip the images. (ETA: 1 second)
-time unzip dash_v002_images.zip
-
-mv dash_v002_images images
+# Unzip the data. (ETA: 1 second)
+time unzip dash_v002_100.zip
 ```
 
 Step 5. Generate the dataset for training and testing. (ETA: 7 hours)
 
 ```
-# To generate the full set (ETA: 9 seconds):
+# To generate the full set (ETA: 10 minutes):
 ./ns_vqa_dart/scripts/dash_v002/generate.sh
 ```
 
@@ -76,7 +61,7 @@ To run training and testing on a tiny subset of the dataset for a few
 iterations as a dry run:
 
 ```
-./ns_vqa_dart/scripts/dash_v002/dry_run.sh
+time ./ns_vqa_dart/scripts/dash_v002/dry_run.sh
 ```
 
 To run training and testing on the full dataset:

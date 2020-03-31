@@ -1,5 +1,5 @@
 ROOT_DIR=~/mguo
-SET=dash_v002_100
+SET=dash_v002_5K
 DATA_DIR=$ROOT_DIR/data/datasets/$SET/data
 RUN_DIR=$ROOT_DIR/outputs/$SET
 PRED_PATH=$RUN_DIR/pred.json

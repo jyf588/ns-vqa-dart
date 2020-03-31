@@ -41,6 +41,7 @@ Generated destination <sid>.p file format:
 """
 import argparse
 import os
+import pprint
 from tqdm import tqdm
 
 import ns_vqa_dart.bullet.random_objects as random_objects
@@ -53,6 +54,8 @@ def main(args: argparse.Namespace):
         # Load the state.
         src_path = os.path.join(args.src_dir, state_fname)
         state = util.load_pickle(path=src_path)
+
+        pprint.pprint(state)
 
         # Loop over the objects.
         new_state_objects = {}

@@ -1,10 +1,12 @@
 ROOT_DIR=~/mguo
-SRC_SET=dash_v002
-DST_SET=dash_v002
+SRC_SET=dash_v002_5K
+DST_SET=dash_v002_5K
 
 time python ns_vqa_dart/bullet/gen_dataset.py \
     --states_dir $ROOT_DIR/data/states/full/$SRC_SET \
     --img_dir $ROOT_DIR/data/datasets/$DST_SET/images \
+    --cam_dir $ROOT_DIR/data/datasets/$DST_SET/camera \
     --dst_dir $ROOT_DIR/data/datasets/$DST_SET/data \
+    --coordinate_frame camera \
     --start_sid 0 \
-    --end_sid 100
+    --end_sid 5000

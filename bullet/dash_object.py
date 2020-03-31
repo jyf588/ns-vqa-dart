@@ -198,9 +198,10 @@ def compute_X(
     oid: int,
     img: np.ndarray,
     seg: np.ndarray,
+    keep_occluded: bool,
     data_height: Optional[int] = 480,
     data_width: Optional[int] = 480,
-) -> np.ndarray:
+) -> Optional[np.ndarray]:
     """Constructs the data tensor for an object.
 
     Args:
@@ -208,6 +209,7 @@ def compute_X(
         img: An image of a scene.
         seg: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
+        keep_occluded: Whether to keep objects that are completely occluded.
         data_height: The desired height of the generated data tensor.
         data_width: The desired width of the generated data tensor.
     
@@ -220,8 +222,11 @@ def compute_X(
             (2) The original image of the scene, with the segmentation area of
                 the object cropped out. Shape (`data_height`, `data_width`, 3).
 
-            Note: If the object bbox area is zero, the input RGB is simply the
-            original RGB image, and the object segmentation image is all zeros.
+            Note: If the object bbox area is zero, then we return one of two
+            things, depending on the value of `keep_occluded`:
+                (1) True: input RGB is simply the original RGB image, and the 
+                    object segmentation image is all zeros.
+                (2) False: We simply return None as an error message.
     """
     # Verify that the RGB image and the segmentation have proper dimensions.
     img_H, img_W, C = img.shape
@@ -233,11 +238,18 @@ def compute_X(
     # appropriate data.
     data = np.zeros((data_height, data_width, 6)).astype(np.uint8)
 
+    # Compute the object's bbox.
+    bbox = compute_bbox(oid=oid, mask=seg)
+
+    if bbox is None and not keep_occluded:
+        return None
+
     # Generate the object's input image.
     input_object_img = compute_input_object_img(
         oid=oid,
         img=img,
         seg=seg,
+        bbox=bbox,
         data_height=data_height,
         data_width=data_width,
     )
@@ -293,6 +305,7 @@ def compute_input_object_img(
     oid: int,
     img: np.ndarray,
     seg: np.ndarray,
+    bbox: List[float],
     data_height: int,
     data_width: int,
 ):
@@ -303,6 +316,7 @@ def compute_input_object_img(
         img: An image of the scene.
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
+        bbox: The 2D bounding box of the object: (x, y, w, h)
         data_height: The desired height of the generated data tensor.
         data_width: The desired width of the generated data tensor.
     
@@ -317,9 +331,6 @@ def compute_input_object_img(
     # First, zero out all pixels outside of the object's segmentation area.
     img_without_background = img.copy()
     img_without_background[seg != oid] = 0.0
-
-    # Crop the segmentation out using its bbox.
-    bbox = compute_bbox(oid=oid, mask=seg)
 
     # If bbox is None, this means that no pixels contain the object, so we are
     # done. We return an all-zero image.

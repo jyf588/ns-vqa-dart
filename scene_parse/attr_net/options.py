@@ -56,6 +56,9 @@ class BaseOptions:
             help="The dataset directory",
         )
         self.parser.add_argument(
+            "--cam_dir", required=True, type=str, help="The camera directory."
+        )
+        self.parser.add_argument(
             "--height", type=int, default=480, help="The image height."
         )
         self.parser.add_argument(

@@ -18,6 +18,8 @@ import shutil
 from tqdm import tqdm
 from typing import *
 
+import ns_vqa_dart.bullet.util as util
+
 
 def main(args: argparse.Namespace):
     # Compute the number of examples to sample from each source directory in
@@ -48,9 +50,15 @@ def main(args: argparse.Namespace):
     print(f"Copying selected states to {args.dst_dir}...")
     os.makedirs(args.dst_dir, exist_ok=True)
     random.shuffle(paths)
+    n_total_objects = 0
     for sid, src_path in enumerate(tqdm(paths)):
+        state = util.load_pickle(path=src_path)
+        n_total_objects += len(state["objects"])
+
         dst_path = os.path.join(args.dst_dir, f"{sid:06}.p")
         shutil.copyfile(src_path, dst_path)
+
+    print(f"Final number of objects: {n_total_objects}")
 
 
 def sample_states(src_dir: str, n_samples: int) -> List[str]:

@@ -43,9 +43,11 @@ import cv2
 import imageio
 import numpy as np
 import os
+import pprint
 from tqdm import tqdm
 from typing import *
 
+from ns_vqa_dart.bullet.camera import BulletCamera
 from ns_vqa_dart.bullet.dash_dataset import DashDataset
 import ns_vqa_dart.bullet.dash_object as dash_object
 import ns_vqa_dart.bullet.random_objects as random_objects
@@ -76,12 +78,20 @@ def main(args: argparse.Namespace):
 
         # Save the input data.
         for oid, odict in state["objects"].items():
-            # Load the image and segmentation for the object.
-            rgb, seg = load_rgb_and_seg(img_dir=args.img_dir, sid=sid, oid=oid)
+            X, y = load_X_and_y(
+                sid=sid,
+                oid=oid,
+                odict=odict,
+                img_dir=args.img_dir,
+                cam_dir=args.cam_dir,
+            )
 
-            # TODO: Exclude example if mask area is zero.
-            X = dash_object.compute_X(oid=oid, img=rgb, seg=seg)
-            y = dash_object.compute_y(odict=odict, coordinate_frame="world")
+            # Skip over the example if there are issues with the example (e.g.,
+            # object is completely occluded)
+            if X is None and y is None:
+                print(f"Skipping occluded example sid: {sid}\toid: {oid}")
+                continue
+
             path = save_example(
                 data_dir=args.dst_dir, sid=sid, oid=oid, X=X, y=y
             )
@@ -101,6 +111,29 @@ def main(args: argparse.Namespace):
     val = len(partition["val"])
     test = len(partition["test"])
     print(f"Saved partition. Train: {train}\tValidation: {val}\tTest: {test}")
+
+
+def load_X_and_y(sid: int, oid: int, odict: Dict, img_dir: str, cam_dir: str):
+    # Load the image and segmentation for the object.
+    rgb, seg = load_rgb_and_seg(img_dir=img_dir, sid=sid, oid=oid)
+
+    # TODO: Exclude example if mask area is zero.
+    X = dash_object.compute_X(oid=oid, img=rgb, seg=seg, keep_occluded=False)
+
+    # The object is completely occluded so we throw the example out.
+    if X is None:
+        return None, None
+
+    # Prepare camera parameters if we are using camera coordinate
+    # frame.
+    if args.coordinate_frame == "camera":
+        camera = create_camera(cam_dir=cam_dir, sid=sid, oid=oid)
+    else:
+        camera = None
+    y = dash_object.compute_y(
+        odict=odict, coordinate_frame=args.coordinate_frame, camera=camera,
+    )
+    return X, y
 
 
 def load_rgb_and_seg(
@@ -125,8 +158,8 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "img", f"{sid:06}_{oid:02}.png")
-    seg_path = os.path.join(img_dir, "id", f"{sid:06}_{oid:02}.png")
+    rgb_path = os.path.join(img_dir, "first/img", f"{sid:06}_{oid:02}.png")
+    seg_path = os.path.join(img_dir, "first/id", f"{sid:06}_{oid:02}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
 
@@ -148,11 +181,25 @@ def load_rgb_and_seg(
     return rgb, seg
 
 
-def load_rgb(dataset_dir: str, sid: int):
-    rgb_square = imageio.imread(
-        os.path.join(dataset_dir, "rgb", f"{sid:06}.png")
-    )
-    return rgb_square
+def create_camera(cam_dir: str, sid: int, oid: int) -> BulletCamera:
+    """Creates a camera with same parameters as camera used to capture images
+    for the specified object in the specified scene.
+
+    Args:
+        cam_dir: The directory containing camera JSON files.
+        sid: The sensor ID.
+        oid: The object ID.
+    
+    Returns:
+        cam: A BulletCamera.
+    """
+    path = os.path.join(cam_dir, f"{sid:06}.json")
+    params = util.load_json(path=path)[f"{oid:02}"]
+    position = params["camera_position"]
+    orientation = params["camera_orientation"]
+    euler_angles = util.orientation_to_euler(orientation=orientation)
+    cam = BulletCamera(position=position, rotation=euler_angles)
+    return cam
 
 
 def save_example(
@@ -191,6 +238,12 @@ if __name__ == "__main__":
         help="The directory to load images from.",
     )
     parser.add_argument(
+        "--cam_dir",
+        required=False,
+        type=str,
+        help="The directory to load camera parameters from, if args.coordinate_frame is 'camera'.",
+    )
+    parser.add_argument(
         "--dst_dir",
         required=True,
         type=str,
@@ -207,6 +260,13 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="The end scene ID to include in the dataset.",
+    )
+    parser.add_argument(
+        "--coordinate_frame",
+        required=True,
+        type=str,
+        choices=["world", "camera"],
+        help="The coordinate frame to generate labels in.",
     )
     args = parser.parse_args()
     main(args)

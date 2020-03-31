@@ -31,7 +31,7 @@ def world_to_cam(xyz: List[float], camera) -> List[float]:
     """
     view_mat = np.array(camera.view_mat)
     view_mat = view_mat.reshape((4, 4))
-    world_vec = np.array(xyz + [1.0])
+    world_vec = np.array(list(xyz) + [1.0])
     cam_vec = np.dot(view_mat, world_vec)
     cam_xyz = list(cam_vec[:3])
     return cam_xyz
@@ -94,7 +94,7 @@ def up_to_orientation(
     rotation[:, -1] = up
 
     # Convert to orientation.
-    orientation = rotation_to_quaternion(rotation=rotation)
+    orientation = rotation_to_orientation(rotation=rotation)
     return orientation
 
 
@@ -112,6 +112,20 @@ def orientation_to_rotation(orientation: List[float]) -> List[float]:
     return rotation
 
 
+def orientation_to_euler(orientation: List[float]) -> List[float]:
+    """Converts an orientation into euler angles.
+
+    Args:
+        orientation: The quaternion representing the orientation. [x, y, z, w].
+    
+    Returns:
+        euler_angles: The euler angle representation of the input quaternion.
+    """
+    q = R.from_quat(orientation)
+    euler_angles = q.as_euler("xyz", degrees=True)
+    return list(euler_angles)
+
+
 def rotation_to_up(rotation: List[float]) -> List[float]:
     """Extracts the up vector from a rotation matrix.
 
@@ -126,17 +140,17 @@ def rotation_to_up(rotation: List[float]) -> List[float]:
     return up
 
 
-def rotation_to_quaternion(rotation: List[float]) -> List[float]:
+def rotation_to_orientation(rotation: List[float]) -> List[float]:
     """Converts a rotation matrix into a quaternion.
 
     Args:
         rotation: The 3x3 rotation matrix.
 
     Returns:
-        quaternion: The [x, y, z, w] quaternion.
+        orientation: The [x, y, z, w] quaternion.
     """
-    quaternion = R.from_matrix(np.array(rotation).reshape((3, 3))).as_quat()
-    return list(quaternion)
+    orientation = R.from_matrix(np.array(rotation).reshape((3, 3))).as_quat()
+    return list(orientation)
 
 
 """ JSON and pickle I/O utility functions. """
