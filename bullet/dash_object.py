@@ -479,6 +479,8 @@ def y_vec_to_dict(
     y: List[float],
     coordinate_frame: str,
     camera: Optional[BulletCamera] = None,
+    cam_position: Optional[List[float]] = None,
+    cam_orientation: Optional[List[float]] = None,
 ) -> Dict:
     """Converts a y vector containing object labels into dictionary. Values are
     converted back into global coordinate frame if `coordinate_frame` is 
@@ -503,18 +505,29 @@ def y_vec_to_dict(
                 "up_vector": [float, float, float]
             }
     """
-    assert type(y) == list
-    if coordinate_frame == "camera" and camera is None:
-        raise ValueError(
-            f"Coordinate frame is camera but no camera was provided."
-        )
+    if coordinate_frame == "camera":
+        if camera is None:
+            euler_angles = util.orientation_to_euler(
+                orientation=cam_orientation
+            )
+            camera = BulletCamera(position=cam_position, rotation=euler_angles)
+
+        # raise ValueError(
+        #     f"Coordinate frame is camera but no camera was provided."
+        # )
 
     y_dict = {}
     start = 0
     for name, attr_list in ATTR_NAME2LIST.items():
         end = start + len(attr_list)
         attr_idx = np.argmax(y[start:end])
+        print(f"y: {y}")
+        print(f"y len: {len(y)}")
+        print(f"start: {start}")
+        print(f"end: {end}")
         start = end
+        print(f"attr_list: {attr_list}")
+        print(f"attr_idx: {attr_idx}")
         label = attr_list[attr_idx]
         y_dict[name] = label
 

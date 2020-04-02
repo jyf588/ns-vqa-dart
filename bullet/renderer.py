@@ -96,7 +96,13 @@ class BulletRenderer:
         """Loads objects from object state.
 
         Args:
-            ostates: A list of dictionaries representing object states.
+            ostates: A list of dictionaries representing object states, in the
+                format: [
+                    {
+                        <attr>: <value>
+                    },
+                    ...
+                ]
             position_mode: Whether the position represents the base or the COM.
             check_sizes: Whether to check sizes of the object, e.g. that the
                 height of a sphere should be 2*r.

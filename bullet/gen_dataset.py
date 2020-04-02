@@ -165,6 +165,11 @@ def load_rgb_and_seg(
 
     # Convert the segmentation image into an array.
     # TODO: Do this before saving the segmentation.
+    seg = seg_img_to_map(seg_img)
+    return rgb, seg
+
+
+def seg_img_to_map(seg_img):
     H, W, _ = seg_img.shape
     seg = np.full((H, W), -1, dtype=np.uint8)
     for rgb_value, oid in RGB2ID.items():
@@ -178,7 +183,7 @@ def load_rgb_and_seg(
             )
         )
         seg[idxs] = oid
-    return rgb, seg
+    return seg
 
 
 def create_camera(cam_dir: str, sid: int, oid: int) -> BulletCamera:
