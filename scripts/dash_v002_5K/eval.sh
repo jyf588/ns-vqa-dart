@@ -12,7 +12,6 @@ NUM_ITERS=60000
 COORD_FRAME=camera
 HTML_N_SCENES=30
 
-
 time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \

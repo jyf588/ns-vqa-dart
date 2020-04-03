@@ -521,13 +521,7 @@ def y_vec_to_dict(
     for name, attr_list in ATTR_NAME2LIST.items():
         end = start + len(attr_list)
         attr_idx = np.argmax(y[start:end])
-        print(f"y: {y}")
-        print(f"y len: {len(y)}")
-        print(f"start: {start}")
-        print(f"end: {end}")
         start = end
-        print(f"attr_list: {attr_list}")
-        print(f"attr_idx: {attr_idx}")
         label = attr_list[attr_idx]
         y_dict[name] = label
 
@@ -549,13 +543,6 @@ def y_vec_to_dict(
             y_dict[k] = util.cam_to_world(xyz=y_dict[k], camera=camera)
     else:
         raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
-
-    # Assigns a categorical size label for the given radius and height.
-    if y_dict["radius"] > 0.04 and y_dict["height"] > 0.18:
-        size = "large"
-    else:
-        size = "small"
-    y_dict["size"] = size
     return y_dict
 
 
