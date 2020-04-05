@@ -20,6 +20,8 @@ class RandomObjectsGenerator:
         x_bounds: Tuple[float],
         y_bounds: Tuple[float],
         z_bounds: Tuple[float],
+        mass_bounds: Tuple[float],
+        mu_bounds: Tuple[float],
         position_mode: str,
     ):
         """
@@ -34,6 +36,7 @@ class RandomObjectsGenerator:
             sizes: A list of sizes to sample from.
             # colors: A list of colors to sample from.
             radius_bounds: 2-tuple of the min and max bounds for shape radius.
+                Note that box radius is downscaled by 0.8.
             height_bounds: 2-tuple of the min and max bounds for shape height.
             x_bounds: 2-tuple of the min and max bounds for the x position.
             y_bounds: 2-tuple of the min and max bounds for the y position.
@@ -57,6 +60,9 @@ class RandomObjectsGenerator:
         self.y_bounds = y_bounds
         self.z_bounds = z_bounds
 
+        self.mass_bounds = mass_bounds
+        self.mu_bounds = mu_bounds
+
         self.obj_dist_thresh = obj_dist_thresh
         self.max_retries = max_retries
         self.position_mode = position_mode
@@ -65,6 +71,8 @@ class RandomObjectsGenerator:
         self, existing_odicts: Optional[List[Dict]] = None
     ) -> List[DashObject]:
         """Generates a single random scene.
+
+        Note that box radius is downscaled by 0.8.
         
         Args:
             existing_odicts: A list of existing objects to include in the
@@ -112,6 +120,8 @@ class RandomObjectsGenerator:
 
     def generate_object(self) -> DashObject:
         """Generates a random DashObject.
+
+        Note that box radius is downscaled by 0.8.
         
         Returns:
             odict: The randomly generated object, in the format:
@@ -128,6 +138,10 @@ class RandomObjectsGenerator:
         shape = random.choice(self.shapes)
         radius, height = self.generate_random_size(shape=shape)
         color = generate_random_color()
+        mass = self.uniform_sample(
+            low=self.mass_bounds[0], high=self.mass_bounds[1]
+        )
+        mu = self.uniform_sample(low=self.mu_bounds[0], high=self.mu_bounds[1])
         position = self.generate_random_xyz(
             self.x_bounds, self.y_bounds, self.z_bounds
         )
@@ -145,6 +159,8 @@ class RandomObjectsGenerator:
             "height": height,
             "position": position,
             "orientation": [0.0, 0.0, 0.0, 1.0],
+            "mass": mass,
+            "mu": mu,
         }
         return odict
 
@@ -159,7 +175,8 @@ class RandomObjectsGenerator:
         return n_objects
 
     def generate_random_size(self, shape: str) -> Tuple[float, float]:
-        """Generates a random radius and height.
+        """Generates a random radius and height. Note that box radius is 
+        downscaled by 0.8.
 
         Args:
             shape: The shape we are generating a size for.
@@ -175,6 +192,9 @@ class RandomObjectsGenerator:
             height = radius * 2
         else:
             height = self.uniform_sample(low=min_h, high=max_h)
+
+        if shape == "box":
+            radius *= 0.8
         return radius, height
 
     def generate_random_xyz(self, x_bounds, y_bounds, z_bounds) -> List[int]:

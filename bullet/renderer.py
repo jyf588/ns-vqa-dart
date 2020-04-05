@@ -89,8 +89,9 @@ class BulletRenderer:
 
     def load_objects_from_state(
         self,
-        ostates: List[Dict],
+        odicts: List[Dict],
         position_mode: str,
+        use_fixed_base: Optional[bool] = False,
         check_sizes: Optional[bool] = True,
     ):
         """Loads objects from object state.
@@ -111,30 +112,19 @@ class BulletRenderer:
             oids: A list of object ids loaded, with order corresponding to 
                 input ostates.
         """
-        ostates = copy.deepcopy(ostates)
-
-        objects = []
-        for odict in ostates:
-            odict["oid"], odict["img_id"] = None, None
-
-            # Convert to DashObject.
-            o = dash_object.from_json(odict)
-            objects.append(o)
-
         # Render objects.
-        objects = self.render_objects(
-            objects=objects,
+        oids = self.render_objects(
+            odicts=odicts,
             position_mode=position_mode,
+            use_fixed_base=use_fixed_base,
             check_sizes=check_sizes,
         )
-        oids = [o.oid for o in objects]
         return oids
 
     def render_objects(
         self,
-        objects: List[DashObject],
+        odicts: List[Dict],
         position_mode: str,
-        base_mass: Optional[float] = 3.5,
         use_fixed_base: Optional[bool] = False,
         check_sizes: Optional[bool] = True,
     ) -> List[DashObject]:
@@ -153,32 +143,42 @@ class BulletRenderer:
             objects_w_oid: The same list of input objects, but with the object
                 IDs set.
         """
-        objects_w_oid = []
-        for o in objects:
+        oids = []
+        for odict in odicts:
+            odict = copy.deepcopy(odict)
             oid = self.render_object(
-                o=o,
+                shape=odict["shape"],
+                color=odict["color"],
+                height=odict["height"],
+                radius=odict["radius"],
+                position=odict["position"],
+                orientation=odict["orientation"],
+                base_mass=odict["mass"],
+                mu=odict["mu"],
                 position_mode=position_mode,
-                base_mass=base_mass,
                 use_fixed_base=use_fixed_base,
                 check_sizes=check_sizes,
             )
-            o.oid = oid
-            objects_w_oid.append(o)
-        return objects_w_oid
+            oids.append(oid)
+        return oids
 
     def render_object(
         self,
-        o: DashObject,
+        shape: str,
+        position: List[float],
+        orientation: List[float],
+        radius: float,
+        height: float,
         position_mode: str,
+        color: Optional[str] = None,
         base_mass: Optional[float] = 3.5,
+        mu: Optional[float] = 1.0,
         use_fixed_base: Optional[bool] = False,
         check_sizes: Optional[bool] = True,
     ) -> Optional[int]:
         """Renders a DashObject.
 
         Args:
-            o: A DashObject, with all attributes except for oid and img_id 
-                filled.
             position_mode: Whether the position represents the base or the COM.
             base_mass: The mass of the object.
             use_fixed_base: Whether to force the base of the loaded object to
@@ -189,29 +189,30 @@ class BulletRenderer:
         Returns:
             oid: The object ID.
         """
-        # Make a deep copy of the object because downstream functions might
-        # modify the object for rendering purposes.
-        o = copy.deepcopy(o)
-
-        if o.shape in PRIMITIVE2GEOM:
+        if shape in PRIMITIVE2GEOM:
             oid = self.create_primitive(
-                geom=PRIMITIVE2GEOM[o.shape],
+                geom=PRIMITIVE2GEOM[shape],
                 position_mode=position_mode,
-                position=o.position,
-                orientation=o.orientation,
-                r=o.radius,
-                h=o.height,
-                color=o.color,
+                position=position,
+                orientation=orientation,
+                r=radius,
+                h=height,
                 check_sizes=check_sizes,
             )
         else:
             oid = self.load_nonprimitive(
-                shape=o.shape,
-                position=o.position,
-                orientation=o.orientation,
-                color=o.color,
+                shape=shape,
+                position=position,
+                orientation=orientation,
+                color=color,
                 use_fixed_base=use_fixed_base,
             )
+
+        # Set color and friction.
+        if color is not None:
+            self.p.changeVisualShape(oid, -1, rgbaColor=COLOR2RGBA[color])
+        self.p.changeDynamics(oid, -1, lateralFriction=mu)
+
         return oid
 
     def create_primitive(
@@ -269,13 +270,21 @@ class BulletRenderer:
 
         # Create the shape.
         try:
-            visual_shape_id = self.p.createVisualShape(
-                shapeType=geom,
-                radius=r,
-                halfExtents=half_extents,
-                length=h,
-                rgbaColor=COLOR2RGBA[color],
-            )
+            if color is not None:
+                visual_shape_id = self.p.createVisualShape(
+                    shapeType=geom,
+                    radius=r,
+                    halfExtents=half_extents,
+                    length=h,
+                    rgbaColor=COLOR2RGBA[color],
+                )
+            else:
+                visual_shape_id = self.p.createVisualShape(
+                    shapeType=geom,
+                    radius=r,
+                    halfExtents=half_extents,
+                    length=h,
+                )
         # Errors can occur when trying to render predictions that are
         # physically impossible.
         except pybullet.error as e:
