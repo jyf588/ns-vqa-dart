@@ -63,7 +63,7 @@ class HTMLImageGenerator:
         i = 0
         tag2img = {}
         sid_strings = list(sid2info.keys())
-        random.shuffle(sid_strings)
+        # random.shuffle(sid_strings)
         for sid_str in tqdm(sid_strings):
             sid = int(sid_str)
             tag2img[sid] = {"scene": {}, "objects": {}}
@@ -221,13 +221,13 @@ class HTMLImageGenerator:
         renderer.load_objects_from_state(
             odicts=states, position_mode="com", check_sizes=False
         )
-        # renderer.render_object(
-        #     shape="tabletop",
-        #     color="grey",
-        #     position=[0.2, 0.2, 0.0],
-        #     orientation=[0.0, 0.0, 0.0, 1.0],
-        #     position_mode="com",
-        # )
+        renderer.render_object(
+            shape="tabletop",
+            color="grey",
+            position=[0.2, 0.2, 0.0],
+            orientation=[0.0, 0.0, 0.0, 1.0],
+            position_mode="com",
+        )
         camera = BulletCamera(
             p=bc,
             position=[-0.2237938867122504, 0.0, 0.5425],

@@ -190,13 +190,13 @@ def to_caption(json_dict: Dict):
             if type(v) == tuple:
                 v = list(v)
             if type(v) == list:
-                v = [float(f"{v_i * 100:.1f}") for v_i in v]
+                v = [float(f"{v_i * 100:.2f}") for v_i in v]
             elif type(v) == float:
-                v = f"{v * 100:.1f}"
+                v = f"{v * 100:.2f}"
             k = f"{k} (cm)"
         # Set precision to 1 decimal point.
         elif k in ["orientation", "up_vector"]:
-            v = [float(f"{v_i:.1f}") for v_i in v]
+            v = [float(f"{v_i:.2f}") for v_i in v]
         # elif k in ["img_id", "orientation", "oid"]:
         #     continue
         str_list.append(f"{k}: {v}")

@@ -138,6 +138,7 @@ def up_to_orientation(
     """
     if gt_orientation is None:
         rotation = np.zeros((3, 3))
+        # rotation = np.identity(3)
     else:
         rotation = orientation_to_rotation(orientation=gt_orientation)
         rotation = np.array(rotation).reshape((3, 3))
@@ -159,9 +160,14 @@ def up_to_euler(up: List[float]):
     Returns:
         euler: Euler xyz angles (degrees) representing the provided up vector.
     """
-    orn = up_to_orientation(up=up)
-    r = R.from_quat(orn)
+    # rotmat = np.identity(3)
+    rotmat = np.zeros((3, 3))
+    rotmat[:, -1] = up
+    r = R.from_matrix(rotmat)
     euler = r.as_euler("xyz", degrees=True)
+    # orn = up_to_orientation(up=up)
+    # r = R.from_quat(orn)
+    # euler = r.as_euler("xyz", degrees=True)
     return euler
 
 

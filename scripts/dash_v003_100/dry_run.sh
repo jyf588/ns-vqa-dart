@@ -21,7 +21,7 @@ TRAIN_END=80
 EVAL_START=80
 EVAL_END=100
 COORD_FRAME=unity_camera
-HTML_N_SCENES=10
+HTML_N_SCENES=30
 
 time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
     --dataset dash \
@@ -46,7 +46,6 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8
-
 
 python ns_vqa_dart/bullet/html_images.py \
     --dataset_dir $DATA_DIR \
