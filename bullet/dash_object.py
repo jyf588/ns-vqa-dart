@@ -178,19 +178,27 @@ class DashObject:
 
 def to_caption(json_dict: Dict):
     str_list = []
+    # Add up vector if it doesn't already exist.
+    if "up_vector" not in json_dict:
+        json_dict["up_vector"] = util.orientation_to_up(
+            orientation=json_dict["orientation"]
+        )
+
     for k, v in json_dict.items():
         # Convert to cm and set precision to 1 decimal point.
         if k in ["radius", "height", "position"]:
+            if type(v) == tuple:
+                v = list(v)
             if type(v) == list:
                 v = [float(f"{v_i * 100:.1f}") for v_i in v]
             elif type(v) == float:
                 v = f"{v * 100:.1f}"
             k = f"{k} (cm)"
         # Set precision to 1 decimal point.
-        elif k in ["up_vector"]:
+        elif k in ["orientation", "up_vector"]:
             v = [float(f"{v_i:.1f}") for v_i in v]
-        elif k in ["img_id", "orientation", "oid"]:
-            continue
+        # elif k in ["img_id", "orientation", "oid"]:
+        #     continue
         str_list.append(f"{k}: {v}")
     return str_list
 
@@ -412,8 +420,8 @@ def compute_y(
         up_vector = util.world_to_cam(xyz=up_vector, camera=camera)
     elif coordinate_frame == "unity_camera":
         position, euler = bullet2unity.states.bworld2ucam(
-            bworld_position=position,
-            bworld_orientation=orientation,
+            p_bw=position,
+            up_bw=up_vector,
             uworld_cam_position=cam_position,
             uworld_cam_orientation=cam_orientation,
         )
@@ -556,9 +564,12 @@ def y_vec_to_dict(
         for k in ["position", "up_vector"]:
             y_dict[k] = util.cam_to_world(xyz=y_dict[k], camera=camera)
     elif coordinate_frame == "unity_camera":
-        position, up_vector = bullet2unity.states.ucam2bworld(
-            ucam_position=y_dict["position"],
-            ucam_up_vector=y_dict["up_vector"],
+        (
+            y_dict["position"],
+            y_dict["up_vector"],
+        ) = bullet2unity.states.ucam2bworld(
+            p_uc=y_dict["position"],
+            up_uc=y_dict["up_vector"],
             uworld_cam_position=cam_position,
             uworld_cam_orientation=cam_orientation,
         )

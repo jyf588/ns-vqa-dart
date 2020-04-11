@@ -62,13 +62,13 @@ class HTMLImageGenerator:
         # Note that sid keys are strings because they were loaded from json.
         i = 0
         tag2img = {}
-        sid_strings = list(sid2info.keys())
+        sid_strings = list(sid2info.keys())[:1]
         random.shuffle(sid_strings)
         for sid_str in tqdm(sid_strings):
             sid = int(sid_str)
             tag2img[sid] = {"scene": {}, "objects": {}}
-            gt_ostates = []
-            pred_ostates = []
+            gt_ostates = []  # In args.coordinate_frame
+            pred_ostates = []  # In args.coordinate_frame
             for oid, info in sid2info[sid_str].items():
                 oid = int(oid)
 
@@ -88,17 +88,30 @@ class HTMLImageGenerator:
                     cam_position=cam_position,
                     cam_orientation=cam_orientation,
                 )
+                gt_state_untrans = dash_object.y_vec_to_dict(
+                    y=info["labels"], coordinate_frame="world",
+                )
+                pred_state_untrans = dash_object.y_vec_to_dict(
+                    y=info["pred"], coordinate_frame="world",
+                )
                 gt_ostates.append(gt_state)
                 pred_ostates.append(pred_state)
 
                 # Generate object-level images.
                 tag2img[sid]["objects"][oid] = self.generate_object_images(
-                    sid=sid, oid=oid, gt_state=gt_state, pred_state=pred_state
+                    sid=sid, oid=oid, gt_state=gt_state, pred_state=pred_state,
                 )
 
                 # Write captions.
                 self.generate_captions(
-                    sid=sid, oid=oid, gt_state=gt_state, pred_state=pred_state
+                    sid=sid,
+                    oid=oid,
+                    cam_position=cam_position,
+                    cam_orientation=cam_orientation,
+                    gt_state=gt_state,
+                    pred_state=pred_state,
+                    gt_state_untrans=gt_state_untrans,
+                    pred_state_untrans=pred_state_untrans,
                 )
 
             # Generate scene-level images. We do this after processing objects
@@ -265,13 +278,55 @@ class HTMLImageGenerator:
                     imageio.imwrite(abs_path, img)
 
     def generate_captions(
-        self, sid: int, oid: int, gt_state: Dict, pred_state: Dict
+        self,
+        sid: int,
+        oid: int,
+        cam_position: List[float],
+        cam_orientation: List[float],
+        gt_state: Dict,
+        pred_state: Dict,
+        gt_state_untrans: Dict,
+        pred_state_untrans: Dict,
     ):
+        """Generates captions.
+
+        Args:
+            sid: The sensor ID.
+            oid: The object ID.
+            gt_state: The ground truth state dictionary, in 
+                args.coordinate_frame.
+            pred_state: The predicted state dictionary, in 
+                args.coordinate_frame.
+            gt_state_untrans: The ground truth state dictionary, untransformed
+                and directly containing values from y vector.
+            pred_state_untrans: The predicted state dictionary, untransformed 
+                and directly containing values from y vector.
+        """
+        state = util.load_pickle(
+            path=os.path.join(self.args.states_dir, f"{sid:06}.p")
+        )
+        gt_state_caption = dash_object.to_caption(
+            json_dict=state["objects"][oid]
+        )
         gt_caption = dash_object.to_caption(json_dict=gt_state)
         pred_caption = dash_object.to_caption(json_dict=pred_state)
+        gt_untrans_caption = dash_object.to_caption(json_dict=gt_state_untrans)
+        pred_untrans_caption = dash_object.to_caption(
+            json_dict=pred_state_untrans
+        )
         if sid not in self.captions:
             self.captions[sid] = {}
-        self.captions[sid][oid] = {"gt_y": gt_caption, "pred_y": pred_caption}
+        self.captions[sid][oid] = {
+            "gt_state": gt_state_caption,
+            f"cam_pose ({args.coordinate_frame})": [
+                f"position: {cam_position}",
+                f"orientation: {cam_orientation}",
+            ],
+            f"gt_untrans_caption ({args.coordinate_frame})": gt_untrans_caption,
+            f"pred_untrans_caption ({args.coordinate_frame})": pred_untrans_caption,
+            "gt_y (bullet_world)": gt_caption,
+            "pred_y (bullet_world)": pred_caption,
+        }
 
 
 if __name__ == "__main__":
@@ -281,6 +336,12 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The directory containing the dataset.",
+    )
+    parser.add_argument(
+        "--states_dir",
+        type=str,
+        required=True,
+        help="The directory containing the states.",
     )
     parser.add_argument(
         "--cam_dir",

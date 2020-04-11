@@ -34,7 +34,7 @@ from typing import *
 from ns_vqa_dart.bullet.dash_dataset import DashDataset
 from ns_vqa_dart.bullet import util
 
-HEADER = "<html><head><style>* {font-size: 15px;}</style></head><body><table><tbody>"
+HEADER = '<html><head><style>* {font-size: 15px;}</style></head><body><table style="table-layout:fixed; width:2700"><tbody>'
 FOOTER = "</tbody></table></body></html>"
 
 
@@ -122,7 +122,7 @@ def create_img_elem(path: str):
 
 def create_text_elem(lines: List[str]):
     text = "<br>".join(lines)
-    return f"<td>{text}</td>"
+    return f'<td width="224">{text}</td>'
 
 
 def create_row(row_contents: List[str]) -> str:
