@@ -419,13 +419,12 @@ def compute_y(
         position = util.world_to_cam(xyz=position, camera=camera)
         up_vector = util.world_to_cam(xyz=up_vector, camera=camera)
     elif coordinate_frame == "unity_camera":
-        position, euler = bullet2unity.states.bworld2ucam(
+        position, up_vector = bullet2unity.states.bworld2ucam(
             p_bw=position,
             up_bw=up_vector,
             uworld_cam_position=cam_position,
             uworld_cam_orientation=cam_orientation,
         )
-        up_vector = util.euler_to_up(euler=euler)
     elif coordinate_frame == "world":
         pass
     else:

@@ -62,7 +62,7 @@ class HTMLImageGenerator:
         # Note that sid keys are strings because they were loaded from json.
         i = 0
         tag2img = {}
-        sid_strings = list(sid2info.keys())[:1]
+        sid_strings = list(sid2info.keys())
         random.shuffle(sid_strings)
         for sid_str in tqdm(sid_strings):
             sid = int(sid_str)
