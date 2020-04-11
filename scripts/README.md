@@ -1,5 +1,15 @@
 ## Generating vision module datasets
 
+First, here is a changelog of dataset versions and the diffs between successive
+versions:
+
+- `dash_v002`: The first dataset to train both planning and placing, together.
+- `dash_v003`: Updated the y labels. Before, position and orientation were 
+  converted from bullet world coordinate frame into unity camera coordinate
+  frame by simply applying a unity world2camera transformation on the position
+  and orientation. Now, the sequence of transformations is: bullet world ->
+  bullet shoulder -> unity shoulder -> unity camera.
+
 Step 1. Generate states for planning and placing.
 
 ```
@@ -61,13 +71,13 @@ To run training and testing on a tiny subset of the dataset for a few
 iterations as a dry run:
 
 ```
-time ./ns_vqa_dart/scripts/dash_v002/dry_run.sh
+time ./ns_vqa_dart/scripts/dash_v003_5K/dry_run.sh
 ```
 
 To run training and testing on the full dataset:
 
 ```
-./ns_vqa_dart/scripts/dash_v002/run.sh
+time ./ns_vqa_dart/scripts/dash_v003_5K/run.sh
 ```
 
 ## To visualize results in an HTML webpage

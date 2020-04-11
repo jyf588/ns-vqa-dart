@@ -167,10 +167,10 @@ class BulletRenderer:
         shape: str,
         position: List[float],
         orientation: List[float],
-        radius: float,
-        height: float,
         position_mode: str,
         color: Optional[str] = None,
+        radius: Optional[float] = None,
+        height: Optional[float] = None,
         base_mass: Optional[float] = 3.5,
         mu: Optional[float] = 1.0,
         use_fixed_base: Optional[bool] = False,
@@ -209,10 +209,10 @@ class BulletRenderer:
             )
 
         # Set color and friction.
-        if color is not None:
-            self.p.changeVisualShape(oid, -1, rgbaColor=COLOR2RGBA[color])
-        self.p.changeDynamics(oid, -1, lateralFriction=mu)
-
+        if oid is not None:
+            if color is not None:
+                self.p.changeVisualShape(oid, -1, rgbaColor=COLOR2RGBA[color])
+            self.p.changeDynamics(oid, -1, lateralFriction=mu)
         return oid
 
     def create_primitive(

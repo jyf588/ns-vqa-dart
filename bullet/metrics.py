@@ -51,14 +51,20 @@ def compute_metrics(cam_dir: str, sid2info: List[Dict], coordinate_frame: str):
             labels = info["labels"]
 
             # Convert from vectors to dictionaries.
-            camera = gen_dataset.create_camera(
+            cam_position, cam_orientation = gen_dataset.load_camera_pose(
                 cam_dir=cam_dir, sid=sid, oid=oid
             )
             gt_y_dict = dash_object.y_vec_to_dict(
-                y=labels, coordinate_frame=coordinate_frame, camera=camera
+                y=labels,
+                coordinate_frame=coordinate_frame,
+                cam_position=cam_position,
+                cam_orientation=cam_orientation,
             )
             pred_y_dict = dash_object.y_vec_to_dict(
-                y=pred, coordinate_frame=coordinate_frame, camera=camera
+                y=pred,
+                coordinate_frame=coordinate_frame,
+                cam_position=cam_position,
+                cam_orientation=cam_orientation,
             )
 
             for k in cls_correct.keys():

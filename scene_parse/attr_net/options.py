@@ -56,7 +56,7 @@ class BaseOptions:
             help="The dataset directory",
         )
         self.parser.add_argument(
-            "--cam_dir", required=True, type=str, help="The camera directory."
+            "--cam_dir", type=str, help="The camera directory."
         )
         self.parser.add_argument(
             "--height", type=int, default=480, help="The image height."
@@ -101,8 +101,7 @@ class BaseOptions:
         # )
         self.parser.add_argument(
             "--coordinate_frame",
-            required=True,
-            choices=["world", "camera"],
+            choices=["world", "camera", "unity_camera"],
             help="The coordinate frame to train on.",
         )
         self.parser.add_argument(

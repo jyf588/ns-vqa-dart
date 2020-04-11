@@ -19,6 +19,58 @@ def create_bullet_client(mode: str) -> bc.BulletClient:
 """ Geometry """
 
 
+def create_transformation(position: List[float], orientation: List[float]):
+    """Creates a transformation matrix for the provided position and 
+    orientation.
+
+    Args:
+        position: The xyz position.
+        orientation: The xyzw orientation, in quaternion format.
+
+    Returns:
+        transformation: The 4x4 transformation matrix.
+    """
+    transformation = np.identity(4)
+    r = R.from_quat(orientation)
+    transformation[:3, :3] = r.as_matrix()
+    transformation[:3, 3] = position
+    return transformation
+
+
+def apply_transform(xyz: List[float], transformation: np.ndarray):
+    """Applies a transformation to a set of xyz values.
+
+    Args:
+        xyz: The xyz values to transform.
+        transformation: A 4x4 transformation matrix to apply.
+
+    Returns:
+        xyz_transformed: Transformed xyz values.
+    """
+    vec = np.array(list(xyz) + [1.0])
+    vec_transformed = np.dot(transformation, vec)
+    xyz_transformed = list(vec_transformed[:3])
+    return xyz_transformed
+
+
+def apply_inv_transform(xyz: List[float], transformation: np.ndarray):
+    """Applies an inverse transform to a set of xyz values.
+
+    Args:
+        xyz: The xyz values to transform.
+        transformation: A 4x4 transformation matrix. The inverse of this
+            transformation will be applied.
+
+    Returns:
+        xyz_transformed: The xyz values, transformed by the inverse of the 
+            input transformation.
+    """
+    xyz_transformed = apply_transform(
+        xyz=xyz, transformation=inv(transformation)
+    )
+    return xyz_transformed
+
+
 def world_to_cam(xyz: List[float], camera) -> List[float]:
     """Converts xyz coordinates from world to camera coordinate frame.
 
@@ -98,6 +150,21 @@ def up_to_orientation(
     return orientation
 
 
+def up_to_euler(up: List[float]):
+    """Converts from an up vector into euler angles.
+
+    Args:
+        up: An up vector.
+    
+    Returns:
+        euler: Euler xyz angles (degrees) representing the provided up vector.
+    """
+    orn = up_to_orientation(up=up)
+    r = R.from_quat(orn)
+    euler = r.as_euler("xyz", degrees=True)
+    return euler
+
+
 def orientation_to_rotation(orientation: List[float]) -> List[float]:
     """Converts an orientation vector into a rotation matrix.
 
@@ -108,7 +175,9 @@ def orientation_to_rotation(orientation: List[float]) -> List[float]:
         rotation: The 3x3 rotation matrix.
     """
     # p = create_bullet_client(mode="direct")
-    rotation = pybullet.getMatrixFromQuaternion(quaternion=orientation)
+    # rotation = pybullet.getMatrixFromQuaternion(quaternion=orientation)
+    r = R.from_quat(orientation)
+    rotation = r.as_matrix()
     return rotation
 
 
@@ -151,6 +220,21 @@ def rotation_to_orientation(rotation: List[float]) -> List[float]:
     """
     orientation = R.from_matrix(np.array(rotation).reshape((3, 3))).as_quat()
     return list(orientation)
+
+
+def euler_to_up(euler: List[float]) -> List[float]:
+    """Converts euler angles into an up vector.
+
+    Args:
+        euler: A set of xyz euler angles (degrees).
+    
+    Returns:
+        up: The up vector corresponding to the euler angles.
+    """
+    r = R.from_euler("xyz", euler, degrees=True)
+    rotmat = r.as_matrix()
+    up = rotation_to_up(rotation=rotmat)
+    return up
 
 
 """ JSON and pickle I/O utility functions. """

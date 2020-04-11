@@ -126,12 +126,17 @@ def load_X_and_y(sid: int, oid: int, odict: Dict, img_dir: str, cam_dir: str):
 
     # Prepare camera parameters if we are using camera coordinate
     # frame.
-    if args.coordinate_frame == "camera":
-        camera = create_camera(cam_dir=cam_dir, sid=sid, oid=oid)
+    if args.coordinate_frame in ["camera", "unity_camera"]:
+        cam_position, cam_orientation = load_camera_pose(
+            cam_dir=cam_dir, sid=sid, oid=oid
+        )
     else:
         camera = None
     y = dash_object.compute_y(
-        odict=odict, coordinate_frame=args.coordinate_frame, camera=camera,
+        odict=odict,
+        coordinate_frame=args.coordinate_frame,
+        cam_position=cam_position,
+        cam_orientation=cam_orientation,
     )
     return X, y
 
@@ -186,7 +191,7 @@ def seg_img_to_map(seg_img):
     return seg
 
 
-def create_camera(cam_dir: str, sid: int, oid: int) -> BulletCamera:
+def load_camera_pose(cam_dir: str, sid: int, oid: int) -> BulletCamera:
     """Creates a camera with same parameters as camera used to capture images
     for the specified object in the specified scene.
 
@@ -202,9 +207,9 @@ def create_camera(cam_dir: str, sid: int, oid: int) -> BulletCamera:
     params = util.load_json(path=path)[f"{oid:02}"]
     position = params["camera_position"]
     orientation = params["camera_orientation"]
-    euler_angles = util.orientation_to_euler(orientation=orientation)
-    cam = BulletCamera(position=position, rotation=euler_angles)
-    return cam
+    # euler_angles = util.orientation_to_euler(orientation=orientation)
+    # cam = BulletCamera(position=position, rotation=euler_angles)
+    return position, orientation
 
 
 def save_example(
@@ -270,7 +275,7 @@ if __name__ == "__main__":
         "--coordinate_frame",
         required=True,
         type=str,
-        choices=["world", "camera"],
+        choices=["world", "camera", "unity_camera"],
         help="The coordinate frame to generate labels in.",
     )
     args = parser.parse_args()

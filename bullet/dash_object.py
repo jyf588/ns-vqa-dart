@@ -11,6 +11,7 @@ import sys
 # from .camera import BulletCamera
 # from . import util
 
+import bullet2unity.states
 from ns_vqa_dart.bullet.camera import BulletCamera
 from ns_vqa_dart.bullet import util
 
@@ -360,7 +361,11 @@ def compute_input_object_img(
 
 
 def compute_y(
-    odict: Dict, coordinate_frame: str, camera: Optional[BulletCamera] = None
+    odict: Dict,
+    coordinate_frame: str,
+    camera: Optional[BulletCamera] = None,
+    cam_position: List[float] = None,
+    cam_orientation: List[float] = None,
 ) -> np.ndarray:
     """Constructs the label vector for an object.
 
@@ -399,11 +404,20 @@ def compute_y(
     y += [odict["radius"], odict["height"]]
 
     position = odict["position"]
-    up_vector = util.orientation_to_up(odict["orientation"])
+    orientation = odict["orientation"]
+    up_vector = util.orientation_to_up(orientation)
 
     if coordinate_frame == "camera":
         position = util.world_to_cam(xyz=position, camera=camera)
         up_vector = util.world_to_cam(xyz=up_vector, camera=camera)
+    elif coordinate_frame == "unity_camera":
+        position, euler = bullet2unity.states.bworld2ucam(
+            bworld_position=position,
+            bworld_orientation=orientation,
+            uworld_cam_position=cam_position,
+            uworld_cam_orientation=cam_orientation,
+        )
+        up_vector = util.euler_to_up(euler=euler)
     elif coordinate_frame == "world":
         pass
     else:
@@ -541,6 +555,13 @@ def y_vec_to_dict(
     elif coordinate_frame == "camera":
         for k in ["position", "up_vector"]:
             y_dict[k] = util.cam_to_world(xyz=y_dict[k], camera=camera)
+    elif coordinate_frame == "unity_camera":
+        position, up_vector = bullet2unity.states.ucam2bworld(
+            ucam_position=y_dict["position"],
+            ucam_up_vector=y_dict["up_vector"],
+            uworld_cam_position=cam_position,
+            uworld_cam_orientation=cam_orientation,
+        )
     else:
         raise ValueError(f"Invalid coordinate frame: {coordinate_frame}.")
     return y_dict
