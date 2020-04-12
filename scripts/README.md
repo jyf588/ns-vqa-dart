@@ -4,11 +4,16 @@ First, here is a changelog of dataset versions and the diffs between successive
 versions:
 
 - `dash_v002`: The first dataset to train both planning and placing, together.
-- `dash_v003`: Updated the y labels. Before, position and orientation were 
+- `dash_v003`: 
+  - states: `dash_v002_5K`
+  - FIX: Updated the y labels. Before, position and orientation were 
   converted from bullet world coordinate frame into unity camera coordinate
   frame by simply applying a unity world2camera transformation on the position
   and orientation. Now, the sequence of transformations is: bullet world ->
-  bullet shoulder -> unity shoulder -> unity camera.
+  bullet shoulder -> unity shoulder -> unity camera. 
+  - FIX: Images; Unity delayed rendering vs. snapshot where arm was never 
+    really holding any objects before.
+  - FIX: Bug where saved camera orientation is changed from xyyw -> xyzw.
 
 Step 1. Generate states for planning and placing.
 
