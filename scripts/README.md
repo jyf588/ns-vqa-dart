@@ -22,19 +22,18 @@ Step 1. Generate states for planning and placing.
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
 ./ns_vqa_dart/scripts/states/placing.sh (ETA: 3 minutes)
 
-# Process and combine states.
-./ns_vqa_dart/scripts/states/process_and_combine.sh (ETA 4 seconds)
+# Process states.
+./ns_vqa_dart/scripts/states/process_states.sh
+
+# Combine states.
+./ns_vqa_dart/scripts/dash_v003_100/combine.sh (ETA 4 seconds)
 ```
 
 Step 2. Transfer the states (23 M) to the machine where you will be
-running Unity.
+running Unity. Note: Run this on the unity machine.
 
 ```
-# Transfer the states.
-time rsync -azP sydney:~/mguo/data/states/full/dash_v002_5K.zip ~/workspace/lucas/states/  # ETA: 1 second
-
-# Unzip the states.
-unzip ~/workspace/lucas/states/dash_v002_5K.zip  # ETA: 1 second
+./ns_vqa_dart/scripts/dash_v003_100/transfer_states.sh
 ```
 
 Step 3. Generate Unity images from the states.
