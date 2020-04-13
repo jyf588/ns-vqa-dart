@@ -152,8 +152,9 @@ class HTMLImageGenerator:
                     <tag>: <image>
                 }
         """
-        path = os.path.join(self.args.img_dir, "third/img", f"{sid:06}.png")
-        third_person = imageio.imread(path)
+        third_person = gen_dataset.load_third_person_image(
+            img_dir=self.args.img_dir, sid=sid
+        )
         # rgb, seg = gen_dataset.load_rgb_and_seg(
         #     img_dir=self.args.img_dir, sid=sid
         # )

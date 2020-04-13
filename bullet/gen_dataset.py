@@ -163,8 +163,8 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "first/img", f"{sid:06}_{oid:02}.png")
-    seg_path = os.path.join(img_dir, "first/id", f"{sid:06}_{oid:02}.png")
+    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{oid}.png")
+    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{oid}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
 
@@ -172,6 +172,12 @@ def load_rgb_and_seg(
     # TODO: Do this before saving the segmentation.
     seg = seg_img_to_map(seg_img)
     return rgb, seg
+
+
+def load_third_person_image(img_dir: str, sid: str):
+    path = os.path.join(img_dir, "third/rgb", f"{sid:06}_.png")
+    img = imageio.imread(path)
+    return img
 
 
 def seg_img_to_map(seg_img):
@@ -204,11 +210,9 @@ def load_camera_pose(cam_dir: str, sid: int, oid: int) -> BulletCamera:
         cam: A BulletCamera.
     """
     path = os.path.join(cam_dir, f"{sid:06}.json")
-    params = util.load_json(path=path)[f"{oid:02}"]
+    params = util.load_json(path=path)[f"{oid}"]
     position = params["camera_position"]
     orientation = params["camera_orientation"]
-    # euler_angles = util.orientation_to_euler(orientation=orientation)
-    # cam = BulletCamera(position=position, rotation=euler_angles)
     return position, orientation
 
 

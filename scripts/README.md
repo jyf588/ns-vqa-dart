@@ -69,7 +69,7 @@ Step 5. Generate the dataset for training and testing. (ETA: 7 hours)
 Step 6. (Optional) Check whether there are any corrupt pickle files.
 
 ```
-./ns_vqa_dart/scripts/dash_v001/check_pickles.sh
+./ns_vqa_dart/scripts/dash_v003_100/check_pickles.sh
 ```
 
 ## Training and testing the vision module on datasets
@@ -78,13 +78,13 @@ To run training and testing on a tiny subset of the dataset for a few
 iterations as a dry run:
 
 ```
-time ./ns_vqa_dart/scripts/dash_v003_5K/dry_run.sh
+time ./ns_vqa_dart/scripts/dash_v003_100/dry_run.sh
 ```
 
 To run training and testing on the full dataset:
 
 ```
-time ./ns_vqa_dart/scripts/dash_v003_5K/run.sh
+time ./ns_vqa_dart/scripts/dash_v003_100/run.sh
 ```
 
 ## To visualize results in an HTML webpage
