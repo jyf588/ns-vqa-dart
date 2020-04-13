@@ -22,10 +22,7 @@ Step 1. Generate states for planning and placing.
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
 ./ns_vqa_dart/scripts/states/placing.sh (ETA: 3 minutes)
 
-# Process states.
 ./ns_vqa_dart/scripts/states/process_states.sh
-
-# Combine states.
 ./ns_vqa_dart/scripts/dash_v003_100/combine.sh (ETA 4 seconds)
 ```
 
@@ -39,28 +36,34 @@ running Unity. Note: Run this on the unity machine.
 Step 3. Generate Unity images from the states.
 
 ```
-time python scripts/server.py (ETA: 18 minutes)
+time python scripts/run_unity_from_states.py
 ```
 
 Step 4. Zip up and scp the generated Unity data to the machine where 
 training will occur.
 
 ```
+rm -rf ~/data/dash_v003_100/unity_output
+mkdir -p ~/data/dash_v003_100/unity_output
+cp -r ~/workspace/lucas/unity/Captures/temp ~/data/dash_v003_100/unity_output/images
+cp -r ~/data/temp_unity_data ~/data/dash_v003_100/unity_outpu/json
+
 # Zip up the data (ETA: 2 minutes)
-time zip -r dash_v002_100.zip dash_v002_100
+cd ~/data
+time zip -r dash_v003_100.zip dash_v003_100
 
 # Transfer the the data (ETA: 36 minutes)
-time rsync -azP dash_v002_5K.zip sydney:~/mguo/data/datasets/dash_v002_5K/
+time rsync -azP dash_v003_100.zip sydney:~/mguo/data/datasets/dash_v003_100/
 
 # Unzip the data. (ETA: 1 second)
-time unzip dash_v002_100.zip
+time unzip dash_v003_100.zip
 ```
 
 Step 5. Generate the dataset for training and testing. (ETA: 7 hours)
 
 ```
 # To generate the full set (ETA: 10 minutes):
-./ns_vqa_dart/scripts/dash_v002/generate.sh
+./ns_vqa_dart/scripts/dash_v003_100/generate.sh
 ```
 
 Step 6. (Optional) Check whether there are any corrupt pickle files.
