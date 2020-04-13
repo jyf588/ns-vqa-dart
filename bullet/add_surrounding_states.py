@@ -58,6 +58,8 @@ def main(args: argparse.Namespace):
         x_bounds=(env_utils.TX_MIN, env_utils.TX_MAX),
         y_bounds=(env_utils.TY_MIN, env_utils.TY_MAX),
         z_bounds=(0.0, 0.0),
+        mass_bounds=(env_utils.MASS_MIN, env_utils.MASS_MAX),
+        mu_bounds=(1.0, 1.0),
         position_mode="com",
     )
 

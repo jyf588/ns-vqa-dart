@@ -55,8 +55,6 @@ def main(args: argparse.Namespace):
         src_path = os.path.join(args.src_dir, state_fname)
         state = util.load_pickle(path=src_path)
 
-        pprint.pprint(state)
-
         # Loop over the objects.
         new_state_objects = {}
         for idx, odict in enumerate(state["objects"]):

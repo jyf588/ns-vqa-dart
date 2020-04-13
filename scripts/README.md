@@ -5,71 +5,74 @@ versions:
 
 - `dash_v002`: The first dataset to train both planning and placing, together.
 - `dash_v003`: 
-  - states: `dash_v002_5K`
-  - FIX: Updated the y labels. Before, position and orientation were 
-  converted from bullet world coordinate frame into unity camera coordinate
-  frame by simply applying a unity world2camera transformation on the position
-  and orientation. Now, the sequence of transformations is: bullet world ->
-  bullet shoulder -> unity shoulder -> unity camera. 
+  - FIX: Update the transformation of y labels (specifically, position and 
+  orientation of objects) from the incorrect bworld -> ucam to the correct 
+  bworld -> bshoulder -> ushoulder -> ucam transformation.
   - FIX: Images; Unity delayed rendering vs. snapshot where arm was never 
     really holding any objects before.
   - FIX: Bug where saved camera orientation is changed from xyyw -> xyzw.
+- `dash_v004` (Apr 13, 2020)
+  - Update to use Yifeng's new placing policy: `0404_0_n_20_40`.
+  - Changed from `placing.sh` to `placing_v002.sh`.
 
 Step 1. Generate states for planning and placing.
 
 ```
 # First, generate states for planning and stacking.
+
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
-./ns_vqa_dart/scripts/states/placing.sh (ETA: 3 minutes)
+./ns_vqa_dart/scripts/states/placing_v002.sh (ETA: 3 minutes)
 
 ./ns_vqa_dart/scripts/states/process_states.sh
-./ns_vqa_dart/scripts/dash_v003_100/combine.sh (ETA 4 seconds)
+./ns_vqa_dart/scripts/states/combine.sh (ETA 4 seconds)
 ```
 
-Step 2. Transfer the states (23 M) to the machine where you will be
+Step 2. Zip, transfer, and unzip the states to the machine where you will be
 running Unity. Note: Run this on the unity machine.
 
 ```
-./ns_vqa_dart/scripts/dash_v003_100/transfer_states.sh
+cd ~/mguo/data/states/full
+time zip -r dash_v004_100.zip dash_v004_100
+./ns_vqa_dart/scripts/dash_v004_100/transfer_states.sh
 ```
 
 Step 3. Generate Unity images from the states.
 
 ```
-time python scripts/run_unity_from_states.py
+time python demo/run_unity_from_states.py --states_dir ~/data/states/dash_v004_100
 ```
 
 Step 4. Zip up and scp the generated Unity data to the machine where 
 training will occur.
 
 ```
-rm -rf ~/data/dash_v003_100/unity_output
-mkdir -p ~/data/dash_v003_100/unity_output
-cp -r ~/workspace/lucas/unity/Captures/temp ~/data/dash_v003_100/unity_output/images
-cp -r ~/data/temp_unity_data ~/data/dash_v003_100/unity_outpu/json
+# If the directory already exists:
+rm -rf ~/data/dash_v004_100/unity_output
+mkdir -p ~/data/dash_v004_100/unity_output
+cp -r ~/workspace/lucas/unity/Captures/temp ~/data/dash_v004_100/unity_output/images
+cp -r ~/data/temp_unity_data ~/data/dash_v004_100/unity_output/json
 
 # Zip up the data (ETA: 2 minutes)
 cd ~/data
-time zip -r dash_v003_100.zip dash_v003_100
+time zip -r dash_v004_100.zip dash_v004_100
 
-# Transfer the the data (ETA: 36 minutes)
-time rsync -azP dash_v003_100.zip sydney:~/mguo/data/datasets/dash_v003_100/
+# Transfer the the data (ETA: 1 minute 30 seconds)
+time rsync -azP dash_v004_100.zip sydney:~/mguo/data/datasets/dash_v004_100/
 
 # Unzip the data. (ETA: 1 second)
-time unzip dash_v003_100.zip
+time unzip dash_v004_100.zip
 ```
 
-Step 5. Generate the dataset for training and testing. (ETA: 7 hours)
+Step 5. Generate the dataset for training and testing. (ETA: 7 seconds)
 
 ```
-# To generate the full set (ETA: 10 minutes):
-./ns_vqa_dart/scripts/dash_v003_100/generate.sh
+./ns_vqa_dart/scripts/dash_v004_100/generate.sh
 ```
 
 Step 6. (Optional) Check whether there are any corrupt pickle files.
 
 ```
-./ns_vqa_dart/scripts/dash_v003_100/check_pickles.sh
+./ns_vqa_dart/scripts/dash_v004_100/check_pickles.sh
 ```
 
 ## Training and testing the vision module on datasets
@@ -78,13 +81,13 @@ To run training and testing on a tiny subset of the dataset for a few
 iterations as a dry run:
 
 ```
-time ./ns_vqa_dart/scripts/dash_v003_100/dry_run.sh
+time ./ns_vqa_dart/scripts/dash_v004_100/dry_run.sh
 ```
 
 To run training and testing on the full dataset:
 
 ```
-time ./ns_vqa_dart/scripts/dash_v003_100/run.sh
+time ./ns_vqa_dart/scripts/dash_v004_100/run.sh
 ```
 
 ## To visualize results in an HTML webpage
