@@ -3,7 +3,7 @@ STATES_SET=dash_v004_100
 IMG_SET=dash_v004_100
 CAM_SET=dash_v004_100
 DATA_SET=dash_v004_100
-OUTPUT_SET=dash_v004_100
+OUTPUT_SET=dash_v004_100_pretrained
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -42,7 +42,7 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --eval_start_id $TRAIN_START \
     --eval_end_id $TRAIN_END \
     --output_path $PRED_PATH \
-    --load_checkpoint_path $RUN_DIR/checkpoint_iter00060000.pt \
+    --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8

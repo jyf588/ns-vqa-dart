@@ -21,7 +21,7 @@ Step 1. Generate states for planning and placing.
 # First, generate states for planning and stacking.
 
 ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
-./ns_vqa_dart/scripts/states/placing_v002.sh (ETA: 3 minutes)
+time ./ns_vqa_dart/scripts/states/placing_v002.sh (ETA: 3 minutes)
 
 ./ns_vqa_dart/scripts/states/process_states.sh
 ./ns_vqa_dart/scripts/states/combine.sh (ETA 4 seconds)

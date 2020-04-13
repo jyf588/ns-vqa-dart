@@ -15,7 +15,7 @@ PRED_PATH=$RUN_DIR/pred.json
 HTML_DIR=$ROOT_DIR/html/$OUTPUT_SET
 
 CHECKPOINT_EVERY=2000
-NUM_ITERS=60000
+NUM_ITERS=20
 TRAIN_START=0
 TRAIN_END=80
 EVAL_START=80
@@ -39,10 +39,10 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $TRAIN_START \
-    --eval_end_id $TRAIN_END \
+    --eval_start_id $EVAL_START \
+    --eval_end_id $EVAL_END \
     --output_path $PRED_PATH \
-    --load_checkpoint_path $RUN_DIR/checkpoint_iter00060000.pt \
+    --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8

@@ -1,2 +1,10 @@
-./ns_vqa_dart/scripts/states/complete_states.sh
-./ns_vqa_dart/scripts/states/add_surrounding_states.sh
+ROOT_DIR=~/mguo/data
+
+time python ns_vqa_dart/bullet/complete_states.py \
+    --src_dir $ROOT_DIR/states/partial/placing_v002 \
+    --dst_dir $ROOT_DIR/states/full/placing_v002
+
+
+time python ns_vqa_dart/bullet/add_surrounding_states.py \
+    --src_dir $ROOT_DIR/states/full/placing_v002 \
+    --dst_dir $ROOT_DIR/states/full/placing_v002_surround

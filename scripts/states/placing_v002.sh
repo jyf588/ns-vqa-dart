@@ -10,6 +10,7 @@ python enjoy.py \
     --n_best_cand 2 \
     --cotrain_stack_place 1 \
     --grasp_pi_name "0404_0_n_20_40" \
+    --use_obj_heights 1 \
     --save_states 1 \
     --states_dir "/home/michelle/mguo/data/states/partial/placing_v002" \
     --n_trials 100
