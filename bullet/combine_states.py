@@ -27,7 +27,6 @@ def main(args: argparse.Namespace):
     # final set of states.
     n_src_sets = len(args.src_dirs)
     n_states_per_set = args.n_states // n_src_sets
-    idx2path = {}
     start_idx = 0
 
     print("Sampling states from each set...")
@@ -49,7 +48,7 @@ def main(args: argparse.Namespace):
     # Copy source files to the destination directory.
     print(f"Copying selected states to {args.dst_dir}...")
     os.makedirs(args.dst_dir, exist_ok=True)
-    random.shuffle(paths)
+    # random.shuffle(paths)
     n_total_objects = 0
     for sid, src_path in enumerate(tqdm(paths)):
         state = util.load_pickle(path=src_path)
