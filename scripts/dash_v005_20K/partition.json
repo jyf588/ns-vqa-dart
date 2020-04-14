@@ -1,0 +1,10 @@
+{
+    "sets": {
+        "/home/michelle/mguo/data/states/full/planning_v003": 0.25,
+        "/home/michelle/mguo/data/states/full/placing_v003_surround": 0.75
+    },
+    "splits": {
+        "train": 0.8,
+        "val": 0.2
+    }
+}
