@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=dash_v004_100
-IMG_SET=dash_v004_100
-CAM_SET=dash_v004_100
-DATA_SET=dash_v004_100
-OUTPUT_SET=dash_v004_100
+STATES_SET=dash_v004_20K
+IMG_SET=dash_v004_20K
+CAM_SET=dash_v004_20K
+DATA_SET=dash_v004_20K
+OUTPUT_SET=dash_v004_20K
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -17,9 +17,9 @@ HTML_DIR=$ROOT_DIR/html/$OUTPUT_SET
 CHECKPOINT_EVERY=2000
 NUM_ITERS=60000
 TRAIN_START=0
-TRAIN_END=80
-EVAL_START=80
-EVAL_END=100
+TRAIN_END=16000
+EVAL_START=16000
+EVAL_END=20000
 COORD_FRAME=unity_camera
 HTML_N_SCENES=30
 
@@ -39,10 +39,10 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $TRAIN_START \
-    --eval_end_id $TRAIN_END \
+    --eval_start_id $EVAL_START \
+    --eval_end_id $EVAL_END \
     --output_path $PRED_PATH \
-    --load_checkpoint_path $RUN_DIR/checkpoint_iter00060000.pt \
+    --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8
