@@ -36,7 +36,7 @@ running Unity. Note: Run this on the unity machine.
 ```
 cd ~/mguo/data/states/full
 time zip -r dash_v005_20K.zip dash_v005_20K (1 second)
-./ns_vqa_dart/scripts/dash_v005_20K/transfer_states.sh (1 minute 22 seconds)
+time ./ns_vqa_dart/scripts/dash_v005_20K/transfer_states.sh (1 minute 22 seconds)
 ```
 
 Step 3. Generate Unity images from the states. (ETA: 1 hour 30 minutes)

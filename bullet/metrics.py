@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import os
 import pickle
+import pprint
 from tqdm import tqdm
 from typing import *
 
@@ -12,13 +13,12 @@ from ns_vqa_dart.bullet import gen_dataset
 from ns_vqa_dart.bullet import util
 
 AXIS_NAMES = ["x", "y", "z"]
-MULTIPLIER = {"radius": 100, "height": 100, "position": 100, "height": 100}
+MULTIPLIER = {"radius": 100, "height": 100, "position": 100}
 UNITS = {
     "radius": "cm",
     "height": "cm",
     "position": "cm",
     "up_vector": "L1",
-    "height": "cm",
 }
 
 
@@ -33,9 +33,9 @@ class Metrics:
             "up_vector": np.zeros((3,)),
         }
         self.reg_errors_dict = {
-            "pos": copy.deepcopy(errors),
-            "neg": copy.deepcopy(errors),
-            "abs": copy.deepcopy(errors),
+            "pos": copy.deepcopy(self.l1_errors_dict),
+            "neg": copy.deepcopy(self.l1_errors_dict),
+            "abs": copy.deepcopy(self.l1_errors_dict),
         }
         self.n_total = 0
 
@@ -87,7 +87,7 @@ class Metrics:
 
         print(f"Classification Accuracies:")
         for k, v in self.counts_dict.items():
-            print(f"\t{k}: {v / n_total * 100:.2f} ({v}/{n_total})")
+            print(f"\t{k}: {v / self.n_total * 100:.2f} ({v}/{self.n_total})")
 
         print(f"Regression Errors:")
         for k in self.l1_errors_dict.keys():
@@ -102,13 +102,13 @@ class Metrics:
                 # Print out the results.
                 if type(v) in [np.float64, float]:
                     print(
-                        f"\t{k} {err_type} ({units}): {v / n_total:.2f} ({v:.2f}/{n_total})"
+                        f"\t{k} {err_type} ({units}): {v / self.n_total:.2f} ({v:.2f}/{self.n_total})"
                     )
                 elif type(v) == np.ndarray:
                     print(f"\t{k} {err_type} ({units}):")
                     for axis_i, v_i in enumerate(v):
                         print(
-                            f"\t\t{AXIS_NAMES[axis_i]}: {v_i / n_total:.2f} ({v_i:.2f}/{n_total})"
+                            f"\t\t{AXIS_NAMES[axis_i]}: {v_i / self.n_total:.2f} ({v_i:.2f}/{self.n_total})"
                         )
                 else:
                     raise ValueError(f"Unrecognized type: {type(v)}")
