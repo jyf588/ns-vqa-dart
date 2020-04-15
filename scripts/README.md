@@ -57,7 +57,7 @@ mkdir -p ~/data/dash_v005_20K/unity_output
 time cp -r ~/workspace/lucas/unity/Captures/temp ~/data/dash_v005_20K/unity_output/images
 time cp -r ~/data/temp_unity_data ~/data/dash_v005_20K/unity_output/json
 
-# Zip up the data (ETA: 2 minutes)
+# Zip up the data (ETA: 15 minutes)
 cd ~/data
 time zip -r dash_v005_20K.zip dash_v005_20K
 
@@ -65,6 +65,7 @@ time zip -r dash_v005_20K.zip dash_v005_20K
 # ETA: 
 #   100: 1 minute 30 seconds
 #   20K: 1 hour 45 minutes
+# WARNING: Make sure there is enough space in sydney!
 time rsync -azP dash_v005_20K.zip sydney:~/mguo/data/datasets/dash_v005_20K/
 ```
 
