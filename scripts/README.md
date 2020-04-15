@@ -73,6 +73,7 @@ Unzip the data.
 ETA:
 - 100: 1 second
 - 20K: 1 minute 12 seconds
+WARNING: Make sure there is enough space in sydney!
 ```
 cd ~/mguo/data/datasets/dash_v005_20K
 time unzip dash_v005_20K.zip
@@ -81,6 +82,7 @@ mv unity_output ../
 cd ..
 du -sh ./dash_v005_20K  # Make sure this folder is empty
 rm -rf dash_v005_20K
+rm dash_v005_20K.zip
 ```
 
 Step 5. Generate the dataset for training and testing.
@@ -90,7 +92,7 @@ ETA:
 
 ```
 # WARNING: Make sure to clear up space before running this!
-./ns_vqa_dart/scripts/dash_v005_20K/generate.sh
+time ./ns_vqa_dart/scripts/dash_v005_20K/generate.sh
 ```
 
 Step 6. (Optional) Check whether there are any corrupt pickle files.

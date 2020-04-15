@@ -63,8 +63,12 @@ class HTMLImageGenerator:
         i = 0
         tag2img = {}
         sid_strings = list(sid2info.keys())
+        sorted_sample_idxs = sorted(
+            random.sample(range(len(sid_strings)), args.n_scenes)
+        )
+        sid_strings_sampled = [sid_strings[idx] for idx in sorted_sample_idxs]
         # random.shuffle(sid_strings)
-        for sid_str in tqdm(sid_strings):
+        for sid_str in tqdm(sid_strings_sampled):
             sid = int(sid_str)
             tag2img[sid] = {"scene": {}, "objects": {}}
             gt_ostates = []  # In args.coordinate_frame
@@ -152,16 +156,16 @@ class HTMLImageGenerator:
                     <tag>: <image>
                 }
         """
-        third_person = gen_dataset.load_third_person_image(
-            img_dir=self.args.img_dir, sid=sid
-        )
+        # third_person = gen_dataset.load_third_person_image(
+        #     img_dir=self.args.img_dir, sid=sid
+        # )
         # rgb, seg = gen_dataset.load_rgb_and_seg(
         #     img_dir=self.args.img_dir, sid=sid
         # )
         gt_rgb = self.rerender(states=gt_ostates, check_dims=True)
         pred_rgb = self.rerender(states=pred_ostates, check_dims=False)
         tag2img = {
-            "third_person": third_person,
+            # "third_person": third_person,
             "gt": gt_rgb,
             "pred": pred_rgb,
         }
