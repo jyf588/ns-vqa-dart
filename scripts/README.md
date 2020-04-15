@@ -260,3 +260,13 @@ source bashrc
 cd /data/or_planning_scripts
 python move_single.py 1
 ```
+
+First time running the scripts will take a few minutes. (Usually when yellow
+output shows up)
+
+April 15, 2020: Re-ran `sudo docker build -t openrave-ha:v3 .` with 
+the following command (because `inmoov.git` was updated):
+```
+sudo docker build --no-cache -t openrave-ha:v3 .
+```
+And then restarted both containers.
