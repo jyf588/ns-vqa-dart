@@ -3,7 +3,19 @@
 First, here is a changelog of dataset versions and the diffs between successive
 versions:
 
-- `dash_v002`: The first dataset to train both planning and placing, together.
+- `dash_v006` (April 17, 2020)
+  - Split into two datasets: `planning_v006` and `placing_v006`.
+  - Change the camera "look at" locations:
+    - `planning_v006`: Instead of looking at every single object, look once at the center of the distribution of object locations and heights.
+    - `placing_v006`: Instead of looking at every single object, look once at the top of the bottom object.
+  - FIX: Shadow bias is removed, now shadow and object are joined instead of 
+  having a gap between them.
+- `dash_v005` (April 14, 2020)
+  - Changed from `placing_v002` (100 trials) to `placing_v003` (1500 trials).
+  - Changed from 50/50 split between planning and placing to 25/75 split.
+- `dash_v004` (Apr 13, 2020)
+  - Update to use Yifeng's new placing policy: `0404_0_n_20_40`.
+  - Changed from `placing.sh` to `placing_v002.sh`.
 - `dash_v003`: 
   - FIX: Update the transformation of y labels (specifically, position and 
   orientation of objects) from the incorrect bworld -> ucam to the correct 
@@ -11,109 +23,48 @@ versions:
   - FIX: Images; Unity delayed rendering vs. snapshot where arm was never 
     really holding any objects before.
   - FIX: Bug where saved camera orientation is changed from xyyw -> xyzw.
-- `dash_v004` (Apr 13, 2020)
-  - Update to use Yifeng's new placing policy: `0404_0_n_20_40`.
-  - Changed from `placing.sh` to `placing_v002.sh`.
-- `dash_v005` (April 14, 2020)
-  - Changed from `placing_v002` (100 trials) to `placing_v003` (1500 trials).
-  - Changed from 50/50 split between planning and placing to 25/75 split.
+- `dash_v002`: The first dataset to train both planning and placing, together.
 
-Step 1. Generate states for planning and placing.
+Step 1. Generate states for planning and placing. (ETA: 40 minutes)
 
 ```
-# First, generate states for planning and stacking.
-
-time ./ns_vqa_dart/scripts/states/planning_v003.sh  (ETA: 10 seconds)
-time ./ns_vqa_dart/scripts/states/placing_v003.sh (ETA: 38 minutes)
-
-time ./ns_vqa_dart/scripts/states/process_placing_v003.sh (ETA: 3 minutes)
-time ./ns_vqa_dart/scripts/dash_v005_20K/combine.sh (ETA 4 seconds)
+time ./ns_vqa_dart/scripts/planning_v006/01_generate_states.sh
+time ./ns_vqa_dart/scripts/placing_v006/01_generate_states.sh
 ```
 
-Step 2. Zip, transfer, and unzip the states to the machine where you will be
-running Unity. Note: Run this on the unity machine.
+Step 2. On the Unity machine, run the following to transfer the states to the
+Unity machine.
+(ETA: 1 minute 22 seconds)
 
 ```
-cd ~/mguo/data/states/full
-time zip -r dash_v005_20K.zip dash_v005_20K (1 second)
-time ./ns_vqa_dart/scripts/dash_v005_20K/transfer_states.sh (1 minute 22 seconds)
+time ./ns_vqa_dart/scripts/planning_v006/02_transfer_states.sh
+time ./ns_vqa_dart/scripts/placing_v006/02_transfer_states.sh
 ```
 
-Step 3. Generate Unity images from the states. (ETA: 1 hour 30 minutes)
+Step 3. Generate Unity images from the states, and transfer the images to the 
+machine where training will occur. 
+
+(ETA: 1 hour 30 minutes for generation, 3 
+hours for transfer)
+
 Note: Currently you need to update the `end_id` of the `DatasetLoader` in the
 script.
-```
-rm -rf ~/workspace/lucas/unity/Captures/temp
-time python demo/run_unity_from_states.py --states_dir ~/data/states/dash_v005_20K
-```
-
-Step 4. Zip up and scp the generated Unity data to the machine where 
-training will occur.
 
 ```
-# If the directory already exists:
-rm -rf ~/data/dash_v005_20K/unity_output
-mkdir -p ~/data/dash_v005_20K/unity_output
-time cp -r ~/workspace/lucas/unity/Captures/temp ~/data/dash_v005_20K/unity_output/images
-time cp -r ~/data/temp_unity_data ~/data/dash_v005_20K/unity_output/json
-
-# Zip up the data (ETA: 15 minutes)
-cd ~/data
-time zip -r dash_v005_20K.zip dash_v005_20K
-
-# Transfer the the data
-# ETA: 
-#   100: 1 minute 30 seconds
-#   20K: 1 hour 45 minutes
-# WARNING: Make sure there is enough space in sydney!
-time rsync -azP dash_v005_20K.zip sydney:~/mguo/data/datasets/dash_v005_20K/
+time ./ns_vqa_dart/scripts/planning_v006/03_generate_unity_images.sh
+time ./ns_vqa_dart/scripts/placing_v006/03_generate_unity_images.sh
 ```
 
-Unzip the data.
-ETA:
-- 100: 1 second
-- 20K: 1 minute 12 seconds
-WARNING: Make sure there is enough space in sydney!
-```
-cd ~/mguo/data/datasets/dash_v005_20K
-time unzip dash_v005_20K.zip
-cd dash_v005_20K
-mv unity_output ../
-cd ..
-du -sh ./dash_v005_20K  # Make sure this folder is empty
-rm -rf dash_v005_20K
-rm dash_v005_20K.zip
-```
+Step 4. Generate the dataset and run training and evaluation.
 
-Step 5. Generate the dataset for training and testing.
-ETA: 
-- 100: 7 seconds
-- 20K: 33 minutes
+ETA: 30 minutes for generation, 3 hours for training
+WARNING: Make sure sydney has enough space before running this! Roughly 120 GB
+of space is needed.
+
 
 ```
-# WARNING: Make sure to clear up space before running this!
-time ./ns_vqa_dart/scripts/dash_v005_20K/generate.sh
-```
-
-Step 6. (Optional) Check whether there are any corrupt pickle files.
-
-```
-./ns_vqa_dart/scripts/dash_v005_20K/check_pickles.sh
-```
-
-## Training and testing the vision module on datasets
-
-To run training and testing on a tiny subset of the dataset for a few 
-iterations as a dry run:
-
-```
-time ./ns_vqa_dart/scripts/dash_v005_20K/dry_run.sh
-```
-
-To run training and testing on the full dataset:
-
-```
-time ./ns_vqa_dart/scripts/dash_v005_20K/run.sh
+./ns_vqa_dart/scripts/planning_v006/04_generate_and_run.sh
+./ns_vqa_dart/scripts/placing_v006/04_generate_and_run.sh
 ```
 
 ## To visualize results in an HTML webpage
