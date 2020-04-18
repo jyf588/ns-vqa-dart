@@ -28,7 +28,7 @@ versions:
 Step 1. Generate states for planning and placing. (ETA: 40 minutes)
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003/01_generate_states.sh
+time ./ns_vqa_dart/scripts/planning_v003_100/01_generate_states.sh
 time ./ns_vqa_dart/scripts/placing_v006/01_generate_states.sh
 ```
 
@@ -37,7 +37,7 @@ Unity machine.
 (ETA: 1 minute 22 seconds)
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003/02_transfer_states.sh
+time ./ns_vqa_dart/scripts/planning_v003_100/02_transfer_states.sh
 time ./ns_vqa_dart/scripts/placing_v006/02_transfer_states.sh
 ```
 
@@ -51,7 +51,7 @@ Note: Currently you need to update the `end_id` of the `DatasetLoader` in the
 script.
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003/03_generate_unity_images.sh
+time ./ns_vqa_dart/scripts/planning_v003_100/03_generate_unity_images.sh
 time ./ns_vqa_dart/scripts/placing_v006/03_generate_unity_images.sh
 ```
 

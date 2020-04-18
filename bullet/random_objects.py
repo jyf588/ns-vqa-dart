@@ -20,9 +20,9 @@ class RandomObjectsGenerator:
         x_bounds: Tuple[float],
         y_bounds: Tuple[float],
         z_bounds: Tuple[float],
-        mass_bounds: Tuple[float],
-        mu_bounds: Tuple[float],
         position_mode: str,
+        mass_bounds: Optional[Tuple[float]] = None,
+        mu_bounds: Optional[Tuple[float]] = None,
     ):
         """
         Args:
@@ -138,10 +138,6 @@ class RandomObjectsGenerator:
         shape = random.choice(self.shapes)
         radius, height = self.generate_random_size(shape=shape)
         color = generate_random_color()
-        mass = self.uniform_sample(
-            low=self.mass_bounds[0], high=self.mass_bounds[1]
-        )
-        mu = self.uniform_sample(low=self.mu_bounds[0], high=self.mu_bounds[1])
         position = self.generate_random_xyz(
             self.x_bounds, self.y_bounds, self.z_bounds
         )
@@ -159,9 +155,16 @@ class RandomObjectsGenerator:
             "height": height,
             "position": position,
             "orientation": [0.0, 0.0, 0.0, 1.0],
-            "mass": mass,
-            "mu": mu,
         }
+        if self.mass_bounds is not None:
+            odict["mass"] = self.uniform_sample(
+                low=self.mass_bounds[0], high=self.mass_bounds[1]
+            )
+        if self.mu_bounds is not None:
+            odict["mu"] = self.uniform_sample(
+                low=self.mu_bounds[0], high=self.mu_bounds[1]
+            )
+
         return odict
 
     def generate_n_objects(self) -> int:

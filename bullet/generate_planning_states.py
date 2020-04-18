@@ -51,7 +51,6 @@ def main(args: argparse.Namespace):
             odicts=odicts, start_id=0
         )
         state = {"objects": oid2odicts}
-        pprint.pprint(state)
         util.save_pickle(
             path=os.path.join(args.output_dir, f"{sid:06}.p"), data=state
         )
