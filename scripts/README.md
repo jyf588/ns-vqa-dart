@@ -4,10 +4,10 @@ First, here is a changelog of dataset versions and the diffs between successive
 versions:
 
 - `dash_v006` (April 17, 2020)
-  - Split into two datasets: `planning_v006` and `placing_v006`.
+  - Split into two datasets: `planning_v003` and `placing_v003`.
   - Change the camera "look at" locations:
-    - `planning_v006`: Instead of looking at every single object, look once at the center of the distribution of object locations and heights.
-    - `placing_v006`: Instead of looking at every single object, look once at the top of the bottom object.
+    - `planning_v003`: Instead of looking at every single object, look once at the center of the distribution of object locations and heights.
+    - `placing_v003`: Instead of looking at every single object, look once at the top of the bottom object.
   - FIX: Shadow bias is removed, now shadow and object are joined instead of 
   having a gap between them.
 - `dash_v005` (April 14, 2020)
@@ -63,7 +63,7 @@ of space is needed.
 
 
 ```
-./ns_vqa_dart/scripts/planning_v003/04_generate_and_run.sh
+time ./ns_vqa_dart/scripts/planning_v003_100/04_generate_and_run.sh
 ./ns_vqa_dart/scripts/placing_v006/04_generate_and_run.sh
 ```
 
