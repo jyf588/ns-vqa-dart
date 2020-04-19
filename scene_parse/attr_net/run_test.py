@@ -64,6 +64,7 @@ def main():
     metrics.compute_metrics(
         cam_dir=opt.cam_dir,
         sid2info=sid2info,
+        camera_control=opt.camera_control,
         coordinate_frame=opt.coordinate_frame,
     )
 

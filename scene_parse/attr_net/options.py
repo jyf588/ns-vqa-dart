@@ -100,6 +100,12 @@ class BaseOptions:
         #     help="If true, predicts the z direction vector in world coordinates.",
         # )
         self.parser.add_argument(
+            "--camera_control",
+            type=str,
+            choices=["all", "center"],
+            help="The method of controlling the camera.",
+        )
+        self.parser.add_argument(
             "--coordinate_frame",
             choices=["world", "camera", "unity_camera"],
             help="The coordinate frame to train on.",

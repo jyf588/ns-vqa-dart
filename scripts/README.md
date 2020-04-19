@@ -28,7 +28,7 @@ versions:
 Step 1. Generate states for planning and placing. (ETA: 40 minutes)
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003_100/01_generate_states.sh
+time ./ns_vqa_dart/scripts/planning_v003_20K/01_generate_states.sh
 time ./ns_vqa_dart/scripts/placing_v006/01_generate_states.sh
 ```
 
@@ -37,7 +37,7 @@ Unity machine.
 (ETA: 1 minute 22 seconds)
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003_100/02_transfer_states.sh
+time ./ns_vqa_dart/scripts/planning_v003_20K/02_transfer_states.sh
 time ./ns_vqa_dart/scripts/placing_v006/02_transfer_states.sh
 ```
 

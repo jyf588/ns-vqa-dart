@@ -84,6 +84,7 @@ def main(args: argparse.Namespace):
                 odict=odict,
                 img_dir=args.img_dir,
                 cam_dir=args.cam_dir,
+                camera_control=args.camera_control,
             )
 
             # Skip over the example if there are issues with the example (e.g.,
@@ -113,9 +114,23 @@ def main(args: argparse.Namespace):
     print(f"Saved partition. Train: {train}\tValidation: {val}\tTest: {test}")
 
 
-def load_X_and_y(sid: int, oid: int, odict: Dict, img_dir: str, cam_dir: str):
+def load_X_and_y(
+    sid: int,
+    oid: int,
+    odict: Dict,
+    img_dir: str,
+    cam_dir: str,
+    camera_control: str,
+):
+    if camera_control == "all":
+        cam_tid = oid
+    elif camera_control == "center":
+        cam_tid = 0
+    else:
+        raise ValueError(f"Invalid camera control {camera_control}")
+
     # Load the image and segmentation for the object.
-    rgb, seg = load_rgb_and_seg(img_dir=img_dir, sid=sid, oid=oid)
+    rgb, seg = load_rgb_and_seg(img_dir=img_dir, sid=sid, cam_tid=cam_tid)
 
     # TODO: Exclude example if mask area is zero.
     X = dash_object.compute_X(oid=oid, img=rgb, seg=seg, keep_occluded=False)
@@ -128,7 +143,7 @@ def load_X_and_y(sid: int, oid: int, odict: Dict, img_dir: str, cam_dir: str):
     # frame.
     if args.coordinate_frame in ["camera", "unity_camera"]:
         cam_position, cam_orientation = load_camera_pose(
-            cam_dir=cam_dir, sid=sid, oid=oid
+            cam_dir=cam_dir, sid=sid, cam_tid=cam_tid
         )
     else:
         camera = None
@@ -142,7 +157,7 @@ def load_X_and_y(sid: int, oid: int, odict: Dict, img_dir: str, cam_dir: str):
 
 
 def load_rgb_and_seg(
-    img_dir: str, sid: int, oid: int
+    img_dir: str, sid: int, cam_tid: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the RGB image and segmentation map for a given scene.
 
@@ -163,8 +178,8 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{oid}.png")
-    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{oid}.png")
+    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{cam_tid}.png")
+    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{cam_tid}.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
 
@@ -197,7 +212,7 @@ def seg_img_to_map(seg_img):
     return seg
 
 
-def load_camera_pose(cam_dir: str, sid: int, oid: int) -> BulletCamera:
+def load_camera_pose(cam_dir: str, sid: int, cam_tid: int) -> BulletCamera:
     """Creates a camera with same parameters as camera used to capture images
     for the specified object in the specified scene.
 
@@ -210,7 +225,7 @@ def load_camera_pose(cam_dir: str, sid: int, oid: int) -> BulletCamera:
         cam: A BulletCamera.
     """
     path = os.path.join(cam_dir, f"{sid:06}.json")
-    params = util.load_json(path=path)[f"{oid}"]
+    params = util.load_json(path=path)[f"{cam_tid}"]
     position = params["camera_position"]
     orientation = params["camera_orientation"]
     return position, orientation
@@ -275,6 +290,13 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="The end scene ID to include in the dataset.",
+    )
+    parser.add_argument(
+        "--camera_control",
+        required=True,
+        type=str,
+        choices=["all", "center"],
+        help="The method of controlling the camera.",
     )
     parser.add_argument(
         "--coordinate_frame",
