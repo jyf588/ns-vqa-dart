@@ -37,7 +37,7 @@ Unity machine.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/02_transfer_states.sh
-time ./ns_vqa_dart/scripts/placing_v003_100/02_transfer_states.sh
+time ./ns_vqa_dart/scripts/placing_v003_2K_100/02_transfer_states.sh
 ```
 
 Step 3. Generate Unity images from the states, and transfer the images to the 
@@ -51,7 +51,7 @@ script.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/03_generate_unity_images.sh
-time ./ns_vqa_dart/scripts/placing_v003_100/03_generate_unity_images.sh
+time ./ns_vqa_dart/scripts/placing_v003_2K_100/03_generate_unity_images.sh
 ```
 
 Step 4. Generate the dataset and run training and evaluation.
@@ -63,7 +63,7 @@ of space is needed.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/04_generate_and_run.sh
-./ns_vqa_dart/scripts/placing_v003_100/04_generate_and_run.sh
+./ns_vqa_dart/scripts/placing_v003_2K_100/04_generate_and_run.sh
 ```
 
 ## To visualize results in an HTML webpage
