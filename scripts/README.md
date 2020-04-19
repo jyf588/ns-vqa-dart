@@ -3,8 +3,7 @@
 First, here is a changelog of dataset versions and the diffs between successive
 versions:
 
-- `dash_v006` (April 17, 2020)
-  - Split into two datasets: `planning_v003` and `placing_v003`.
+- `planning_v003` and `placing_v003` (April 17, 2020)
   - Change the camera "look at" locations:
     - `planning_v003`: Instead of looking at every single object, look once at the center of the distribution of object locations and heights.
     - `placing_v003`: Instead of looking at every single object, look once at the top of the bottom object.
@@ -29,7 +28,7 @@ Step 1. Generate states for planning and placing. (ETA: 40 minutes)
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/01_generate_states.sh
-time ./ns_vqa_dart/scripts/placing_v006/01_generate_states.sh
+time ./ns_vqa_dart/scripts/placing_v003_2K_100/01_generate_states.sh
 ```
 
 Step 2. On the Unity machine, run the following to transfer the states to the
@@ -38,7 +37,7 @@ Unity machine.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/02_transfer_states.sh
-time ./ns_vqa_dart/scripts/placing_v006/02_transfer_states.sh
+time ./ns_vqa_dart/scripts/placing_v003_100/02_transfer_states.sh
 ```
 
 Step 3. Generate Unity images from the states, and transfer the images to the 
@@ -52,7 +51,7 @@ script.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/03_generate_unity_images.sh
-time ./ns_vqa_dart/scripts/placing_v006/03_generate_unity_images.sh
+time ./ns_vqa_dart/scripts/placing_v003_100/03_generate_unity_images.sh
 ```
 
 Step 4. Generate the dataset and run training and evaluation.
@@ -64,7 +63,7 @@ of space is needed.
 
 ```
 time ./ns_vqa_dart/scripts/planning_v003_20K/04_generate_and_run.sh
-./ns_vqa_dart/scripts/placing_v006/04_generate_and_run.sh
+./ns_vqa_dart/scripts/placing_v003_100/04_generate_and_run.sh
 ```
 
 ## To visualize results in an HTML webpage

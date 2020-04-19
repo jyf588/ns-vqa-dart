@@ -79,6 +79,7 @@ def main(args: argparse.Namespace):
 
 
 if __name__ == "__main__":
+    print("*****complete_states.py*****")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--src_dir",
@@ -93,4 +94,5 @@ if __name__ == "__main__":
         help="The destination directory to save the full, complete states.",
     )
     args = parser.parse_args()
+    pprint.pprint(vars(args))
     main(args=args)

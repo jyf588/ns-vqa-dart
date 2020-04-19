@@ -107,6 +107,7 @@ def main(args: argparse.Namespace):
 
 
 if __name__ == "__main__":
+    print("*****add_surrounding_states.py*****")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--src_dir",
@@ -122,6 +123,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    print("Arguments:")
     pprint.pprint(vars(args))
     main(args)
