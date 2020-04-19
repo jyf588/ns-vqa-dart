@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=stacking_v003_2K_100
-IMG_SET=stacking_v003_2K_100
-CAM_SET=stacking_v003_2K_100
-DATA_SET=stacking_v003_2K_100
-OUTPUT_SET=stacking_v003_2K_100
+STATES_SET=stacking_v003_2K_20K
+IMG_SET=stacking_v003_2K_20K
+CAM_SET=stacking_v003_2K_20K
+DATA_SET=stacking_v003_2K_20K
+OUTPUT_SET=stacking_v003_2K_20K
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -15,14 +15,14 @@ PRED_PATH=$RUN_DIR/pred.json
 HTML_DIR=$ROOT_DIR/html/$OUTPUT_SET
 
 CHECKPOINT_EVERY=10000
-NUM_ITERS=600000
+NUM_ITERS=100
 TRAIN_START=0
-TRAIN_END=80
-EVAL_START=80
-EVAL_END=100
+TRAIN_END=16000
+EVAL_START=16000
+EVAL_END=20000
 CAMERA_CONTROL=stack
 COORD_FRAME=unity_camera
-HTML_N_SCENES=30
+HTML_N_SCENES=5
 
 time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
     --dataset dash \
@@ -72,6 +72,7 @@ python ns_vqa_dart/bullet/html_images.py \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --n_scenes $HTML_N_SCENES
+
 
 python ns_vqa_dart/bullet/html.py \
     --html_dir $HTML_DIR \
