@@ -20,6 +20,7 @@ TRAIN_START=0
 TRAIN_END=16000
 EVAL_START=16000
 EVAL_END=20000
+CAMERA_CONTROL=center
 COORD_FRAME=unity_camera
 HTML_N_SCENES=30
 
@@ -43,6 +44,7 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --eval_end_id $TRAIN_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
+    --camera_control $CAMERA_CONTROL \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8
@@ -55,6 +57,7 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --eval_end_id $EVAL_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
+    --camera_control $CAMERA_CONTROL \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --num_workers 8
@@ -65,6 +68,7 @@ python ns_vqa_dart/bullet/html_images.py \
     --img_dir $IMG_DIR \
 	--pred_path $PRED_PATH \
     --html_dir $HTML_DIR \
+    --camera_control $CAMERA_CONTROL \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --n_scenes $HTML_N_SCENES
