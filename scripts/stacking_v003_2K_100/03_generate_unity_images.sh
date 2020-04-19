@@ -1,6 +1,6 @@
 rm -rf ~/workspace/lucas/unity/Captures/temp
 rm -rf ~/data/temp_unity_data
-time python demo/run_unity_from_states.py \
+time python system/run_unity_from_states.py \
     --states_dir ~/data/states/stacking_v003_2K_100 \
     --start_id 0 \
     --end_id 100 \
