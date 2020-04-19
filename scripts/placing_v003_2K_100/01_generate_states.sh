@@ -15,8 +15,7 @@ time python ns_vqa_dart/bullet/states/complete_states.py \
 
 time python ns_vqa_dart/bullet/states/add_surrounding_states.py \
     --src_dir $FULL_STATES_DIR/placing_v003_2K_100 \
-    --dst_dir $FULL_STATES_DIR/placing_v003_surround_2K_100
+    --dst_dir $FULL_STATES_DIR/placing_v003_2K_100
 
 cd $FULL_STATES_DIR
-time zip -r placing_v003_surround_2K_100.zip placing_v003_surround_2K_100
-
+time zip -r placing_v003_2K_100.zip placing_v003_2K_100

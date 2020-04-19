@@ -50,9 +50,9 @@ def main(args: argparse.Namespace):
             print(f"user_input: {user_input}. Exiting.")
             sys.exit(0)
     os.makedirs(args.dst_dir)
-    for fname in sampled_fnames:
+    for dst_sid, fname in enumerate(sampled_fnames):
         src_path = os.path.join(args.src_dir, fname)
-        dst_path = os.path.join(args.dst_dir, fname)
+        dst_path = os.path.join(args.dst_dir, f"{dst_sid:06}.p")
         shutil.copy(src_path, dst_path)
     print(f"Number of sampled files: {len(sampled_fnames)}")
 
