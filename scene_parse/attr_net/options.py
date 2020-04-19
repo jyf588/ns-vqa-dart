@@ -102,7 +102,7 @@ class BaseOptions:
         self.parser.add_argument(
             "--camera_control",
             type=str,
-            choices=["all", "center"],
+            choices=["all", "center", "stack"],
             help="The method of controlling the camera.",
         )
         self.parser.add_argument(

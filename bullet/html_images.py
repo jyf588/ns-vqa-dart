@@ -76,18 +76,12 @@ class HTMLImageGenerator:
             for oid, info in sid2info[sid_str].items():
                 oid = int(oid)
 
-                if self.args.camera_control == "all":
-                    cam_tid = oid
-                elif self.args.camera_control == "center":
-                    cam_tid = 0
-                else:
-                    raise ValueError(
-                        f"Invalid camera control {self.args.camera_control}"
-                    )
-
                 # Convert from vectors to state dictionaries.
                 cam_position, cam_orientation = gen_dataset.load_camera_pose(
-                    args.cam_dir, sid=sid, cam_tid=cam_tid
+                    args.cam_dir,
+                    sid=sid,
+                    oid=oid,
+                    camera_control=self.args.camera_control,
                 )
                 gt_state = dash_object.y_vec_to_dict(
                     y=info["labels"],
@@ -385,7 +379,7 @@ if __name__ == "__main__":
         "--camera_control",
         required=True,
         type=str,
-        choices=["all", "center"],
+        choices=["all", "center", "stack"],
         help="The method of controlling the camera.",
     )
     parser.add_argument(

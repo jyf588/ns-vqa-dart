@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=planning_v003_100
-IMG_SET=planning_v003_100
-CAM_SET=planning_v003_100
-DATA_SET=planning_v003_100
-OUTPUT_SET=planning_v003_100
+STATES_SET=stacking_v003_2K_100
+IMG_SET=stacking_v003_2K_100
+CAM_SET=stacking_v003_2K_100
+DATA_SET=stacking_v003_2K_100
+OUTPUT_SET=stacking_v003_2K_100
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -20,7 +20,7 @@ TRAIN_START=0
 TRAIN_END=80
 EVAL_START=80
 EVAL_END=100
-CAMERA_CONTROL=center
+CAMERA_CONTROL=stack
 COORD_FRAME=unity_camera
 HTML_N_SCENES=5
 

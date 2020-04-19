@@ -76,8 +76,17 @@ def main(args: argparse.Namespace):
             path=os.path.join(args.states_dir, f"{sid:06}.p")
         )
 
+        oids = list(state["objects"].keys())
+
+        # Only generate for the first two objects if the camera control is
+        # stacking. Here we are assuming that the first two objects in the
+        # state dictionary always corresponds to the two objects in the stack.
+        if args.camera_control == "stack":
+            oids = oids[:2]
+
         # Save the input data.
-        for oid, odict in state["objects"].items():
+        for oid in oids:
+            odict = state["objects"][oid]
             X, y = load_X_and_y(
                 sid=sid,
                 oid=oid,
@@ -85,6 +94,7 @@ def main(args: argparse.Namespace):
                 img_dir=args.img_dir,
                 cam_dir=args.cam_dir,
                 camera_control=args.camera_control,
+                coordinate_frame=args.coordinate_frame,
             )
 
             # Skip over the example if there are issues with the example (e.g.,
@@ -121,16 +131,13 @@ def load_X_and_y(
     img_dir: str,
     cam_dir: str,
     camera_control: str,
+    coordinate_frame: str,
 ):
-    if camera_control == "all":
-        cam_tid = oid
-    elif camera_control == "center":
-        cam_tid = 0
-    else:
-        raise ValueError(f"Invalid camera control {camera_control}")
 
     # Load the image and segmentation for the object.
-    rgb, seg = load_rgb_and_seg(img_dir=img_dir, sid=sid, cam_tid=cam_tid)
+    rgb, seg = load_rgb_and_seg(
+        img_dir=img_dir, sid=sid, oid=oid, camera_control=camera_control
+    )
 
     # TODO: Exclude example if mask area is zero.
     X = dash_object.compute_X(oid=oid, img=rgb, seg=seg, keep_occluded=False)
@@ -141,15 +148,15 @@ def load_X_and_y(
 
     # Prepare camera parameters if we are using camera coordinate
     # frame.
-    if args.coordinate_frame in ["camera", "unity_camera"]:
+    if coordinate_frame in ["camera", "unity_camera"]:
         cam_position, cam_orientation = load_camera_pose(
-            cam_dir=cam_dir, sid=sid, cam_tid=cam_tid
+            cam_dir=cam_dir, sid=sid, oid=oid, camera_control=camera_control
         )
     else:
-        camera = None
+        raise ValueError(f"Invalid coordinate frame: {coordinate_frame}")
     y = dash_object.compute_y(
         odict=odict,
-        coordinate_frame=args.coordinate_frame,
+        coordinate_frame=coordinate_frame,
         cam_position=cam_position,
         cam_orientation=cam_orientation,
     )
@@ -157,7 +164,7 @@ def load_X_and_y(
 
 
 def load_rgb_and_seg(
-    img_dir: str, sid: int, cam_tid: int
+    img_dir: str, sid: int, oid: int, camera_control: str
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the RGB image and segmentation map for a given scene.
 
@@ -178,6 +185,7 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
+    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
     rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{cam_tid}.png")
     seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{cam_tid}.png")
     rgb = imageio.imread(uri=rgb_path)
@@ -212,7 +220,19 @@ def seg_img_to_map(seg_img):
     return seg
 
 
-def load_camera_pose(cam_dir: str, sid: int, cam_tid: int) -> BulletCamera:
+def get_camera_target_id(oid: int, camera_control: str):
+    if camera_control == "all":
+        cam_tid = oid
+    elif camera_control in ["center", "stack"]:
+        cam_tid = 0
+    else:
+        raise ValueError(f"Invalid camera control {camera_control}")
+    return cam_tid
+
+
+def load_camera_pose(
+    cam_dir: str, sid: int, oid: int, camera_control: str
+) -> BulletCamera:
     """Creates a camera with same parameters as camera used to capture images
     for the specified object in the specified scene.
 
@@ -224,6 +244,7 @@ def load_camera_pose(cam_dir: str, sid: int, cam_tid: int) -> BulletCamera:
     Returns:
         cam: A BulletCamera.
     """
+    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
     path = os.path.join(cam_dir, f"{sid:06}.json")
     params = util.load_json(path=path)[f"{cam_tid}"]
     position = params["camera_position"]
@@ -295,7 +316,7 @@ if __name__ == "__main__":
         "--camera_control",
         required=True,
         type=str,
-        choices=["all", "center"],
+        choices=["all", "center", "stack"],
         help="The method of controlling the camera.",
     )
     parser.add_argument(

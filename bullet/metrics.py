@@ -134,16 +134,12 @@ def compute_metrics(
             pred = info["pred"]
             labels = info["labels"]
 
-            if camera_control == "all":
-                cam_tid = oid
-            elif camera_control == "center":
-                cam_tid = 0
-            else:
-                raise ValueError(f"Invalid camera control {camera_control}")
-
             # Convert from vectors to dictionaries.
             cam_position, cam_orientation = gen_dataset.load_camera_pose(
-                cam_dir=cam_dir, sid=sid, cam_tid=cam_tid
+                cam_dir=cam_dir,
+                sid=sid,
+                oid=oid,
+                camera_control=camera_control,
             )
             gt_y_dict = dash_object.y_vec_to_dict(
                 y=labels,
