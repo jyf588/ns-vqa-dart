@@ -40,8 +40,8 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $EVAL_START \
-    --eval_end_id $EVAL_END \
+    --eval_start_id $TRAIN_START \
+    --eval_end_id $TRAIN_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --camera_control $CAMERA_CONTROL \
@@ -53,8 +53,8 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $TRAIN_START \
-    --eval_end_id $TRAIN_END \
+    --eval_start_id $EVAL_START \
+    --eval_end_id $EVAL_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --camera_control $CAMERA_CONTROL \

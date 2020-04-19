@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=planning_v003_100
-IMG_SET=planning_v003_100
-CAM_SET=planning_v003_100
-DATA_SET=planning_v003_100
-OUTPUT_SET=planning_v003_100
+STATES_SET=planning_v003_20K
+IMG_SET=planning_v003_20K
+CAM_SET=planning_v003_20K
+DATA_SET=planning_v003_20K
+OUTPUT_SET=planning_v003_20K
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -17,9 +17,9 @@ HTML_DIR=$ROOT_DIR/html/$OUTPUT_SET
 CHECKPOINT_EVERY=10000
 NUM_ITERS=600000
 TRAIN_START=0
-TRAIN_END=80
-EVAL_START=80
-EVAL_END=100
+TRAIN_END=16000
+EVAL_START=16000
+EVAL_END=20000
 COORD_FRAME=unity_camera
 HTML_N_SCENES=30
 
@@ -39,8 +39,8 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $EVAL_START \
-    --eval_end_id $EVAL_END \
+    --eval_start_id $TRAIN_START \
+    --eval_end_id $TRAIN_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --coordinate_frame $COORD_FRAME \
@@ -51,8 +51,8 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --dataset dash \
     --run_dir $RUN_DIR \
     --dataset_dir $DATA_DIR \
-    --eval_start_id $TRAIN_START \
-    --eval_end_id $TRAIN_END \
+    --eval_start_id $EVAL_START \
+    --eval_end_id $EVAL_END \
     --output_path $PRED_PATH \
     --load_checkpoint_path $RUN_DIR/checkpoint_best.pt \
     --coordinate_frame $COORD_FRAME \

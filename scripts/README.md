@@ -51,7 +51,7 @@ Note: Currently you need to update the `end_id` of the `DatasetLoader` in the
 script.
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003_100/03_generate_unity_images.sh
+time ./ns_vqa_dart/scripts/planning_v003_20K/03_generate_unity_images.sh
 time ./ns_vqa_dart/scripts/placing_v006/03_generate_unity_images.sh
 ```
 
@@ -63,7 +63,7 @@ of space is needed.
 
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003_100/04_generate_and_run.sh
+time ./ns_vqa_dart/scripts/planning_v003_20K/04_generate_and_run.sh
 ./ns_vqa_dart/scripts/placing_v006/04_generate_and_run.sh
 ```
 
