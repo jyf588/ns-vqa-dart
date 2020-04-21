@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=stacking_v003_2K_20K
-IMG_SET=stacking_v003_2K_20K
-CAM_SET=stacking_v003_2K_20K
-DATA_SET=stacking_v003_2K_20K
-OUTPUT_SET=stacking_v003_2K_20K
+STATES_SET=placing_v003_10_100
+IMG_SET=placing_v003_10_100
+CAM_SET=placing_v003_10_100
+DATA_SET=placing_v003_10_100
+OUTPUT_SET=placing_v003_10_100
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -17,14 +17,14 @@ TRAIN_PLOT_PATH=$RUN_DIR/plots/train.png
 VAL_PLOT_PATH=$RUN_DIR/plots/val.png
 
 CHECKPOINT_EVERY=10000
-NUM_ITERS=600000
+NUM_ITERS=100
 TRAIN_START=0
-TRAIN_END=16000
-VAL_START=16000
-VAL_END=20000
+TRAIN_END=80
+VAL_START=80
+VAL_END=100
 CAMERA_CONTROL=stack
 COORD_FRAME=unity_camera
-HTML_N_SCENES=30
+HTML_N_SCENES=5
 
 time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
     --dataset dash \
@@ -32,8 +32,8 @@ time python ns_vqa_dart/scene_parse/attr_net/run_train.py \
     --dataset_dir $DATA_DIR \
     --train_start_id $TRAIN_START \
     --train_end_id $TRAIN_END \
-    --eval_start_id $EVAL_START \
-    --eval_end_id $EVAL_END \
+    --eval_start_id $VAL_START \
+    --eval_end_id $VAL_END \
     --checkpoint_every $CHECKPOINT_EVERY \
     --num_iters $NUM_ITERS \
     --num_workers 8
@@ -76,6 +76,7 @@ python ns_vqa_dart/bullet/html_images.py \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --n_scenes $HTML_N_SCENES
+
 
 python ns_vqa_dart/bullet/html.py \
     --html_dir $HTML_DIR \
