@@ -1,4 +1,6 @@
-cd ~/mguo/data/datasets
+ROOT_DIR=/media/sdc3/mguo
+
+cd /data/datasets
 mkdir placing_v003_10_100
 mv placing_v003_10_100.zip placing_v003_10_100/
 cd placing_v003_10_100
