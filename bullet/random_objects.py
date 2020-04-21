@@ -14,7 +14,7 @@ class RandomObjectsGenerator:
         obj_dist_thresh: float,
         max_retries: int,
         shapes: List[str],
-        # colors: List[str],
+        colors: List[str],
         radius_bounds: Tuple[float],
         height_bounds: Tuple[float],
         x_bounds: Tuple[float],
@@ -53,7 +53,7 @@ class RandomObjectsGenerator:
         # Define randomizable parameters.
         self.n_objs_bounds = n_objs_bounds
         self.shapes = shapes
-        # self.colors = colors
+        self.colors = colors
         self.radius_bounds = radius_bounds
         self.height_bounds = height_bounds
         self.x_bounds = x_bounds
@@ -137,7 +137,7 @@ class RandomObjectsGenerator:
         """
         shape = random.choice(self.shapes)
         radius, height = self.generate_random_size(shape=shape)
-        color = generate_random_color()
+        color = random.choice(self.colors)
         position = self.generate_random_xyz(
             self.x_bounds, self.y_bounds, self.z_bounds
         )

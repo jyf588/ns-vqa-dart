@@ -292,6 +292,7 @@ def compute_input_scene_img(
     Returns:
         input_img: The generated input image for the scene.
     """
+    img = img.copy()
     # Initialize a tensor of specified size for the image we will generate.
     input_img = np.zeros((H, W, 3), dtype=np.uint8)
 

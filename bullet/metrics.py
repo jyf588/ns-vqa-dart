@@ -81,7 +81,7 @@ class Metrics:
             pos_diff = diff.copy()
             neg_diff = diff.copy()
 
-            if type(diff) == np.float64:
+            if type(diff) in [np.float64, np.float32]:
                 pos_diff = diff if diff >= 0.0 else 0.0
                 neg_diff = diff if diff <= 0.0 else 0.0
             elif type(diff) == np.ndarray:

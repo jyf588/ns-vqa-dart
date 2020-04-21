@@ -185,16 +185,44 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
-    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{cam_tid}.png")
-    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{cam_tid}.png")
-    rgb = imageio.imread(uri=rgb_path)
-    seg_img = imageio.imread(uri=seg_path)
+    rgb, seg_img = load_rgb_and_seg_img(
+        img_dir=img_dir, sid=sid, oid=oid, camera_control=camera_control
+    )
 
     # Convert the segmentation image into an array.
     # TODO: Do this before saving the segmentation.
     seg = seg_img_to_map(seg_img)
     return rgb, seg
+
+
+def load_rgb_and_seg_img(
+    img_dir: str, sid: int, oid: int, camera_control: str
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Loads the RGB image and segmentation map for a given scene.
+
+    Args:
+        img_dir: The directory containing the images with the structure:
+            <img_dir>/
+                img/
+                    <sid>_<oid>.png
+                    ...
+                id/
+                    <sid>_<oid>.png
+                    ...
+        sid: The scene ID.
+        oid: The object ID.
+
+    Returns:
+        rgb: The RGB image, of shape (H, W, 3)
+        segmentation: A 2D segmentation map where each pixel stores the object 
+            ID it belongs to.
+    """
+    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
+    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{cam_tid}.png")
+    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{cam_tid}.png")
+    rgb = imageio.imread(uri=rgb_path)
+    seg_img = imageio.imread(uri=seg_path)
+    return rgb, seg_img
 
 
 def load_third_person_image(img_dir: str, sid: str):
