@@ -63,10 +63,15 @@ class HTMLImageGenerator:
         i = 0
         tag2img = {}
         sid_strings = list(sid2info.keys())
-        sorted_sample_idxs = sorted(
-            random.sample(range(len(sid_strings)), args.n_scenes)
-        )
-        sid_strings_sampled = [sid_strings[idx] for idx in sorted_sample_idxs]
+        if args.n_scenes > len(sid_strings):
+            sid_strings_sampled = sid_strings
+        else:
+            sorted_sample_idxs = sorted(
+                random.sample(range(len(sid_strings)), args.n_scenes)
+            )
+            sid_strings_sampled = [
+                sid_strings[idx] for idx in sorted_sample_idxs
+            ]
         # random.shuffle(sid_strings)
         for sid_str in tqdm(sid_strings_sampled):
             sid = int(sid_str)
