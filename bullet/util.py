@@ -6,6 +6,8 @@ import pickle
 import pybullet
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
+import shutil
+import sys
 from typing import *
 
 
@@ -243,7 +245,20 @@ def euler_to_up(euler: List[float]) -> List[float]:
     return up
 
 
-""" JSON and pickle I/O utility functions. """
+""" File I/O utility functions. """
+
+
+def delete_and_create_dir(dir: str):
+    if os.path.exists(dir):
+        user_input = input(
+            f"dst dir already exists: {dir}. Delete and continue? [Y/n]"
+        )
+        if user_input == "Y":
+            shutil.rmtree(dir)
+        else:
+            print(f"user_input: {user_input}. Exiting.")
+            sys.exit(0)
+    os.makedirs(dir)
 
 
 def load_json(path: str) -> Any:

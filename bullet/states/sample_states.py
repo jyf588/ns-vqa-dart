@@ -9,11 +9,14 @@ The output generated file structure will be:
         <sid>.p
 """
 import argparse
+import collections
 import os
 import pprint
 import random
 import shutil
 import sys
+
+from ns_vqa_dart.bullet import util
 
 
 def main(args: argparse.Namespace):
@@ -21,6 +24,7 @@ def main(args: argparse.Namespace):
 
     src_fnames = os.listdir(args.src_dir)
     n_src = len(src_fnames)
+    print(f"Number of source frames: {n_src}")
 
     # Verify that the sample size is less than or equal to the number of
     # source files.
@@ -36,20 +40,18 @@ def main(args: argparse.Namespace):
     print(f"sorted_sample_idxs: {len(sorted_sample_idxs)}")
 
     # Select the sampled idxs.
-    sampled_fnames = [sorted_fnames[idx] for idx in sorted_sample_idxs]
+    sampled_fnames = []
+    trial_idx2count = collections.Counter()
+    for idx in sorted_sample_idxs:
+        sampled_fnames.append(sorted_fnames[idx])
+        trial_idx = idx // 100
+        trial_idx2count[trial_idx] += 1
     print(f"sampled_fnames: {len(sampled_fnames)}")
+    avg_per_trial = sum(list(trial_idx2count.values())) / len(trial_idx2count)
+    print(f"Average number of frames sampled per trial: {avg_per_trial}")
 
     # Copy the sampled files into the destination directory.
-    if os.path.exists(args.dst_dir):
-        user_input = input(
-            f"dst dir already exists: {args.dst_dir}. Delete and continue? [Y/n]"
-        )
-        if user_input == "Y":
-            shutil.rmtree(args.dst_dir)
-        else:
-            print(f"user_input: {user_input}. Exiting.")
-            sys.exit(0)
-    os.makedirs(args.dst_dir)
+    util.delete_and_create_dir(dir=args.dst_dir)
     for dst_sid, fname in enumerate(sampled_fnames):
         src_path = os.path.join(args.src_dir, fname)
         dst_path = os.path.join(args.dst_dir, f"{dst_sid:06}.p")

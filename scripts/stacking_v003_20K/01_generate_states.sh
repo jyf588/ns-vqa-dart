@@ -17,8 +17,8 @@ time python enjoy.py \
     --grasp_pi_name "0404_0_n_20_40" \
     --use_obj_heights 1 \
     --save_states 1 \
-    --states_dir $PARTIAL_STATES_DIR/stacking_v003_2K \
-    --n_trials 2000
+    --states_dir $PARTIAL_STATES_DIR/stacking_v003_20K \
+    --n_trials 20000
 
 time python ns_vqa_dart/bullet/states/sample_states.py \
     --seed 1 \

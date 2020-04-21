@@ -66,6 +66,7 @@ def main():
         sid2info=sid2info,
         camera_control=opt.camera_control,
         coordinate_frame=opt.coordinate_frame,
+        plot_path=opt.plot_path,
     )
 
 

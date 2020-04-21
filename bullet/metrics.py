@@ -1,5 +1,6 @@
 import argparse
 import copy
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
@@ -23,7 +24,13 @@ UNITS = {
 
 
 class Metrics:
-    def __init__(self):
+    def __init__(self, plot_path: str):
+        """
+        Args:
+            plot_path: The path to save the plot to.
+        """
+        self.plot_path = plot_path
+
         # Initialize the error counters for various categories.
         self.counts_dict = {k: 0 for k in ["shape", "color"]}
         self.l1_errors_dict = {
@@ -38,6 +45,15 @@ class Metrics:
             "abs": copy.deepcopy(self.l1_errors_dict),
         }
         self.n_total = 0
+
+        # Initialize the structures that will be used to create a scatter plot
+        # of the errors, downstream.
+        self.x = []
+        self.y = []
+        self.errors = []
+
+        # Create the directory for the plot path if it doesn't already exist.
+        os.makedirs(os.path.dirname(plot_path), exist_ok=True)
 
     def add_example(self, gt_dict, pred_dict):
         """Computes errors, and adds them to the running total.
@@ -79,6 +95,19 @@ class Metrics:
             self.reg_errors_dict["neg"][k] += neg_diff
             self.reg_errors_dict["abs"][k] += l1
 
+        # Compute values that will be used for the scatter plot.
+        x_gt, y_gt, _ = gt_dict["position"]
+        self.x.append(x_gt * 100)
+        self.y.append(y_gt * 100)
+        error = (
+            2
+            * np.linalg.norm(
+                np.array(gt_dict["position"] * 100)
+                - np.array(pred_dict["position"] * 100)
+            )
+        ) ** 2
+        self.errors.append(error)
+
         self.n_total += 1
 
     def print(self):
@@ -113,6 +142,16 @@ class Metrics:
                 else:
                     raise ValueError(f"Unrecognized type: {type(v)}")
 
+        # Generate a plot.
+        self.plot()
+
+    def plot(self):
+        # print(self.x)
+        # print(self.y)
+        # print(self.errors)
+        plt.scatter(self.x, self.y, s=self.errors, alpha=0.5)
+        plt.savefig(self.plot_path)
+
 
 def main(args: argparse.Namespace):
     pred_dicts = util.load_json(path=args.pred_path)
@@ -126,8 +165,9 @@ def compute_metrics(
     sid2info: List[Dict],
     camera_control: str,
     coordinate_frame: str,
+    plot_path: str,
 ):
-    metrics = Metrics()
+    metrics = Metrics(plot_path=plot_path)
     for sid in sid2info.keys():
         for oid, info in sid2info[sid].items():
             sid, oid = int(sid), int(oid)

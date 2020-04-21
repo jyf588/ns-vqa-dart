@@ -1,9 +1,9 @@
 ROOT_DIR=~/mguo
-STATES_SET=planning_v003_20K
-IMG_SET=planning_v003_20K
-CAM_SET=planning_v003_20K
-DATA_SET=planning_v003_20K
-OUTPUT_SET=planning_v003_20K
+STATES_SET=stacking_v003_2K_20K
+IMG_SET=stacking_v003_2K_20K
+CAM_SET=stacking_v003_2K_20K
+DATA_SET=stacking_v003_2K_20K
+OUTPUT_SET=stacking_v003_2K_20K
 
 DATA_DIR=$ROOT_DIR/data/datasets/$DATA_SET/data
 STATES_DIR=$ROOT_DIR/data/states/full/$STATES_SET
@@ -13,8 +13,6 @@ CAM_DIR=$ROOT_DIR/data/datasets/$CAM_SET/unity_output/json
 RUN_DIR=$ROOT_DIR/outputs/$OUTPUT_SET
 PRED_PATH=$RUN_DIR/pred.json
 HTML_DIR=$ROOT_DIR/html/$OUTPUT_SET
-TRAIN_PLOT_PATH=$RUN_DIR/plots/train.png
-VAL_PLOT_PATH=$RUN_DIR/plots/val.png
 
 CHECKPOINT_EVERY=10000
 NUM_ITERS=600000
@@ -22,7 +20,7 @@ TRAIN_START=0
 TRAIN_END=16000
 EVAL_START=16000
 EVAL_END=20000
-CAMERA_CONTROL=center
+CAMERA_CONTROL=stack
 COORD_FRAME=unity_camera
 HTML_N_SCENES=30
 
@@ -49,7 +47,6 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --camera_control $CAMERA_CONTROL \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
-    --plot_path $TRAIN_PLOT_PATH \
     --num_workers 8
 
 time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
@@ -63,7 +60,6 @@ time python ns_vqa_dart/scene_parse/attr_net/run_test.py \
     --camera_control $CAMERA_CONTROL \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
-    --plot_path $VAL_PLOT_PATH \
     --num_workers 8
 
 python ns_vqa_dart/bullet/html_images.py \
@@ -76,7 +72,6 @@ python ns_vqa_dart/bullet/html_images.py \
     --coordinate_frame $COORD_FRAME \
     --cam_dir $CAM_DIR \
     --n_scenes $HTML_N_SCENES
-
 
 python ns_vqa_dart/bullet/html.py \
     --html_dir $HTML_DIR \

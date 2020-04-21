@@ -111,6 +111,11 @@ class BaseOptions:
             help="The coordinate frame to train on.",
         )
         self.parser.add_argument(
+            "--plot_path",
+            type=str,
+            help="The path to save the output plot to.",
+        )
+        self.parser.add_argument(
             "--fp16", action="store_true", help="Whether to use FP 16."
         )
         self.parser.add_argument(

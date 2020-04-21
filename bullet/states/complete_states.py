@@ -49,6 +49,8 @@ import ns_vqa_dart.bullet.util as util
 
 
 def main(args: argparse.Namespace):
+    util.delete_and_create_dir(dir=args.dst_dir)
+
     # Loop over each state in the directory.
     for state_fname in tqdm(os.listdir(args.src_dir)):
         # Load the state.
