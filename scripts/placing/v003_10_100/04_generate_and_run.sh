@@ -1,4 +1,6 @@
-cd ~/mguo/data/datasets
+ROOT_DIR=/media/sdc3/mguo
+
+cd $ROOT_DIR/data/datasets
 mkdir placing_v003_10_100
 mv placing_v003_10_100.zip placing_v003_10_100/
 cd placing_v003_10_100
@@ -10,6 +12,6 @@ cd ..
 rm -rf placing_v003_10_100
 cd ~/workspace/pytorch-rl-bullet
 
-time ./ns_vqa_dart/scripts/placing_v003_10_100/generate.sh
-time ./ns_vqa_dart/scripts/placing_v003_10_100/dry_run.sh
-time ./ns_vqa_dart/scripts/placing_v003_10_100/run.sh
+time ./ns_vqa_dart/scripts/placing/v003_10_100/generate.sh
+time ./ns_vqa_dart/scripts/placing/v003_10_100/dry_run.sh
+time ./ns_vqa_dart/scripts/placing/v003_10_100/run.sh
