@@ -45,6 +45,8 @@ import my_pybullet_envs.utils as env_utils
 
 
 def main(args: argparse.Namespace):
+    util.delete_and_create_dir(dir=args.dst_dir)
+
     # For n_objs: We want at least 2 objects total, and minimum number of
     # existing objects is 1 (placing).
     objects_generator = RandomObjectsGenerator(
@@ -53,6 +55,7 @@ def main(args: argparse.Namespace):
         obj_dist_thresh=0.1,
         max_retries=50,
         shapes=["box", "cylinder", "sphere"],
+        colors=["red", "yellow", "green", "blue"],
         radius_bounds=(0.01, 0.07),
         height_bounds=(0.05, 0.20),
         x_bounds=(env_utils.TX_MIN, env_utils.TX_MAX),
@@ -67,7 +70,7 @@ def main(args: argparse.Namespace):
     new_count = 0
 
     # Loop over states in the source directory.
-    fnames = os.listdir(args.src_dir)
+    fnames = sorted(os.listdir(args.src_dir))
     for fname in tqdm(fnames):
         # Load the current state file.
         src_state = util.load_pickle(path=os.path.join(args.src_dir, fname))

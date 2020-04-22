@@ -29,10 +29,10 @@ time python ns_vqa_dart/bullet/states/sample_states.py \
 
 time python ns_vqa_dart/bullet/states/complete_states.py \
     --src_dir $PARTIAL_STATES_DIR/placing_v003_2K_20K \
-    --dst_dir $FULL_STATES_DIR/placing_v003_2K_20K
+    --dst_dir $FULL_STATES_DIR/placing_v003_2K_20K_nosur
 
 time python ns_vqa_dart/bullet/states/add_surrounding_states.py \
-    --src_dir $FULL_STATES_DIR/placing_v003_2K_20K \
+    --src_dir $FULL_STATES_DIR/placing_v003_2K_20K_nosur \
     --dst_dir $FULL_STATES_DIR/placing_v003_2K_20K
 
 cd $FULL_STATES_DIR

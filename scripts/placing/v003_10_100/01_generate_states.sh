@@ -1,4 +1,5 @@
-STATES_DIR=~/mguo/data/states
+ROOT_DIR=/media/sdc3/mguo
+STATES_DIR=$ROOT_DIR/data/states
 PARTIAL_STATES_DIR=$STATES_DIR/partial
 FULL_STATES_DIR=$STATES_DIR/full
 
@@ -28,10 +29,10 @@ time python ns_vqa_dart/bullet/states/sample_states.py \
 
 time python ns_vqa_dart/bullet/states/complete_states.py \
     --src_dir $PARTIAL_STATES_DIR/placing_v003_10_100 \
-    --dst_dir $FULL_STATES_DIR/placing_v003_10_100
+    --dst_dir $FULL_STATES_DIR/placing_v003_10_100_nosur
 
 time python ns_vqa_dart/bullet/states/add_surrounding_states.py \
-    --src_dir $FULL_STATES_DIR/placing_v003_10_100 \
+    --src_dir $FULL_STATES_DIR/placing_v003_10_100_nosur \
     --dst_dir $FULL_STATES_DIR/placing_v003_10_100
 
 cd $FULL_STATES_DIR
