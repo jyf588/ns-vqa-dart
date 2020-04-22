@@ -6,7 +6,7 @@ time python system/run_unity_from_states.py \
     --states_dir ~/data/states/placing_v003_10_100 \
     --start_id 0 \
     --end_id 100 \
-    --camera_control stack \
+    --camera_control position \
     --out_dir /Users/michelleguo/data/temp_unity_data
 
 rm -rf ~/data/placing_v003_10_100/unity_output
