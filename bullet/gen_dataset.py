@@ -66,7 +66,8 @@ RGB2ID = {
 
 
 def main(args: argparse.Namespace):
-    os.makedirs(args.dst_dir, exist_ok=True)
+    util.delete_and_create_dir(dir=args.dst_dir)
+    # os.makedirs(args.dst_dir, exist_ok=True)
 
     paths = []
     # Loop over the scene IDs.
@@ -81,8 +82,16 @@ def main(args: argparse.Namespace):
         # Only generate for the first two objects if the camera control is
         # stacking. Here we are assuming that the first two objects in the
         # state dictionary always corresponds to the two objects in the stack.
-        if args.camera_control == "stack":
+        if args.objects_to_include == 2:
             oids = oids[:2]
+        elif args.objects_to_include == 1:
+            oids = oids[:1]
+        elif args.objects_to_include == -1:
+            pass
+        else:
+            raise ValueError(
+                f"Invalid number of objects to include: {args.objects_to_include}"
+            )
 
         # Save the input data.
         for oid in oids:
@@ -339,6 +348,12 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="The end scene ID to include in the dataset.",
+    )
+    parser.add_argument(
+        "--objects_to_include",
+        required=True,
+        type=int,
+        help="The first N objects to include in the dataset.",
     )
     parser.add_argument(
         "--camera_control",
