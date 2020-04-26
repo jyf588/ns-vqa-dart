@@ -220,3 +220,88 @@ the following command (because `inmoov.git` was updated):
 sudo docker build --no-cache -t openrave-ha:v3 .
 ```
 And then restarted both containers.
+
+## Detectron
+
+Source: https://github.com/facebookresearch/detectron2
+
+### Installation
+
+Create the virtual env:
+
+```
+conda create -n detectron python=3.7 anaconda
+conda activate detectron
+```
+
+The following installation instructions are largely based on the colab notebook: https://colab.research.google.com/drive/16jcaJoc6bCFAQ96jDe2HwtXj7BMD_-m5#scrollTo=QHnVupBBn9eR
+```
+pip install -U torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu102/torch_stable.html
+pip install cython pyyaml==5.1
+pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+pip install opencv
+```
+
+Note: When attemping to install pyyaml, received the following message:
+```
+Installing collected packages: pyyaml
+  Attempting uninstall: pyyaml
+    Found existing installation: PyYAML 5.3.1
+ERROR: Cannot uninstall 'PyYAML'. It is a distutils installed project and thus we cannot accurately determine which files belong to it which would lead to only a partial uninstall.
+```
+This error is ignored for now since a more updated version of pyyaml is already installed.
+
+Check that PyTorch is properly installed:
+```
+import torch, torchvision
+print(torch.__version__, torch.cuda.is_available())
+```
+
+Check the gcc version:
+```
+gcc --version
+```
+
+Install detectron 2:
+```
+pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html
+```
+cuda 10.2 link does not exist, so we're going with 10.1
+
+Try importing detectron2
+```
+import detectron2
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer
+from detectron2.data import MetadataCatalog
+```
+
+### Run a pre-trained detectron2 model
+
+First, download a random image from the COCO dataset:
+
+```
+cd ns_vqa_dart/scene_parse/detectron2
+wget http://images.cocodataset.org/val2017/000000439715.jpg -O input.jpg
+```
+
+Run the pretrained model:
+```
+python pretrained.py
+```
+
+The resulting image is written to `detectron2/result_im.png`.
+
+### Train on balloon
+
+Get the dataset:
+```
+wget https://github.com/matterport/Mask_RCNN/releases/download/v2.1/balloon_dataset.zip
+unzip balloon_dataset.zip > /dev/null
+```
+
+```
+python dash.py
+```
