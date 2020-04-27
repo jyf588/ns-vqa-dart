@@ -47,22 +47,10 @@ import pprint
 from tqdm import tqdm
 from typing import *
 
-from ns_vqa_dart.bullet.camera import BulletCamera
 from ns_vqa_dart.bullet.dash_dataset import DashDataset
 import ns_vqa_dart.bullet.dash_object as dash_object
 import ns_vqa_dart.bullet.random_objects as random_objects
 import ns_vqa_dart.bullet.util as util
-
-RGB2ID = {
-    (174, 199, 232): 0,  # blue
-    (152, 223, 138): 1,  # green
-    (255, 152, 150): 2,  # red
-    (197, 176, 213): 3,  # purple
-    (219, 219, 141): 4,  # lime green
-    (196, 156, 148): 5,  # brown
-    (255, 187, 120): 6,  # orange
-    (247, 182, 210): 7,  # pink
-}
 
 
 def main(args: argparse.Namespace):
@@ -240,23 +228,6 @@ def load_third_person_image(img_dir: str, sid: str):
     return img
 
 
-def seg_img_to_map(seg_img):
-    H, W, _ = seg_img.shape
-    seg = np.full((H, W), -1, dtype=np.uint8)
-    for rgb_value, oid in RGB2ID.items():
-        idxs = np.where(
-            np.logical_and(
-                seg_img[:, :, 0] == rgb_value[0],
-                np.logical_and(
-                    seg_img[:, :, 1] == rgb_value[1],
-                    seg_img[:, :, 2] == rgb_value[2],
-                ),
-            )
-        )
-        seg[idxs] = oid
-    return seg
-
-
 def get_camera_target_id(oid: int, camera_control: str):
     if camera_control == "all":
         cam_tid = oid
@@ -267,9 +238,7 @@ def get_camera_target_id(oid: int, camera_control: str):
     return cam_tid
 
 
-def load_camera_pose(
-    cam_dir: str, sid: int, oid: int, camera_control: str
-) -> BulletCamera:
+def load_camera_pose(cam_dir: str, sid: int, oid: int, camera_control: str):
     """Creates a camera with same parameters as camera used to capture images
     for the specified object in the specified scene.
 

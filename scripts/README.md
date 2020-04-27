@@ -236,10 +236,10 @@ conda activate detectron
 
 The following installation instructions are largely based on the colab notebook: https://colab.research.google.com/drive/16jcaJoc6bCFAQ96jDe2HwtXj7BMD_-m5#scrollTo=QHnVupBBn9eR
 ```
-pip install -U torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu102/torch_stable.html
+pip install -U torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu101/torch_stable.html
 pip install cython pyyaml==5.1
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
-pip install opencv
+pip install opencv-python
 ```
 
 Note: When attemping to install pyyaml, received the following message:
@@ -264,7 +264,10 @@ gcc --version
 
 Install detectron 2:
 ```
-pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+
+# The version below is outdated.
+# pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html
 ```
 cuda 10.2 link does not exist, so we're going with 10.1
 
@@ -305,3 +308,40 @@ unzip balloon_dataset.zip > /dev/null
 ```
 python dash.py
 ```
+
+### Troubleshooting
+
+<details>
+<summary>TypeError: Object of type bytes is not JSON serializable</summary>
+Full trackback:
+
+```
+  File "ns_vqa_dart/scene_parse/detectron2/dash.py", line 223, in main
+    evaluator = COCOEvaluator("dash_val", cfg, False, output_dir="./output/")
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/site-packages/detectron2/evaluation/coco_evaluation.py", line 72, in __init__
+    convert_to_coco_json(dataset_name, cache_path)
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/site-packages/detectron2/data/datasets/coco.py", line 429, in convert_to_coco_json
+    json.dump(coco_dict, f)
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 325, in _iterencode_list
+    yield from chunks
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "/home/michelle/opt/anaconda3/envs/detectron/lib/python3.7/json/encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type bytes is not JSON serializable
+```
+
+This is because when converting to COCO format, they try to add the original segmentation data to the generated COCO dictionary. However, in our case, our segmentation data is in COCO RLE format, which is in bytes. This is not JSON serializable.
+
+Fix: Remove the lines here: https://github.com/facebookresearch/detectron2/blob/403f1d39af74bb1d35b5fd7efd11cc57eb5a409a/detectron2/data/datasets/coco.py#L376
+</details>

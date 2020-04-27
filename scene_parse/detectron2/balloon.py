@@ -17,6 +17,57 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 
 
 def get_balloon_dicts(img_dir):
+    """Prepares the dataset dictionaries for the balloon dataset for detectron2
+    training.
+
+    Args:
+        img_dir: The directory that the images are located.
+    Returns:
+        dataset_dicts: A list of dataset dictionaries, in the format:
+            [
+                record = {  # Information about a single image.
+                    "file_name": <str>,  # The path of the example.
+                    "image_id": <str or int>,  # A unique ID of the image.
+                    "height": <int>,  # The height of the image.
+                    "width": <int>,  # The width of the image.
+                    "annotations": objs = [  # Annotations for objects in img.
+                        {
+                            "bbox": [  # The bbox.
+                                x_min: float, 
+                                y_min: float, 
+                                x_max: float, 
+                                y_max: float
+                            ],
+                            "bbox_mode": BoxMode.XYXY_ABS,  # The bbox format.
+                            "category_id": <int>,  # The category label.
+                            "segmentation": [poly],  # The poly segmentation.
+                            "iscrowd": 0,  # Docs say don't include this we don't know what this means.
+                        },
+                        ...
+                    ]
+                }
+            ]
+    """
+    """
+    Load the JSON file which contains data in the format:
+        {
+            k: v = {
+                "filename": <str>,  # The filename of the example image.
+                "regions": annos = {
+                    k: anno = {
+                        "region_attributes": ?,
+                        "shape_attributes": anno = {
+                            "all_points_x": px,
+                            "all_points_y": py,
+
+                        }
+                    },
+                    ...
+                }
+            },
+            ...
+        }
+    """
     json_file = os.path.join(img_dir, "via_region_data.json")
     with open(json_file) as f:
         imgs_anns = json.load(f)
@@ -57,21 +108,28 @@ def get_balloon_dicts(img_dir):
 
 
 def main():
+    # Register the dataset for each split.
     for d in ["train", "val"]:
+        # Associate `ballon_{split}` with the corresponding function that
+        # returns the data for the split.
         DatasetCatalog.register(
             "balloon_" + d, lambda d=d: get_balloon_dicts("balloon/" + d)
         )
+        # Add the `thing_classes` metadata, which is used by all instance
+        # detection / segmentation tasks. It stores a list of names for each
+        # instance / thing category.
         MetadataCatalog.get("balloon_" + d).set(thing_classes=["balloon"])
-    balloon_metadata = MetadataCatalog.get("balloon_train")
 
-    dataset_dicts = get_balloon_dicts("balloon/train")
-    for idx, d in enumerate(random.sample(dataset_dicts, 3)):
-        img = cv2.imread(d["file_name"])
-        visualizer = Visualizer(
-            img[:, :, ::-1], metadata=balloon_metadata, scale=0.5
-        )
-        vis = visualizer.draw_dataset_dict(d)
-        cv2.imwrite(f"balloon_train_{idx}.png", vis.get_image()[:, :, ::-1])
+    # Verify that the dataloading is correct.
+    # balloon_metadata = MetadataCatalog.get("balloon_train")
+    # dataset_dicts = get_balloon_dicts("balloon/train")
+    # for idx, d in enumerate(random.sample(dataset_dicts, 3)):
+    #     img = cv2.imread(d["file_name"])
+    #     visualizer = Visualizer(
+    #         img[:, :, ::-1], metadata=balloon_metadata, scale=0.5
+    #     )
+    #     vis = visualizer.draw_dataset_dict(d)
+    #     cv2.imwrite(f"balloon_train_{idx}.png", vis.get_image()[:, :, ::-1])
 
     # Train.
     cfg = get_cfg()
