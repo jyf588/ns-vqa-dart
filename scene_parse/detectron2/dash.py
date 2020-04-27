@@ -5,12 +5,15 @@ import os
 import cv2
 import json
 import pickle
+import pprint
 import random
 import imageio
+import argparse
 import numpy as np
 from typing import *
-import pycocotools.mask
+from datetime import datetime
 
+import pycocotools.mask
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.structures import BoxMode
@@ -25,11 +28,114 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from ns_vqa_dart.bullet.seg import seg_img_to_map
 
 
-SHAPE2INT = {
-    "box": 0,
-    "cylinder": 1,
-    "sphere": 2,
-}
+class DASHTrainer:
+    def __init__(self, seed: int, root_dir: str):
+        self.root_dir = root_dir
+        random.seed(seed)
+
+        self.cfg = self.get_cfg()
+        self.n_visuals = 3
+    
+    def get_cfg(self):
+        cfg = get_cfg()
+        cfg.merge_from_file(
+            model_zoo.get_config_file(
+                "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+            )
+        )
+
+        # Data configurations.
+        cfg.INPUT.MASK_FORMAT = "bitmask"
+        cfg.DATASETS.TRAIN = ("dash_train",)
+        cfg.DATASETS.TEST = ()
+        cfg.DATALOADER.NUM_WORKERS = 2
+
+        # Model configurations.
+        # Let training initialize from model zoo
+        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+        )
+        # faster, and good enough for this toy dataset (default: 512)
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
+        # only has one class (ballon)
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
+
+        # Training configurations.
+        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
+        cfg.SOLVER.MAX_ITER = 300  # 300 iterations seems good enough for this toy dataset; you may need to train longer for a practical dataset
+        return cfg
+    
+    def train(self):
+        # Output configurations.
+        time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, time_str)
+        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+        
+        trainer = DefaultTrainer(self.cfg)
+        trainer.resume_or_load(resume=False)
+        trainer.train()
+
+    def eval(self, split: str, model_name: str):
+        """Runs evaluation.
+
+        Args:
+            split: The split to evaluate.
+            model_name: The name of the model to evaluate
+        """
+        # Model configurations.
+        assert model_name
+        # self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, model_name)
+        # self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, "model_final.pth")
+
+        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, "pretain")
+        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+        )
+        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+
+        trainer = DefaultTrainer(self.cfg)
+        trainer.resume_or_load(resume=True)
+
+        # Dataset configurations.
+        dataset_name = f"dash_{split}"
+        self.cfg.DATASETS.TEST = (dataset_name,)
+
+        # set the testing threshold for this model
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+
+        self.visualize(split=split)
+
+        # Compute metrics.
+        evaluator = COCOEvaluator(dataset_name=dataset_name, cfg=self.cfg, distributed=False, output_dir=self.cfg.OUTPUT_DIR)
+        val_loader = build_detection_test_loader(self.cfg, dataset_name)
+        res = inference_on_dataset(trainer.model, val_loader, evaluator)
+        return res
+    
+    def visualize(self, split: str):
+        # Dataset.
+        dataset_name = f"dash_{split}"
+        dataset_dicts = get_dash_dicts(split=split)
+        dash_metadata = MetadataCatalog.get(dataset_name)
+
+        vis_dir = os.path.join(self.cfg.OUTPUT_DIR, f"images/{dataset_name}")
+        os.makedirs(vis_dir, exist_ok=True)
+
+        predictor = DefaultPredictor(self.cfg)
+        for idx, d in enumerate(random.sample(dataset_dicts, min(self.n_visuals, len(dataset_dicts)))):
+            im = cv2.imread(d["file_name"])
+            outputs = predictor(im)
+            v = Visualizer(
+                im[:, :, ::-1],
+                metadata=dash_metadata,
+                scale=1.0,
+                # instance_mode=ColorMode.IMAGE_BW,  # remove the colors of unsegmented pixels
+            )
+            v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+            cv2.imwrite(
+                os.path.join(vis_dir, f"{idx:02}.png"),
+                v.get_image()[:, :, ::-1],
+            )
 
 
 def get_dash_dicts(split: str) -> List[Dict]:
@@ -72,8 +178,8 @@ def get_dash_dicts(split: str) -> List[Dict]:
         start_idx = 0
         end_idx = 80
     elif split == "val":
-        start_idx = 0
-        end_idx = 1
+        start_idx = 80
+        end_idx = 100
     for idx in range(start_idx, end_idx):
         record = {}
 
@@ -115,7 +221,7 @@ def get_dash_dicts(split: str) -> List[Dict]:
                 "bbox": bbox,
                 "bbox_mode": BoxMode.XYWH_ABS,
                 "segmentation": rle,
-                "category_id": SHAPE2INT[odict["shape"]],
+                "category_id": 0,
                 "iscrowd": 0,
             }
             objs.append(obj)
@@ -124,8 +230,8 @@ def get_dash_dicts(split: str) -> List[Dict]:
     return dataset_dicts
 
 
-def main():
-    # Tell detectron2 about the dataset function.
+def main(args: argparse.Namespace):
+    # Register the datasets.
     for d in ["train", "val"]:
         # Associate a dataset named "dash_{split}" with the function that
         # returns the data for the split.
@@ -133,102 +239,25 @@ def main():
             "dash_" + d, lambda d=d: get_dash_dicts(split=d)
         )
         MetadataCatalog.get("dash_" + d).set(
-            thing_classes=list(SHAPE2INT.keys())
+            thing_classes=["object"]
         )
 
-    # Verify that the dataloading is correct.
-    dash_metadata = MetadataCatalog.get("dash_train")
-    dataset_dicts = get_dash_dicts(split="train")
-    for idx, d in enumerate(random.sample(dataset_dicts, 3)):
-        img = cv2.imread(d["file_name"])
-        visualizer = Visualizer(
-            img[:, :, ::-1], metadata=dash_metadata, scale=0.5
-        )
-        vis = visualizer.draw_dataset_dict(d)
-        cv2.imwrite(
-            f"ns_vqa_dart/scene_parse/detectron2/dash_train_{idx}.png",
-            vis.get_image()[:, :, ::-1],
-        )
-
-    # Train.
-    cfg = get_cfg()
-    cfg.merge_from_file(
-        model_zoo.get_config_file(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-        )
-    )
-    cfg.INPUT.MASK_FORMAT = "bitmask"
-    cfg.DATASETS.TRAIN = ("dash_train",)
-    cfg.DATASETS.TEST = ()
-    cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
-        "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-    )  # Let training initialize from model zoo
-    cfg.SOLVER.IMS_PER_BATCH = 2
-    cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 300  # 300 iterations seems good enough for this toy dataset; you may need to train longer for a practical dataset
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = (
-        128  # faster, and good enough for this toy dataset (default: 512)
-    )
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(
-        SHAPE2INT
-    )  # only has one class (ballon)
-    cfg.OUTPUT_DIR = "ns_vqa_dart/scene_parse/detectron2/output"
-
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    trainer = DefaultTrainer(cfg)
-    # trainer.resume_or_load(resume=False)
-    # trainer.train()
-
-    # Validate.
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
-    trainer.resume_or_load(resume=True)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = (
-        0.7  # set the testing threshold for this model
-    )
-    cfg.DATASETS.TEST = ("dash_val",)
-    predictor = DefaultPredictor(cfg)
-
-    # Visualize val results.
-    dataset_dicts = get_dash_dicts(split="val")
-    dash_metadata = MetadataCatalog.get("dash_val")
-    for idx, d in enumerate(random.sample(dataset_dicts, 1)):
-        im = cv2.imread(d["file_name"])
-        outputs = predictor(im)
-        v = Visualizer(
-            im[:, :, ::-1],
-            metadata=dash_metadata,
-            scale=0.8,
-            instance_mode=ColorMode.IMAGE_BW,  # remove the colors of unsegmented pixels
-        )
-        v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-        cv2.imwrite(
-            f"ns_vqa_dart/scene_parse/detectron2/dash_val_{idx}.png",
-            v.get_image()[:, :, ::-1],
-        )
-
-    # Evaluate performance.
-    dataset_dicts = DatasetCatalog.get("dash_val")
-    for image_id, image_dict in enumerate(dataset_dicts):
-        for annotation in image_dict["annotations"]:
-            if "segmentation" in annotation:
-                segmentation = annotation["segmentation"]
-                if isinstance(segmentation, list):
-                    print("segmentation")
-                elif isinstance(segmentation, dict):
-                    area = pycocotools.mask.area(segmentation)
-                    print("rle")
-                    print(f"area: {area}")
-                    # with open("/home/michelle/test.json", "w") as f:
-                    #     json.dump({
-                    #         "segmentation": segmentation
-                    #     }, f)
-    metadata = MetadataCatalog.get("dash_val")
-    evaluator = COCOEvaluator("dash_val", cfg, False, output_dir="./output/")
-    val_loader = build_detection_test_loader(cfg, "dash_val")
-    res = inference_on_dataset(trainer.model, val_loader, evaluator)
-    print(res)
-
+    trainer = DASHTrainer(seed=args.seed, root_dir=args.root_dir)
+    if args.mode == "train":
+        trainer.train()
+    elif args.mode == "eval":
+        train_res = trainer.eval(split="train", model_name=args.model_name)
+        val_res = trainer.eval(split="val", model_name=args.model_name)
+        print("Train Results:")
+        pprint.pprint(train_res)
+        print("Validation Results:")
+        pprint.pprint(val_res)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=1, help="The random seed.")
+    parser.add_argument("--mode", required=True, type=str, choices=["train", "eval"], help="Whether to train or run evaluation.")
+    parser.add_argument("--root_dir", type=str, default="/media/sdc3/mguo/outputs/detectron", help="The root directory containing models.")
+    parser.add_argument("--model_name", type=str, default="2020_04_27_16_47_49", help="The name of the model to evaluate.")
+    args = parser.parse_args()
+    main(args=args)
