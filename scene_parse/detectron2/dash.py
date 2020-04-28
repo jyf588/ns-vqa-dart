@@ -11,6 +11,7 @@ import imageio
 import argparse
 import numpy as np
 from typing import *
+from tqdm import tqdm
 from datetime import datetime
 
 import pycocotools.mask
@@ -34,7 +35,7 @@ class DASHTrainer:
         random.seed(seed)
 
         self.cfg = self.get_cfg()
-        self.n_visuals = 3
+        self.n_visuals = 15
     
     def get_cfg(self):
         cfg = get_cfg()
@@ -57,13 +58,13 @@ class DASHTrainer:
         )
         # faster, and good enough for this toy dataset (default: 512)
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
-        # only has one class (ballon)
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
 
         # Training configurations.
         cfg.SOLVER.IMS_PER_BATCH = 2
-        cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-        cfg.SOLVER.MAX_ITER = 300  # 300 iterations seems good enough for this toy dataset; you may need to train longer for a practical dataset
+        cfg.SOLVER.BASE_LR = 0.00025
+        cfg.SOLVER.MAX_ITER = 100000
+        cfg.SOLVER.CHECKPOINT_PERIOD = 5000
         return cfg
     
     def train(self):
@@ -85,13 +86,10 @@ class DASHTrainer:
         """
         # Model configurations.
         assert model_name
-        # self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, model_name)
-        # self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, "model_final.pth")
-
-        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, "pretain")
-        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-        )
+        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, model_name)
+        with open(os.path.join(self.cfg.OUTPUT_DIR, "last_checkpoint"), "r") as f:
+            checkpoint_fname = f.readlines()[0]
+        self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, checkpoint_fname)
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
         trainer = DefaultTrainer(self.cfg)
@@ -176,57 +174,54 @@ def get_dash_dicts(split: str) -> List[Dict]:
     dataset_dicts = []
     if split == "train":
         start_idx = 0
-        end_idx = 80
+        end_idx = 16000
     elif split == "val":
-        start_idx = 80
-        end_idx = 100
-    for idx in range(start_idx, end_idx):
-        record = {}
+        start_idx = 16000
+        end_idx = 20000
+    print(f"Loading the dataset for split {split}...")
 
-        # Construct the full path of the image.
-        # path = os.path.join(img_dir, v["filename"])
-        state_path = (
-            f"/media/sdc3/mguo/data/states/full/planning_v003_20K/{idx:06}.p"
-        )
-        rgb_path = f"/media/sdc3/mguo/data/datasets/planning_v003_20K/unity_output/images/first/rgb/{idx:06}_0.png"
-        seg_path = f"/media/sdc3/mguo/data/datasets/planning_v003_20K/unity_output/images/first/seg/{idx:06}_0.png"
+    for dataset in ["planning_v003_20K", "placing_v003_2K_20K", "stacking_v003_2K_20K"]:
+        for idx in tqdm(range(start_idx, end_idx)):
+            record = {}
 
-        state = pickle.load(open(state_path, "rb"))
+            # Construct the full path of the image.
+            rgb_path = f"/media/sdc3/mguo/data/datasets/{dataset}/unity_output/images/first/rgb/{idx:06}_0.png"
+            seg_path = f"/media/sdc3/mguo/data/datasets/{dataset}/unity_output/images/first/seg/{idx:06}_0.png"
 
-        # Retrieve the height and width of the image.
-        seg_img = imageio.imread(seg_path)
-        height, width = imageio.imread(rgb_path).shape[:2]
+            # Retrieve the height and width of the image.
+            seg_img = imageio.imread(seg_path)
+            height, width = imageio.imread(rgb_path).shape[:2]
 
-        record["file_name"] = rgb_path
-        record["image_id"] = idx
-        record["height"] = height
-        record["width"] = width
+            record["file_name"] = rgb_path
+            record["image_id"] = f"{dataset}_{idx:06}"
+            record["height"] = height
+            record["width"] = width
 
-        # Compute the segmentations.
-        seg_map, oids = seg_img_to_map(seg_img=seg_img)
+            # Compute the segmentations.
+            seg_map, oids = seg_img_to_map(seg_img=seg_img)
 
-        objs = []
-        for oid, odict in state["objects"].items():
-            mask = seg_map == oid
-            rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
+            objs = []
+            for oid in oids:
+                mask = seg_map == oid
+                rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
 
-            # Convert `counts` to ascii, otherwise json dump complains about 
-            # not being able to serialize bytes.
-            # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
-            rle["counts"] = rle["counts"].decode("ASCII")
-            assert isinstance(rle, dict)
-            assert len(rle) > 0
-            bbox = list(pycocotools.mask.toBbox(rle))
-            obj = {
-                "bbox": bbox,
-                "bbox_mode": BoxMode.XYWH_ABS,
-                "segmentation": rle,
-                "category_id": 0,
-                "iscrowd": 0,
-            }
-            objs.append(obj)
-        record["annotations"] = objs
-        dataset_dicts.append(record)
+                # Convert `counts` to ascii, otherwise json dump complains about 
+                # not being able to serialize bytes.
+                # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
+                rle["counts"] = rle["counts"].decode("ASCII")
+                assert isinstance(rle, dict)
+                assert len(rle) > 0
+                bbox = list(pycocotools.mask.toBbox(rle))
+                obj = {
+                    "bbox": bbox,
+                    "bbox_mode": BoxMode.XYWH_ABS,
+                    "segmentation": rle,
+                    "category_id": 0,
+                    "iscrowd": 0,
+                }
+                objs.append(obj)
+            record["annotations"] = objs
+            dataset_dicts.append(record)
     return dataset_dicts
 
 
@@ -258,6 +253,6 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=1, help="The random seed.")
     parser.add_argument("--mode", required=True, type=str, choices=["train", "eval"], help="Whether to train or run evaluation.")
     parser.add_argument("--root_dir", type=str, default="/media/sdc3/mguo/outputs/detectron", help="The root directory containing models.")
-    parser.add_argument("--model_name", type=str, default="2020_04_27_16_47_49", help="The name of the model to evaluate.")
+    parser.add_argument("--model_name", type=str, default="2020_04_27_20_02_15", help="The name of the model to evaluate.")
     args = parser.parse_args()
     main(args=args)
