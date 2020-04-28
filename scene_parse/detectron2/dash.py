@@ -36,7 +36,7 @@ class DASHTrainer:
 
         self.cfg = self.get_cfg()
         self.n_visuals = 15
-    
+
     def get_cfg(self):
         cfg = get_cfg()
         cfg.merge_from_file(
@@ -66,13 +66,13 @@ class DASHTrainer:
         cfg.SOLVER.MAX_ITER = 100000
         cfg.SOLVER.CHECKPOINT_PERIOD = 5000
         return cfg
-    
+
     def train(self):
         # Output configurations.
         time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, time_str)
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
-        
+
         trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=False)
         trainer.train()
@@ -87,9 +87,13 @@ class DASHTrainer:
         # Model configurations.
         assert model_name
         self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, model_name)
-        with open(os.path.join(self.cfg.OUTPUT_DIR, "last_checkpoint"), "r") as f:
+        with open(
+            os.path.join(self.cfg.OUTPUT_DIR, "last_checkpoint"), "r"
+        ) as f:
             checkpoint_fname = f.readlines()[0]
-        self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, checkpoint_fname)
+        self.cfg.MODEL.WEIGHTS = os.path.join(
+            self.cfg.OUTPUT_DIR, checkpoint_fname
+        )
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
         trainer = DefaultTrainer(self.cfg)
@@ -105,11 +109,16 @@ class DASHTrainer:
         self.visualize(split=split)
 
         # Compute metrics.
-        evaluator = COCOEvaluator(dataset_name=dataset_name, cfg=self.cfg, distributed=False, output_dir=self.cfg.OUTPUT_DIR)
+        evaluator = COCOEvaluator(
+            dataset_name=dataset_name,
+            cfg=self.cfg,
+            distributed=False,
+            output_dir=self.cfg.OUTPUT_DIR,
+        )
         val_loader = build_detection_test_loader(self.cfg, dataset_name)
         res = inference_on_dataset(trainer.model, val_loader, evaluator)
         return res
-    
+
     def visualize(self, split: str):
         # Dataset.
         dataset_name = f"dash_{split}"
@@ -120,7 +129,11 @@ class DASHTrainer:
         os.makedirs(vis_dir, exist_ok=True)
 
         predictor = DefaultPredictor(self.cfg)
-        for idx, d in enumerate(random.sample(dataset_dicts, min(self.n_visuals, len(dataset_dicts)))):
+        for idx, d in enumerate(
+            random.sample(
+                dataset_dicts, min(self.n_visuals, len(dataset_dicts))
+            )
+        ):
             im = cv2.imread(d["file_name"])
             outputs = predictor(im)
             v = Visualizer(
@@ -180,7 +193,11 @@ def get_dash_dicts(split: str) -> List[Dict]:
         end_idx = 20000
     print(f"Loading the dataset for split {split}...")
 
-    for dataset in ["planning_v003_20K", "placing_v003_2K_20K", "stacking_v003_2K_20K"]:
+    for dataset in [
+        "planning_v003_20K",
+        "placing_v003_2K_20K",
+        "stacking_v003_2K_20K",
+    ]:
         for idx in tqdm(range(start_idx, end_idx)):
             record = {}
 
@@ -205,7 +222,7 @@ def get_dash_dicts(split: str) -> List[Dict]:
                 mask = seg_map == oid
                 rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
 
-                # Convert `counts` to ascii, otherwise json dump complains about 
+                # Convert `counts` to ascii, otherwise json dump complains about
                 # not being able to serialize bytes.
                 # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
                 rle["counts"] = rle["counts"].decode("ASCII")
@@ -233,26 +250,42 @@ def main(args: argparse.Namespace):
         DatasetCatalog.register(
             "dash_" + d, lambda d=d: get_dash_dicts(split=d)
         )
-        MetadataCatalog.get("dash_" + d).set(
-            thing_classes=["object"]
-        )
+        MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
 
     trainer = DASHTrainer(seed=args.seed, root_dir=args.root_dir)
     if args.mode == "train":
         trainer.train()
     elif args.mode == "eval":
-        train_res = trainer.eval(split="train", model_name=args.model_name)
+        # train_res = trainer.eval(split="train", model_name=args.model_name)
         val_res = trainer.eval(split="val", model_name=args.model_name)
-        print("Train Results:")
-        pprint.pprint(train_res)
+
+        # print("Train Results:")
+        # pprint.pprint(train_res)
         print("Validation Results:")
         pprint.pprint(val_res)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1, help="The random seed.")
-    parser.add_argument("--mode", required=True, type=str, choices=["train", "eval"], help="Whether to train or run evaluation.")
-    parser.add_argument("--root_dir", type=str, default="/media/sdc3/mguo/outputs/detectron", help="The root directory containing models.")
-    parser.add_argument("--model_name", type=str, default="2020_04_27_20_02_15", help="The name of the model to evaluate.")
+    parser.add_argument(
+        "--mode",
+        required=True,
+        type=str,
+        choices=["train", "eval"],
+        help="Whether to train or run evaluation.",
+    )
+    parser.add_argument(
+        "--root_dir",
+        type=str,
+        default="/media/sdc3/mguo/outputs/detectron",
+        help="The root directory containing models.",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="2020_04_27_20_12_14",
+        help="The name of the model to evaluate.",
+    )
     args = parser.parse_args()
     main(args=args)
