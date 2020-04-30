@@ -231,7 +231,7 @@ def load_third_person_image(img_dir: str, sid: str):
 def get_camera_target_id(oid: int, camera_control: str):
     if camera_control == "all":
         cam_tid = oid
-    elif camera_control in ["center", "stack"]:
+    elif camera_control in ["center", "stack", "position"]:
         cam_tid = 0
     else:
         raise ValueError(f"Invalid camera control {camera_control}")

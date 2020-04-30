@@ -187,10 +187,10 @@ def get_dash_dicts(split: str) -> List[Dict]:
     dataset_dicts = []
     if split == "train":
         start_idx = 0
-        end_idx = 16000
+        end_idx = 80  # 16000
     elif split == "val":
-        start_idx = 16000
-        end_idx = 20000
+        start_idx = 80  # 16000
+        end_idx = 100  # 20000
     print(f"Loading the dataset for split {split}...")
 
     for dataset in [

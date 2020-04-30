@@ -1,3 +1,18 @@
+## Requirements
+```
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+```
+
+OpenAI baselines:
+```
+git clone https://github.com/openai/baselines.git
+cd baselines
+*Replace baselines/common/running_mean_std.py with one in https://github.com/jyf588/pytorch-rl-bullet/tree/bullet_ppo/baseline_patches
+*replace setup.py with the one in the folder above as well.
+pip install -e .
+```
+
 ## Generating vision module datasets
 
 First, here is a changelog of dataset versions and the diffs between successive
