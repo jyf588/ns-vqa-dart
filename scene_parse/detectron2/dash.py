@@ -35,7 +35,7 @@ class DASHTrainer:
         random.seed(seed)
 
         self.cfg = self.get_cfg()
-        self.n_visuals = 15
+        self.n_visuals = 30
 
     def get_cfg(self):
         cfg = get_cfg()
@@ -136,11 +136,16 @@ class DASHTrainer:
         ):
             im = cv2.imread(d["file_name"])
             outputs = predictor(im)
+            fields = outputs["instances"]._fields
+            fields_wo_scores = {}
+            for key in ["pred_boxes", "pred_classes", "pred_masks"]:
+                fields_wo_scores[key] = fields[key]
+            outputs["instances"]._fields = fields_wo_scores
             v = Visualizer(
                 im[:, :, ::-1],
                 metadata=dash_metadata,
                 scale=1.0,
-                # instance_mode=ColorMode.IMAGE_BW,  # remove the colors of unsegmented pixels
+                instance_mode=ColorMode.SEGMENTATION,  # remove the colors of unsegmented pixels
             )
             v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
             cv2.imwrite(
@@ -187,7 +192,7 @@ def get_dash_dicts(split: str) -> List[Dict]:
     dataset_dicts = []
     if split == "train":
         start_idx = 0
-        end_idx = 80  # 16000
+        end_idx = 1  # 16000
     elif split == "val":
         start_idx = 80  # 16000
         end_idx = 100  # 20000
