@@ -138,6 +138,18 @@ def up_to_orientation(
     Returns:
         orientation: The orientation in xyzw quaternion format.
     """
+    x, y, z = up
+    a1_solved = np.arcsin(-y)
+    a2_solved = np.arctan2(x, z)
+    # a3_solved is zero since equation has under-determined
+    if gt_orientation is None:
+        orientation = pybullet.getQuaternionFromEuler(
+            [a1_solved, a2_solved, 0]
+        )
+    else:
+        raise NotImplementedError
+
+    """
     if gt_orientation is None:
         rotation = np.zeros((3, 3))
         # rotation = np.identity(3)
@@ -150,6 +162,7 @@ def up_to_orientation(
 
     # Convert to orientation.
     orientation = rotation_to_orientation(rotation=rotation)
+    """
     return orientation
 
 
