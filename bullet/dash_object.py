@@ -204,9 +204,8 @@ def to_caption(json_dict: Dict):
 
 
 def compute_X(
-    oid: int,
     img: np.ndarray,
-    seg: np.ndarray,
+    mask: np.ndarray,
     keep_occluded: bool,
     data_height: Optional[int] = 480,
     data_width: Optional[int] = 480,
@@ -214,10 +213,8 @@ def compute_X(
     """Constructs the data tensor for an object.
 
     Args:
-        oid: The ID of the object that we are generating data for.
         img: An image of a scene.
-        seg: A 2D segmentation map where each pixel stores the object 
-            ID it belongs to.
+        mask: A 2D binary segmentation mask of an object.
         keep_occluded: Whether to keep objects that are completely occluded.
         data_height: The desired height of the generated data tensor.
         data_width: The desired width of the generated data tensor.
@@ -238,34 +235,28 @@ def compute_X(
                 (2) False: We simply return None as an error message.
     """
     # Verify that the RGB image and the segmentation have proper dimensions.
-    img_H, img_W, C = img.shape
-    seg_H, seg_W = seg.shape
-    assert img_H == seg_H
-    assert img_W == seg_W
+    img_H, img_W, _ = img.shape
+    mask_H, mask_W = mask.shape
+    assert img_H == mask_H
+    assert img_W == mask_W
 
     # Initialize the generated data tensor, which we will fill with the
     # appropriate data.
     data = np.zeros((data_height, data_width, 6)).astype(np.uint8)
 
-    # Compute the object's bbox.
-    bbox = compute_bbox(oid=oid, mask=seg)
-
-    if bbox is None and not keep_occluded:
+    # If the mask is empty and the user requests that we don't create the
+    # tensor for occluded objects, we return None.
+    if np.sum(mask) == 0 and not keep_occluded:
         return None
 
     # Generate the object's input image.
     input_object_img = compute_input_object_img(
-        oid=oid,
-        img=img,
-        seg=seg,
-        bbox=bbox,
-        data_height=data_height,
-        data_width=data_width,
+        img=img, mask=mask, data_height=data_height, data_width=data_width,
     )
 
     # Generate the modified scene image, where object pixels are zeroed out.
     input_scene_img = compute_input_scene_img(
-        oid=oid, img=img, seg=seg, H=data_height, W=data_width
+        img=img, mask=mask, H=data_height, W=data_width
     )
 
     # Assign the images to the final data tensor.
@@ -275,17 +266,15 @@ def compute_X(
 
 
 def compute_input_scene_img(
-    oid: int, img: np.ndarray, seg: np.ndarray, H: int, W: int
+    img: np.ndarray, mask: np.ndarray, H: int, W: int
 ) -> np.ndarray:
     """Generate the modified input scene, where the object's pixels are zeroed
     out. Note that if the object has zero pixels in the segmentation, the input
     image is simply the full, original scene.
 
     Args:
-        oid: The ID of the object that we are generating data for.
         img: An image of the scene.
-        segmentation: A 2D segmentation map where each pixel stores the object 
-            ID it belongs to.
+        mask: A 2D binary segmentation mask of an object.
         H: The desired height of the generated data tensor.
         W: The desired width of the generated data tensor.
     
@@ -297,7 +286,7 @@ def compute_input_scene_img(
     input_img = np.zeros((H, W, 3), dtype=np.uint8)
 
     # Zero out the object's pixels from the scene.
-    img[seg == oid] = 0.0
+    img[mask] = 0.0
 
     # Compute the offset of the original image's dimensions compared to the
     # desired output size. If original image is smaller, boundaries are padded
@@ -312,21 +301,13 @@ def compute_input_scene_img(
 
 
 def compute_input_object_img(
-    oid: int,
-    img: np.ndarray,
-    seg: np.ndarray,
-    bbox: List[float],
-    data_height: int,
-    data_width: int,
+    img: np.ndarray, mask: np.ndarray, data_height: int, data_width: int,
 ):
     """Generates the input object image.
 
     Args:
-        oid: The ID of the object that we are generating data for.
         img: An image of the scene.
-        segmentation: A 2D segmentation map where each pixel stores the object 
-            ID it belongs to.
-        bbox: The 2D bounding box of the object: (x, y, w, h)
+        mask: A 2D binary segmentation mask of an object.
         data_height: The desired height of the generated data tensor.
         data_width: The desired width of the generated data tensor.
     
@@ -340,16 +321,20 @@ def compute_input_object_img(
 
     # First, zero out all pixels outside of the object's segmentation area.
     img_without_background = img.copy()
-    img_without_background[seg != oid] = 0.0
+    img_without_background[~mask] = 0.0
+
+    bbox = compute_bbox(mask=mask)
 
     # If bbox is None, this means that no pixels contain the object, so we are
     # done. We return an all-zero image.
     if bbox is None:
-        print(f"Bbox is None. Object ID: {oid}")
+        print(
+            f"Bbox is None. Returning an all-zero image as the input X segmentation."
+        )
         return input_object_img
 
     x, y, w, h = bbox
-    seg = img_without_background[y : y + h, x : x + w, :]
+    seg_img = img_without_background[y : y + h, x : x + w, :]
 
     # Compute the new dimensions to resize the segmentation to.
     if h > w:
@@ -361,11 +346,14 @@ def compute_input_object_img(
     H_, W_ = resize_dims
 
     # Resize the segmentation while maintaining aspect ratio.
-    seg = cv2.resize(seg, (W_, H_))  # OpenCV expects WH.
+    seg_img = cv2.resize(seg_img, (W_, H_))  # OpenCV expects WH.
     top_pad = (data_height - H_) // 2
     left_pad = (data_width - W_) // 2
 
-    input_object_img[top_pad : top_pad + H_, left_pad : left_pad + W_] = seg
+    # Paste the segmentation into the final canvas with padding.
+    input_object_img[
+        top_pad : top_pad + H_, left_pad : left_pad + W_
+    ] = seg_img
     return input_object_img
 
 
@@ -455,17 +443,17 @@ def construct_attr_vec(shape: str, color: str) -> List[int]:
     return list(attr_vec)
 
 
-def compute_bbox(oid: int, mask: np.ndarray) -> Tuple[int]:
+def compute_bbox(mask: np.ndarray) -> Optional[Tuple[int]]:
     """Compute the object bounding box.
 
     Args:
-        oid: The object ID.
-        mask: A 2D mask where values represent the object ID of each pixel.
+        mask: A 2D binary segmentation mask of an object.
     
     Returns:
-        (x, y, w, h): The bounding box of the object.
+        (x, y, w, h): The bounding box of the object. Returns None if the mask
+            area is zero.
     """
-    rle = compute_object_mask(oid=oid, mask=mask)
+    rle = mask_to_rle(mask=mask)
 
     if mask_util.area(rle) > 0:
         bbox = mask_util.toBbox(rle)  # xywh
@@ -477,21 +465,16 @@ def compute_bbox(oid: int, mask: np.ndarray) -> Tuple[int]:
         return None
 
 
-def compute_object_mask(oid: int, mask: np.ndarray) -> List[int]:
+def mask_to_rle(mask: np.ndarray) -> List[int]:
     """Computes the object mask, in RLE format.
 
     Args:
-        oid: The object ID.
-        mask: The mask of all objects in a scene.
+        mask: A 2D binary segmentation mask of an object.
     
     Returns:
         rle: The object mask, in RLE format.
     """
-    # Binary mask of the object.
-    obj_mask = mask == oid
-
-    # Mask to bbox.
-    mask = np.asfortranarray(obj_mask, dtype="uint8")
+    mask = np.asfortranarray(mask, dtype="uint8")
     rle = mask_util.encode(mask)
     rle["counts"] = rle["counts"].decode("ASCII")
     return rle
