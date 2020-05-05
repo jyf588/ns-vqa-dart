@@ -12,10 +12,23 @@ RGB2ID = {
 }
 
 
-def seg_img_to_map(seg_img):
+def seg_img_to_map(seg_img) -> np.ndarray:
+    """
+    Args:
+        seg_img: An RGB image of segmentations, where object ID corresponds to
+            the `RGB2ID` mapping.
+    
+    Returns:
+        masks: An array of binary masks of shape (N, H, W).
+        ids: A list of object IDs corresponding to each mask returned in 
+            `masks`.
+    """
     H, W, _ = seg_img.shape
     seg = np.full((H, W), -1, dtype=np.uint8)
     ids = []
+    masks = []
+
+    # Loop over each possible RGB value.
     for rgb_value, oid in RGB2ID.items():
         idxs = np.where(
             np.logical_and(
@@ -26,7 +39,13 @@ def seg_img_to_map(seg_img):
                 ),
             )
         )
-        seg[idxs] = oid
+
+        # There is at least pixel containing the object segmentation.
         if len(idxs[0]) > 0:
+            mask = np.full((H, W), False, dtype=bool)
+            mask[idxs] = True
+            masks.append(mask)
             ids.append(oid)
-    return seg, ids
+
+    masks = np.array(masks)
+    return masks, ids
