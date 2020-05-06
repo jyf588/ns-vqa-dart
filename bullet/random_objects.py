@@ -25,6 +25,7 @@ class RandomObjectsGenerator:
         position_mode: str,
         mass_bounds: Optional[Tuple[float]] = None,
         mu_bounds: Optional[Tuple[float]] = None,
+        disable_orientation: Optional[bool] = False,
     ):
         """
         Args:
@@ -47,6 +48,7 @@ class RandomObjectsGenerator:
                 position will be offset by +H/2 if the `position_mode` is set to
                 "com".
             position_mode: Whether the position represents the base or the COM.
+            disable_orientation: Whether to disable randomizing object orientations.
         """
         # Set the seed for random number generators.
         np.random.seed(seed)
@@ -68,6 +70,7 @@ class RandomObjectsGenerator:
         self.obj_dist_thresh = obj_dist_thresh
         self.max_retries = max_retries
         self.position_mode = position_mode
+        self.disable_orientation = disable_orientation
 
     def generate_tabletop_objects(
         self, existing_odicts: Optional[List[Dict]] = None
@@ -150,15 +153,20 @@ class RandomObjectsGenerator:
         else:
             raise ValueError(f"Invalid position mode: {self.position_mode}")
 
+        if self.disable_orientation:
+            orientation = [0.0, 0.0, 0.0, 1.0]
+        else:
+            orientation = pybullet.getQuaternionFromEuler(
+                [0.0, 0.0, np.random.uniform(low=0, high=2.0 * math.pi)]
+            )
+
         odict = {
             "shape": shape,
             "color": color,
             "radius": radius,
             "height": height,
             "position": position,
-            "orientation": pybullet.getQuaternionFromEuler(
-                [0.0, 0.0, np.random.uniform(low=0, high=2.0 * math.pi)]
-            ),
+            "orientation": orientation,
         }
         if self.mass_bounds is not None:
             odict["mass"] = self.uniform_sample(

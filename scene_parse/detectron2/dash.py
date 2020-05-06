@@ -29,9 +29,10 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from ns_vqa_dart.bullet.seg import seg_img_to_map
 
 
-class DASHTrainer:
-    def __init__(self, seed: int, root_dir: str):
-        self.root_dir = root_dir
+class DASHSegModule:
+    def __init__(self, seed: Optional[int] = 1, vis_dir: Optional[str] = None):
+        self.vis_dir = vis_dir
+
         random.seed(seed)
 
         self.cfg = self.get_cfg()
@@ -67,48 +68,140 @@ class DASHTrainer:
         cfg.SOLVER.CHECKPOINT_PERIOD = 5000
         return cfg
 
-    def train(self):
-        # Output configurations.
+    @staticmethod
+    def get_time_dirname():
         time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, time_str)
+        return time_str
+
+    def train(self, root_dir, str):
+        # Output configurations.
+        self.cfg.OUTPUT_DIR = os.path.join(root_dir, self.get_time_dirname())
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
         trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=False)
         trainer.train()
 
-    def eval(self, split: str, model_name: str):
+    def eval_example(self, checkpoint_path: str, img: np.ndarray, vis_id: int):
+        """Evaluates a single example.
+
+        Args:
+            checkpoint_path: The checkpoint path.
+        
+        Returns:
+            masks: A numpy array of shape (N, H, W) of instance masks.
+        """
+        for d in ["train", "val", "test"]:
+            DatasetCatalog.register(
+                "dash_" + d, lambda d=d: get_dash_dicts(split=d)
+            )
+            MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
+        metadata = MetadataCatalog.get("dash_test")
+
+        _, predictor = self.setup_eval(
+            checkpoint_path=checkpoint_path, dataset_name="dash_test"
+        )
+        outputs = predictor(img)
+
+        self.visualize_predictions(
+            img=img, outputs=outputs, vis_id=vis_id, metadata=metadata
+        )
+
+        # This produces a numpy array of shape (N, H, W) containing binary
+        # masks.
+        masks = outputs["instances"].to("cpu")._fields["pred_masks"].numpy()
+        return masks
+
+    def eval(
+        self,
+        split: str,
+        checkpoint_path: str,
+        compute_metrics: Optional[bool] = True,
+        visualize: Optional[bool] = True,
+    ):
         """Runs evaluation.
 
         Args:
             split: The split to evaluate.
-            model_name: The name of the model to evaluate
+            checkpoint_path: The checkpoint path.
         """
-        # Model configurations.
-        assert model_name
-        self.cfg.OUTPUT_DIR = os.path.join(self.root_dir, model_name)
-        with open(
-            os.path.join(self.cfg.OUTPUT_DIR, "last_checkpoint"), "r"
-        ) as f:
-            checkpoint_fname = f.readlines()[0]
-        self.cfg.MODEL.WEIGHTS = os.path.join(
-            self.cfg.OUTPUT_DIR, checkpoint_fname
+        trainer, predictor = self.setup_eval(
+            checkpoint_path=checkpoint_path, dataset_name=f"dash_{split}"
         )
-        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
-        trainer = DefaultTrainer(self.cfg)
-        trainer.resume_or_load(resume=True)
-
-        # Dataset configurations.
-        dataset_name = f"dash_{split}"
-        self.cfg.DATASETS.TEST = (dataset_name,)
-
-        # set the testing threshold for this model
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
-
-        self.visualize(split=split)
+        if visualize:
+            self.visualize_dataset(predictor=predictor, split=split)
 
         # Compute metrics.
+        if compute_metrics:
+            res = self.compute_metrics(trainer=trainer, split=split)
+            return res
+
+    def setup_eval(self, checkpoint_path: str, dataset_name: str):
+        self.cfg.DATASETS.TEST = (dataset_name,)
+        self.cfg.MODEL.WEIGHTS = checkpoint_path
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+        self.cfg.OUTPUT_DIR = os.path.join(
+            os.path.dirname(checkpoint_path), "eval", self.get_time_dirname()
+        )
+        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+        trainer = DefaultTrainer(self.cfg)
+        trainer.resume_or_load(resume=True)
+        predictor = DefaultPredictor(self.cfg)
+        return trainer, predictor
+
+    def visualize_dataset(self, predictor: DefaultPredictor, split: str):
+        # Dataset.
+        dataset_name = f"dash_{split}"
+        dataset_dicts = get_dash_dicts(split=split)
+        dash_metadata = MetadataCatalog.get(dataset_name)
+
+        for idx, d in enumerate(
+            random.sample(
+                dataset_dicts, min(self.n_visuals, len(dataset_dicts))
+            )
+        ):
+            img = cv2.imread(d["file_name"])
+            outputs = predictor(img)
+            self.visualize_predictions(
+                img=img, outputs=outputs, vis_id=idx, metadata=dash_metadata
+            )
+
+    def visualize_predictions(
+        self,
+        img: np.ndarray,
+        outputs: Dict,
+        vis_id: int,
+        metadata: MetadataCatalog,
+    ):
+        fields = outputs["instances"]._fields
+        fields_wo_scores = {}
+        for key in ["pred_boxes", "pred_classes", "pred_masks"]:
+            fields_wo_scores[key] = fields[key]
+        outputs["instances"]._fields = fields_wo_scores
+        v = Visualizer(
+            img[:, :, ::-1],
+            metadata=metadata,
+            scale=1.0,
+            instance_mode=ColorMode.SEGMENTATION,  # remove the colors of unsegmented pixels
+        )
+        v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+
+        if self.vis_dir is None:
+            vis_dir = os.path.join(
+                self.cfg.OUTPUT_DIR, f"images/{self.cfg.DATASETS.TEST[0]}"
+            )
+            os.makedirs(vis_dir, exist_ok=True)
+        else:
+            vis_dir = self.vis_dir
+
+        cv2.imwrite(
+            os.path.join(vis_dir, f"{vis_id:02}.png"),
+            v.get_image()[:, :, ::-1],
+        )
+
+    def compute_metrics(self, trainer: DefaultTrainer, split: str):
+        dataset_name = f"dash_{split}"
         evaluator = COCOEvaluator(
             dataset_name=dataset_name,
             cfg=self.cfg,
@@ -118,40 +211,6 @@ class DASHTrainer:
         val_loader = build_detection_test_loader(self.cfg, dataset_name)
         res = inference_on_dataset(trainer.model, val_loader, evaluator)
         return res
-
-    def visualize(self, split: str):
-        # Dataset.
-        dataset_name = f"dash_{split}"
-        dataset_dicts = get_dash_dicts(split=split)
-        dash_metadata = MetadataCatalog.get(dataset_name)
-
-        vis_dir = os.path.join(self.cfg.OUTPUT_DIR, f"images/{dataset_name}")
-        os.makedirs(vis_dir, exist_ok=True)
-
-        predictor = DefaultPredictor(self.cfg)
-        for idx, d in enumerate(
-            random.sample(
-                dataset_dicts, min(self.n_visuals, len(dataset_dicts))
-            )
-        ):
-            im = cv2.imread(d["file_name"])
-            outputs = predictor(im)
-            fields = outputs["instances"]._fields
-            fields_wo_scores = {}
-            for key in ["pred_boxes", "pred_classes", "pred_masks"]:
-                fields_wo_scores[key] = fields[key]
-            outputs["instances"]._fields = fields_wo_scores
-            v = Visualizer(
-                im[:, :, ::-1],
-                metadata=dash_metadata,
-                scale=1.0,
-                instance_mode=ColorMode.SEGMENTATION,  # remove the colors of unsegmented pixels
-            )
-            v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-            cv2.imwrite(
-                os.path.join(vis_dir, f"{idx:02}.png"),
-                v.get_image()[:, :, ::-1],
-            )
 
 
 def get_dash_dicts(split: str) -> List[Dict]:
@@ -196,6 +255,9 @@ def get_dash_dicts(split: str) -> List[Dict]:
     elif split == "val":
         start_idx = 80  # 16000
         end_idx = 100  # 20000
+    elif split == "test":
+        start_idx = 0
+        end_idx = 0
     print(f"Loading the dataset for split {split}...")
 
     for dataset in [
@@ -220,11 +282,12 @@ def get_dash_dicts(split: str) -> List[Dict]:
             record["width"] = width
 
             # Compute the segmentations.
-            seg_map, oids = seg_img_to_map(seg_img=seg_img)
+            masks, oids = seg_img_to_map(seg_img=seg_img)
 
             objs = []
-            for oid in oids:
-                mask = seg_map == oid
+            for mask in masks:
+                # for oid in oids:
+                # mask = seg_map == oid
                 rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
 
                 # Convert `counts` to ascii, otherwise json dump complains about
@@ -257,12 +320,17 @@ def main(args: argparse.Namespace):
         )
         MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
 
-    trainer = DASHTrainer(seed=args.seed, root_dir=args.root_dir)
+    trainer = DASHSegModule(seed=args.seed, root_dir=args.root_dir)
     if args.mode == "train":
         trainer.train()
     elif args.mode == "eval":
+        model_dir = os.path.join(args.root_dir, args.model_name)
+        with open(os.path.join(model_dir, "last_checkpoint"), "r",) as f:
+            checkpoint_fname = f.readlines()[0]
+        checkpoint_path = os.path.join(model_dir, checkpoint_fname)
+
         # train_res = trainer.eval(split="train", model_name=args.model_name)
-        val_res = trainer.eval(split="val", model_name=args.model_name)
+        val_res = trainer.eval(split="val", checkpoint_path=checkpoint_path)
 
         # print("Train Results:")
         # pprint.pprint(train_res)

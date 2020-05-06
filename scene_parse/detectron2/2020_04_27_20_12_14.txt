@@ -1,0 +1,35 @@
+Evaluate annotation type *segm*                                                                                                       [11/1931]
+DONE (t=9.76s).      
+Accumulating evaluation results...     
+DONE (t=1.43s).                          
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.974
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.980
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.955
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.987
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.989
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.246
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.980
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.980
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.963
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.995
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.995
+[04/28 09:33:14 d2.evaluation.coco_evaluation]: Evaluation results for segm:
+|   AP   |  AP50  |  AP75  |  APs   |  APm   |  APl   |
+|:------:|:------:|:------:|:------:|:------:|:------:|
+| 97.397 | 99.002 | 98.001 | 95.542 | 98.742 | 98.880 |
+Validation Results:
+OrderedDict([('bbox',
+              {'AP': 94.94906256733687,
+               'AP50': 98.99267827121679,
+               'AP75': 97.97695676197607,
+               'APl': 98.9727089089475,
+               'APm': 97.84430435124068,
+               'APs': 90.92698334841964}),
+             ('segm',
+              {'AP': 97.39735760322365,
+               'AP50': 99.00217916647746,
+               'AP75': 98.0010351036233,
+               'APl': 98.8795710787609,
+               'APm': 98.74167370128461,
+               'APs': 95.5424511245745})])
