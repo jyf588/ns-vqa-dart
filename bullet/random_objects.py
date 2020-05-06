@@ -1,5 +1,7 @@
-import numpy as np
+import math
 import random
+import pybullet
+import numpy as np
 from typing import *
 
 from ns_vqa_dart.bullet.dash_object import DashObject
@@ -154,7 +156,9 @@ class RandomObjectsGenerator:
             "radius": radius,
             "height": height,
             "position": position,
-            "orientation": [0.0, 0.0, 0.0, 1.0],
+            "orientation": pybullet.getQuaternionFromEuler(
+                [0.0, 0.0, np.random.uniform(low=0, high=2.0 * math.pi)]
+            ),
         }
         if self.mass_bounds is not None:
             odict["mass"] = self.uniform_sample(
