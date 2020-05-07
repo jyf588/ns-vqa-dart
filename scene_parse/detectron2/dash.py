@@ -30,13 +30,38 @@ from ns_vqa_dart.bullet.seg import seg_img_to_map
 
 
 class DASHSegModule:
-    def __init__(self, seed: Optional[int] = 1, vis_dir: Optional[str] = None):
+    def __init__(
+        self,
+        mode: str,
+        train_root_dir: Optional[str] = None,
+        checkpoint_path: Optional[str] = None,
+        seed: Optional[int] = 1,
+        vis_dir: Optional[str] = None,
+        n_visuals: Optional[int] = 30,
+    ):
+        """
+        Args:
+            mode: Whether to use this module for training or inference.
+            train_root_dir: The directory to save training models to.
+            seed: The random seed.
+            vis_dir: The directory to save visuals to.
+            n_visuals: Number of examples to generate visuals for.
+        """
+        self.train_root_dir = train_root_dir
+        self.checkpoint_path = checkpoint_path
         self.vis_dir = vis_dir
+        self.n_visuals = n_visuals
 
         random.seed(seed)
 
         self.cfg = self.get_cfg()
-        self.n_visuals = 30
+
+        if mode == "train":
+            self.set_train_cfg()
+        elif mode == "eval":
+            self.set_eval_cfg()
+        else:
+            raise ValueError(f"Invalid mode: {mode}.")
 
     def get_cfg(self):
         cfg = get_cfg()
@@ -47,26 +72,38 @@ class DASHSegModule:
         )
 
         # Data configurations.
+        # IMPORTANT: by default INPUT.FORMAT is BGR...
         cfg.INPUT.MASK_FORMAT = "bitmask"
         cfg.DATASETS.TRAIN = ("dash_train",)
         cfg.DATASETS.TEST = ()
         cfg.DATALOADER.NUM_WORKERS = 2
 
         # Model configurations.
-        # Let training initialize from model zoo
-        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-        )
         # faster, and good enough for this toy dataset (default: 512)
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
-
-        # Training configurations.
-        cfg.SOLVER.IMS_PER_BATCH = 2
-        cfg.SOLVER.BASE_LR = 0.00025
-        cfg.SOLVER.MAX_ITER = 100000
-        cfg.SOLVER.CHECKPOINT_PERIOD = 5000
         return cfg
+
+    def set_train_cfg(self):
+        # Let training initialize from model zoo
+        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+        )
+
+        self.cfg.SOLVER.IMS_PER_BATCH = 2
+        self.cfg.SOLVER.BASE_LR = 0.00025
+        self.cfg.SOLVER.MAX_ITER = 100000
+        self.cfg.SOLVER.CHECKPOINT_PERIOD = 500
+
+        self.cfg.OUTPUT_DIR = os.path.join(
+            self.train_root_dir, self.get_time_dirname()
+        )
+        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+
+    def set_eval_cfg(self):
+        assert self.checkpoint_path is not None
+        self.cfg.MODEL.WEIGHTS = self.checkpoint_path
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
 
     @staticmethod
     def get_time_dirname():
@@ -74,15 +111,11 @@ class DASHSegModule:
         return time_str
 
     def train(self, root_dir, str):
-        # Output configurations.
-        self.cfg.OUTPUT_DIR = os.path.join(root_dir, self.get_time_dirname())
-        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
-
         trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=False)
         trainer.train()
 
-    def eval_example(self, checkpoint_path: str, img: np.ndarray, vis_id: int):
+    def eval_example(self, img: np.ndarray, vis_id: int):
         """Evaluates a single example.
 
         Args:
@@ -91,20 +124,13 @@ class DASHSegModule:
         Returns:
             masks: A numpy array of shape (N, H, W) of instance masks.
         """
-        for d in ["train", "val", "test"]:
-            DatasetCatalog.register(
-                "dash_" + d, lambda d=d: get_dash_dicts(split=d)
-            )
-            MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
-        metadata = MetadataCatalog.get("dash_test")
-
-        _, predictor = self.setup_eval(
-            checkpoint_path=checkpoint_path, dataset_name="dash_test"
-        )
+        dataset_name = "dash_test"
+        self.cfg.DATASETS.TEST = (dataset_name,)
+        predictor = DefaultPredictor(self.cfg)
         outputs = predictor(img)
 
         self.visualize_predictions(
-            img=img, outputs=outputs, vis_id=vis_id, metadata=metadata
+            img=img, outputs=outputs, vis_id=vis_id, dataset_name=dataset_name
         )
 
         # This produces a numpy array of shape (N, H, W) containing binary
@@ -115,7 +141,6 @@ class DASHSegModule:
     def eval(
         self,
         split: str,
-        checkpoint_path: str,
         compute_metrics: Optional[bool] = True,
         visualize: Optional[bool] = True,
     ):
@@ -125,36 +150,23 @@ class DASHSegModule:
             split: The split to evaluate.
             checkpoint_path: The checkpoint path.
         """
-        trainer, predictor = self.setup_eval(
-            checkpoint_path=checkpoint_path, dataset_name=f"dash_{split}"
-        )
+        dataset_name = f"dash_{split}"
+        self.cfg.DATASETS.TEST = (dataset_name,)
 
         if visualize:
-            self.visualize_dataset(predictor=predictor, split=split)
+            self.visualize_dataset(split=split)
 
         # Compute metrics.
         if compute_metrics:
-            res = self.compute_metrics(trainer=trainer, split=split)
+            res = self.compute_metrics(split=split)
             return res
 
-    def setup_eval(self, checkpoint_path: str, dataset_name: str):
-        self.cfg.DATASETS.TEST = (dataset_name,)
-        self.cfg.MODEL.WEIGHTS = checkpoint_path
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
-        self.cfg.OUTPUT_DIR = os.path.join(
-            os.path.dirname(checkpoint_path), "eval", self.get_time_dirname()
-        )
-        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
-        trainer = DefaultTrainer(self.cfg)
-        trainer.resume_or_load(resume=True)
-        predictor = DefaultPredictor(self.cfg)
-        return trainer, predictor
-
-    def visualize_dataset(self, predictor: DefaultPredictor, split: str):
+    def visualize_dataset(self, split: str):
         # Dataset.
         dataset_name = f"dash_{split}"
         dataset_dicts = get_dash_dicts(split=split)
-        dash_metadata = MetadataCatalog.get(dataset_name)
+
+        predictor = DefaultPredictor(self.cfg)
 
         for idx, d in enumerate(
             random.sample(
@@ -164,16 +176,14 @@ class DASHSegModule:
             img = cv2.imread(d["file_name"])
             outputs = predictor(img)
             self.visualize_predictions(
-                img=img, outputs=outputs, vis_id=idx, metadata=dash_metadata
+                img=img, outputs=outputs, vis_id=idx, dataset_name=dataset_name
             )
 
     def visualize_predictions(
-        self,
-        img: np.ndarray,
-        outputs: Dict,
-        vis_id: int,
-        metadata: MetadataCatalog,
+        self, img: np.ndarray, outputs: Dict, vis_id: int, dataset_name: str,
     ):
+        metadata = MetadataCatalog.get(dataset_name)
+
         fields = outputs["instances"]._fields
         fields_wo_scores = {}
         for key in ["pred_boxes", "pred_classes", "pred_masks"]:
@@ -188,20 +198,24 @@ class DASHSegModule:
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
         if self.vis_dir is None:
-            vis_dir = os.path.join(
-                self.cfg.OUTPUT_DIR, f"images/{self.cfg.DATASETS.TEST[0]}"
+            self.vis_dir = os.path.join(
+                self.cfg.OUTPUT_DIR, "images", dataset_name
             )
-            os.makedirs(vis_dir, exist_ok=True)
-        else:
-            vis_dir = self.vis_dir
+        os.makedirs(self.vis_dir, exist_ok=True)
 
         cv2.imwrite(
-            os.path.join(vis_dir, f"{vis_id:02}.png"),
+            os.path.join(self.vis_dir, f"{vis_id:02}.png"),
             v.get_image()[:, :, ::-1],
         )
 
-    def compute_metrics(self, trainer: DefaultTrainer, split: str):
+    def compute_metrics(self, split: str):
         dataset_name = f"dash_{split}"
+        self.cfg.OUTPUT_DIR = os.path.join(
+            os.path.dirname(self.checkpoint_path),
+            "eval",
+            self.get_time_dirname(),
+        )
+        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
         evaluator = COCOEvaluator(
             dataset_name=dataset_name,
             cfg=self.cfg,
@@ -209,6 +223,9 @@ class DASHSegModule:
             output_dir=self.cfg.OUTPUT_DIR,
         )
         val_loader = build_detection_test_loader(self.cfg, dataset_name)
+
+        trainer = DefaultTrainer(self.cfg)
+        trainer.resume_or_load(resume=True)
         res = inference_on_dataset(trainer.model, val_loader, evaluator)
         return res
 
@@ -310,6 +327,14 @@ def get_dash_dicts(split: str) -> List[Dict]:
     return dataset_dicts
 
 
+def get_latest_checkpoint(root_dir: str, model_name: str):
+    model_dir = os.path.join(root_dir, model_name)
+    with open(os.path.join(model_dir, "last_checkpoint"), "r",) as f:
+        checkpoint_fname = f.readlines()[0]
+    checkpoint_path = os.path.join(model_dir, checkpoint_fname)
+    return checkpoint_path
+
+
 def main(args: argparse.Namespace):
     # Register the datasets.
     for d in ["train", "val"]:
@@ -320,17 +345,35 @@ def main(args: argparse.Namespace):
         )
         MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
 
-    trainer = DASHSegModule(seed=args.seed, root_dir=args.root_dir)
-    if args.mode == "train":
-        trainer.train()
-    elif args.mode == "eval":
-        model_dir = os.path.join(args.root_dir, args.model_name)
-        with open(os.path.join(model_dir, "last_checkpoint"), "r",) as f:
-            checkpoint_fname = f.readlines()[0]
-        checkpoint_path = os.path.join(model_dir, checkpoint_fname)
+    """
+    class DASHSegModule:
+    def __init__(
+        self,
+        mode: str,
+        train_root_dir: Optional[str] = None,
+        checkpoint_path: Optional[str] = None,
+        seed: Optional[int] = 1,
+        vis_dir: Optional[str] = None,
+        n_visuals: Optional[int] = 30,
+    ):
 
-        # train_res = trainer.eval(split="train", model_name=args.model_name)
-        val_res = trainer.eval(split="val", checkpoint_path=checkpoint_path)
+    """
+
+    if args.mode == "train":
+        module = DASHSegModule(
+            mode=args.mode, train_root_dir=args.root_dir, seed=args.seed
+        )
+        module.train()
+    elif args.mode == "eval":
+        checkpoint_path = get_latest_checkpoint(
+            root_dir=args.root_dir, model_name=args.model_name
+        )
+
+        module = DASHSegModule(
+            mode=args.mode, checkpoint_path=checkpoint_path, seed=args.seed
+        )
+
+        val_res = module.eval(split="val")
 
         # print("Train Results:")
         # pprint.pprint(train_res)
