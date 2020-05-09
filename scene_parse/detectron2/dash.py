@@ -129,9 +129,10 @@ class DASHSegModule:
         predictor = DefaultPredictor(self.cfg)
         outputs = predictor(img)
 
-        self.visualize_predictions(
-            img=img, outputs=outputs, vis_id=vis_id, dataset_name=dataset_name
-        )
+        if self.vis_dir is not None:
+            self.visualize_predictions(
+                img=img, outputs=outputs, vis_id=vis_id, dataset_name=dataset_name
+            )
 
         # This produces a numpy array of shape (N, H, W) containing binary
         # masks.

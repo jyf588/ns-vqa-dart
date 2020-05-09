@@ -1,5 +1,23 @@
 ## Requirements
+
+This section contains prerequisites to running the DASH system.
+
+First, clone the main repo and its submodules.
 ```
+git clone https://github.com/jyf588/pytorch-rl-bullet.git
+git submodule update --init --recursive
+```
+
+Create a conda environment.
+```
+conda create -n dash
+conda activate dash
+```
+
+Install python packages.
+```
+cd ns_vqa_dart/scripts
+conda install pip
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
@@ -8,9 +26,53 @@ OpenAI baselines:
 ```
 git clone https://github.com/openai/baselines.git
 cd baselines
-*Replace baselines/common/running_mean_std.py with one in https://github.com/jyf588/pytorch-rl-bullet/tree/bullet_ppo/baseline_patches
-*replace setup.py with the one in the folder above as well.
+cp <path_to_pytorch_rl_bullet_repo>/baseline_patches/running_mean_std.py baselines/common/
+cp <path_to_pytorch_rl_bullet_repo>/baseline_patches/setup.py .
 pip install -e .
+```
+
+Pytorch installation:
+```
+
+conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+
+# Issue when using the command below: https://github.com/facebookresearch/detectron2/issues/55
+# pip install torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu101/torch_stable.html
+```
+
+Check that PyTorch is properly installed:
+```
+import torch, torchvision
+print(torch.__version__, torch.cuda.is_available())
+print(torch.version.cuda)
+```
+
+Make sure that your torch CUDA version printed out matches your CUDA version.
+
+Another command to try:
+```
+python -c 'import torch; from torch.utils.cpp_extension import CUDA_HOME; print(torch.cuda.is_available(), CUDA_HOME)'
+```
+
+Check the gcc version. gcc & g++ ≥ 5 are required.
+```
+gcc --version
+```
+
+Install Detectron2 and pycocotools:
+```
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+```
+
+Try importing detectron2:
+```
+import detectron2
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer
+from detectron2.data import MetadataCatalog
 ```
 
 ## Generating Vision Module Datasets
@@ -133,15 +195,6 @@ rsync -azP ~/demo_poses ~/workspace/lucas/
 ./scripts/table2/baseline_cyl.sh
 ```
 
-## NLP-related installation instructions
-
-Mainly to run `main_sim_stack_new.py`:
-
-```
-pip install spacy nltk
-python -m spacy download en_core_web_sm
-```
-
 ## Instructions for Building & Running OpenRAVE:
 
 First, build the image.
@@ -256,63 +309,6 @@ April 28, 2020: Trying to re-add reaching and retracting.
 
 ## Detectron
 
-Source: https://github.com/facebookresearch/detectron2
-
-### Installation
-
-Create the virtual env:
-
-```
-conda create -n detectron python=3.7 anaconda
-conda activate detectron
-```
-
-The following installation instructions are largely based on the colab notebook: https://colab.research.google.com/drive/16jcaJoc6bCFAQ96jDe2HwtXj7BMD_-m5#scrollTo=QHnVupBBn9eR
-```
-pip install -U torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu101/torch_stable.html
-pip install cython pyyaml==5.1
-pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
-pip install opencv-python
-```
-
-Note: When attemping to install pyyaml, received the following message:
-```
-Installing collected packages: pyyaml
-  Attempting uninstall: pyyaml
-    Found existing installation: PyYAML 5.3.1
-ERROR: Cannot uninstall 'PyYAML'. It is a distutils installed project and thus we cannot accurately determine which files belong to it which would lead to only a partial uninstall.
-```
-This error is ignored for now since a more updated version of pyyaml is already installed.
-
-Check that PyTorch is properly installed:
-```
-import torch, torchvision
-print(torch.__version__, torch.cuda.is_available())
-```
-
-Check the gcc version:
-```
-gcc --version
-```
-
-Install detectron 2:
-```
-python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
-
-# The version below is outdated.
-# pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html
-```
-cuda 10.2 link does not exist, so we're going with 10.1
-
-Try importing detectron2
-```
-import detectron2
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog
-```
 
 ### Run a pre-trained detectron2 model
 

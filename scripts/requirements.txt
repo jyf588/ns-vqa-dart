@@ -3,3 +3,7 @@ pybullet
 gym
 spacy
 nltk
+imageio
+cython
+pyyaml
+opencv-python
