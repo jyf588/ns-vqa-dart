@@ -13,11 +13,12 @@ cd baselines
 pip install -e .
 ```
 
-## Generating vision module datasets
+## Generating Vision Module Datasets
 
 First, here is a changelog of dataset versions and the diffs between successive
 versions:
 
+- `planning_v004`, `placing_v004`, `stacking_v004` (May 8, 2020)
 - `planning_v003` and `placing_v003` (April 17, 2020)
   - Change the camera "look at" locations:
     - `planning_v003`: Instead of looking at every single object, look once at the center of the distribution of object locations and heights.
@@ -39,11 +40,20 @@ versions:
   - FIX: Bug where saved camera orientation is changed from xyyw -> xyzw.
 - `dash_v002`: The first dataset to train both planning and placing, together.
 
-Step 1. Generate states for planning and placing. (ETA: 40 minutes)
+Step 1. Generate policy rollout states for placing and stacking. 
+(ETA: 1 hr 20 mins)
 
 ```
-time ./ns_vqa_dart/scripts/planning_v003_20K/01_generate_states.sh
-time ./ns_vqa_dart/scripts/placing_v003_2K_100/01_generate_states.sh
+./ns_vqa_dart/scripts/01_generate_policy_rollouts.sh
+```
+
+Step 2. Generate states for planning, placing, and stacking. 
+(ETA: 40 minutes)
+
+```
+time ./ns_vqa_dart/scripts/planning/v003_20K/01_generate_states.sh
+time ./ns_vqa_dart/scripts/placing/v003_2K_20K/01_generate_states.sh
+time ./ns_vqa_dart/scripts/stacking/v003_2K_20K/01_generate_states.sh
 ```
 
 Step 2. On the Unity machine, run the following to transfer the states to the
@@ -58,8 +68,7 @@ time ./ns_vqa_dart/scripts/placing_v003_2K_100/02_transfer_states.sh
 Step 3. Generate Unity images from the states, and transfer the images to the 
 machine where training will occur. 
 
-(ETA: 1 hour 30 minutes for generation, 3 
-hours for transfer)
+(ETA: 1 hour 30 minutes for generation, 3 hours for transfer)
 
 Note: Currently you need to update the `end_id` of the `DatasetLoader` in the
 script.
