@@ -8,7 +8,7 @@ git clone https://github.com/jyf588/pytorch-rl-bullet.git
 git submodule update --init --recursive
 ```
 
-Create a conda environment.
+Next, create a conda environment.
 ```
 conda create -n dash
 conda activate dash
