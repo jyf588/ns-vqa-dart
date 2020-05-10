@@ -18,7 +18,12 @@ Next, run the Unity executable:
 ## Tables and Figures
 
 ### Table 1
-TODO
+
+First, generate the test scenes:
+
+```
+time python scenes/generate.py table1  # ETA: 1 second
+```
 
 ### Table 2
 TODO
@@ -30,13 +35,14 @@ TODO
 
 ### Vision Datasets
 
-To generate your own datasets for training the vision module, run the following:
+To generate your own datasets for training the vision module, run the following
+commands. You can choose to either run the tiny dataset or the full dataset.
 
-Step 1. Generate states for planning, placing, and stacking. 
-(ETA: TODO)
+Step 1. Generate scenes for planning, placing, and stacking. 
 
 ```
-time ./ns_vqa_dart/scripts/01_generate_states.sh
+time python scenes/generate.py vision  # ETA: 5 seconds
+time python scenes/generate.py vision_tiny  # ETA: 1 second
 ```
 
 Step 2. Generate Unity images from the states.

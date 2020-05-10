@@ -1,14 +1,15 @@
-import json
-import numpy as np
-from numpy.linalg import inv
 import os
+import sys
+import json
+import shutil
 import pickle
 import pybullet
+import numpy as np
+from typing import *
+from numpy.linalg import inv
+from os.path import expanduser
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
-import shutil
-import sys
-from typing import *
 
 
 CONNECT_MODE2FLAG = {"direct": pybullet.DIRECT, "gui": pybullet.GUI}
@@ -67,9 +68,7 @@ def apply_inv_transform(xyz: List[float], transformation: np.ndarray):
         xyz_transformed: The xyz values, transformed by the inverse of the 
             input transformation.
     """
-    xyz_transformed = apply_transform(
-        xyz=xyz, transformation=inv(transformation)
-    )
+    xyz_transformed = apply_transform(xyz=xyz, transformation=inv(transformation))
     return xyz_transformed
 
 
@@ -143,9 +142,7 @@ def up_to_orientation(
     a2_solved = np.arctan2(x, z)
     # a3_solved is zero since equation has under-determined
     if gt_orientation is None:
-        orientation = pybullet.getQuaternionFromEuler(
-            [a1_solved, a2_solved, 0]
-        )
+        orientation = pybullet.getQuaternionFromEuler([a1_solved, a2_solved, 0])
     else:
         raise NotImplementedError
 
@@ -263,9 +260,7 @@ def euler_to_up(euler: List[float]) -> List[float]:
 
 def delete_and_create_dir(dir: str):
     if os.path.exists(dir):
-        user_input = input(
-            f"dst dir already exists: {dir}. Delete and continue? [Y/n]"
-        )
+        user_input = input(f"dst dir already exists: {dir}. Delete and continue? [Y/n]")
         if user_input == "Y":
             shutil.rmtree(dir)
         else:
@@ -319,3 +314,8 @@ def save_pickle(path: str, data: Any):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         pickle.dump(data, f)
+
+
+def get_user_homedir() -> str:
+    home = expanduser("~")
+    return home
