@@ -7,3 +7,5 @@ imageio
 cython
 pyyaml
 opencv-python
+argparse
+tqdm
