@@ -26,6 +26,7 @@ from detectron2.data import build_detection_test_loader
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 
+import exp.loader
 from ns_vqa_dart.bullet.seg import seg_img_to_map
 
 
@@ -33,6 +34,7 @@ class DASHSegModule:
     def __init__(
         self,
         mode: str,
+        exp_name: str,
         train_root_dir: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         seed: Optional[int] = 1,
@@ -47,6 +49,7 @@ class DASHSegModule:
             vis_dir: The directory to save visuals to.
             n_visuals: Number of examples to generate visuals for.
         """
+        self.exp_name = exp_name
         self.train_root_dir = train_root_dir
         self.checkpoint_path = checkpoint_path
         self.vis_dir = vis_dir
@@ -72,14 +75,12 @@ class DASHSegModule:
         )
 
         # Data configurations.
-        # IMPORTANT: by default INPUT.FORMAT is BGR...
         cfg.INPUT.MASK_FORMAT = "bitmask"
-        cfg.DATASETS.TRAIN = ("dash_train",)
+        cfg.DATASETS.TRAIN = (self.exp_name,)
         cfg.DATASETS.TEST = ()
         cfg.DATALOADER.NUM_WORKERS = 2
 
         # Model configurations.
-        # faster, and good enough for this toy dataset (default: 512)
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
         return cfg
@@ -92,30 +93,38 @@ class DASHSegModule:
 
         self.cfg.SOLVER.IMS_PER_BATCH = 2
         self.cfg.SOLVER.BASE_LR = 0.00025
-        self.cfg.SOLVER.MAX_ITER = 100000
+        self.cfg.SOLVER.MAX_ITER = 60000
         self.cfg.SOLVER.CHECKPOINT_PERIOD = 500
 
-        self.cfg.OUTPUT_DIR = os.path.join(
-            self.train_root_dir, self.get_time_dirname()
-        )
+        self.cfg.OUTPUT_DIR = os.path.join(self.train_root_dir, self.get_time_dirname())
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
     def set_eval_cfg(self):
+        self.cfg.DATASETS.TEST = (self.exp_name,)
+
         assert self.checkpoint_path is not None
         self.cfg.MODEL.WEIGHTS = self.checkpoint_path
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
+
+        self.cfg.OUTPUT_DIR = os.path.join(
+            os.path.dirname(self.checkpoint_path),
+            "eval",
+            self.exp_name,
+            self.get_time_dirname(),
+        )
+        os.makedirs(self.cfg.OUTPUT_DIR)
 
     @staticmethod
     def get_time_dirname():
         time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         return time_str
 
-    def train(self, root_dir, str):
+    def train(self):
         trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=False)
         trainer.train()
 
-    def eval_example(self, img: np.ndarray, vis_id: int):
+    def eval_example(self, bgr: np.ndarray, vis_id: Optional[int] = Nones):
         """Evaluates a single example.
 
         Args:
@@ -124,15 +133,11 @@ class DASHSegModule:
         Returns:
             masks: A numpy array of shape (N, H, W) of instance masks.
         """
-        dataset_name = "dash_test"
-        self.cfg.DATASETS.TEST = (dataset_name,)
         predictor = DefaultPredictor(self.cfg)
         outputs = predictor(img)
 
-        if self.vis_dir is not None:
-            self.visualize_predictions(
-                img=img, outputs=outputs, vis_id=vis_id, dataset_name=dataset_name
-            )
+        if vis_id is not None and self.vis_dir is not None:
+            self.visualize_predictions(bgr=bgr, outputs=outputs, vis_id=vis_id)
 
         # This produces a numpy array of shape (N, H, W) containing binary
         # masks.
@@ -140,10 +145,7 @@ class DASHSegModule:
         return masks
 
     def eval(
-        self,
-        split: str,
-        compute_metrics: Optional[bool] = True,
-        visualize: Optional[bool] = True,
+        self, compute_metrics: Optional[bool] = True, visualize: Optional[bool] = True,
     ):
         """Runs evaluation.
 
@@ -151,79 +153,74 @@ class DASHSegModule:
             split: The split to evaluate.
             checkpoint_path: The checkpoint path.
         """
-        dataset_name = f"dash_{split}"
-        self.cfg.DATASETS.TEST = (dataset_name,)
 
         if visualize:
-            self.visualize_dataset(split=split)
+            self.visualize_dataset()
 
         # Compute metrics.
         if compute_metrics:
-            res = self.compute_metrics(split=split)
+            res = self.compute_metrics()
             return res
 
-    def visualize_dataset(self, split: str):
+    def visualize_dataset(self):
         # Dataset.
-        dataset_name = f"dash_{split}"
-        dataset_dicts = get_dash_dicts(split=split)
+        dataset_dicts = get_dash_dicts(exp_name=self.exp_name)
 
         predictor = DefaultPredictor(self.cfg)
 
-        for idx, d in enumerate(
-            random.sample(
-                dataset_dicts, min(self.n_visuals, len(dataset_dicts))
+        print("Visualizing predictions...")
+        for idx, d in tqdm(
+            enumerate(
+                random.sample(dataset_dicts, min(self.n_visuals, len(dataset_dicts)))
             )
         ):
-            img = cv2.imread(d["file_name"])
-            outputs = predictor(img)
-            self.visualize_predictions(
-                img=img, outputs=outputs, vis_id=idx, dataset_name=dataset_name
-            )
+            bgr = cv2.imread(d["file_name"])
+            # Predictor always takes in a BGR image.
+            # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L162
+            # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L212
+            outputs = predictor(bgr)
+            self.visualize_predictions(bgr=bgr, outputs=outputs, vis_id=idx)
 
     def visualize_predictions(
-        self, img: np.ndarray, outputs: Dict, vis_id: int, dataset_name: str,
+        self, bgr: np.ndarray, outputs: Dict, vis_id: int, remove_scores=True
     ):
-        metadata = MetadataCatalog.get(dataset_name)
+        """
 
-        fields = outputs["instances"]._fields
-        fields_wo_scores = {}
-        for key in ["pred_boxes", "pred_classes", "pred_masks"]:
-            fields_wo_scores[key] = fields[key]
-        outputs["instances"]._fields = fields_wo_scores
+        Args:
+            img (np.ndarray): An image of shape (H, W, C), in BGR order.
+            outputs: The outputs of the model.
+        """
+        metadata = MetadataCatalog.get(self.exp_name)
+
+        # Remove scores from the visualization.
+        if remove_scores:
+            fields = outputs["instances"]._fields
+            fields_wo_scores = {}
+            for key in ["pred_boxes", "pred_classes", "pred_masks"]:
+                fields_wo_scores[key] = fields[key]
+            outputs["instances"]._fields = fields_wo_scores
+
+        # Generate the visualization.
         v = Visualizer(
-            img[:, :, ::-1],
-            metadata=metadata,
-            scale=1.0,
-            instance_mode=ColorMode.SEGMENTATION,  # remove the colors of unsegmented pixels
+            bgr, metadata=metadata, scale=1.0, instance_mode=ColorMode.SEGMENTATION,
         )
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
         if self.vis_dir is None:
-            self.vis_dir = os.path.join(
-                self.cfg.OUTPUT_DIR, "images", dataset_name
-            )
+            self.vis_dir = os.path.join(self.cfg.OUTPUT_DIR, "images")
         os.makedirs(self.vis_dir, exist_ok=True)
 
-        cv2.imwrite(
-            os.path.join(self.vis_dir, f"{vis_id:02}.png"),
-            v.get_image()[:, :, ::-1],
-        )
+        # Visualizer produces BGR.
+        cv2.imwrite(os.path.join(self.vis_dir, f"{vis_id:02}.png"), v.get_image())
 
-    def compute_metrics(self, split: str):
-        dataset_name = f"dash_{split}"
-        self.cfg.OUTPUT_DIR = os.path.join(
-            os.path.dirname(self.checkpoint_path),
-            "eval",
-            self.get_time_dirname(),
-        )
-        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+    def compute_metrics(self):
         evaluator = COCOEvaluator(
-            dataset_name=dataset_name,
+            dataset_name=self.exp_name,
             cfg=self.cfg,
             distributed=False,
             output_dir=self.cfg.OUTPUT_DIR,
         )
-        val_loader = build_detection_test_loader(self.cfg, dataset_name)
+        val_loader = build_detection_test_loader(self.cfg, self.exp_name)
 
         trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=True)
@@ -231,12 +228,13 @@ class DASHSegModule:
         return res
 
 
-def get_dash_dicts(split: str) -> List[Dict]:
+def get_dash_dicts(exp_name: str) -> List[Dict]:
     """Prepares the dataset dictionaries for the DASH dataset for detectron2
     training.
 
     Args:
-        img_dir: The directory that the images are located.
+        exp_name: The name of the experiment to load data for.
+
     Returns:
         dataset_dicts: A list of dataset dictionaries, in the format:
             [
@@ -267,51 +265,34 @@ def get_dash_dicts(split: str) -> List[Dict]:
             ]
     """
     dataset_dicts = []
-    if split == "train":
-        start_idx = 0
-        end_idx = 1  # 16000
-    elif split == "val":
-        start_idx = 80  # 16000
-        end_idx = 100  # 20000
-    elif split == "test":
-        start_idx = 0
-        end_idx = 0
-    print(f"Loading the dataset for split {split}...")
 
-    for dataset in [
-        "planning_v003_20K",
-        "placing_v003_2K_20K",
-        "stacking_v003_2K_20K",
-    ]:
-        for idx in tqdm(range(start_idx, end_idx)):
+    for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
+        print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
+        set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
+        key2paths = set_loader.get_key2paths()
+        for idx in tqdm(range(len(set_loader))):
             record = {}
 
-            # Construct the full path of the image.
-            rgb_path = f"/media/sdc3/mguo/data/datasets/{dataset}/unity_output/images/first/rgb/{idx:06}_0.png"
-            seg_path = f"/media/sdc3/mguo/data/datasets/{dataset}/unity_output/images/first/seg/{idx:06}_0.png"
+            img_path = key2paths["img"][idx]
+            masks_path = key2paths["masks"][idx]
 
             # Retrieve the height and width of the image.
-            seg_img = imageio.imread(seg_path)
-            height, width = imageio.imread(rgb_path).shape[:2]
+            masks = np.load(masks_path)
+            _, height, width = masks.shape
 
-            record["file_name"] = rgb_path
-            record["image_id"] = f"{dataset}_{idx:06}"
+            record["file_name"] = img_path
+            record["image_id"] = f"{set_name}_{idx:06}"
             record["height"] = height
             record["width"] = width
 
-            # Compute the segmentations.
-            masks, oids = seg_img_to_map(seg_img=seg_img)
-
             objs = []
             for mask in masks:
-                # for oid in oids:
-                # mask = seg_map == oid
                 rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
 
                 # Convert `counts` to ascii, otherwise json dump complains about
                 # not being able to serialize bytes.
                 # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
-                rle["counts"] = rle["counts"].decode("ASCII")
+                # rle["counts"] = rle["counts"].decode("ASCII")
                 assert isinstance(rle, dict)
                 assert len(rle) > 0
                 bbox = list(pycocotools.mask.toBbox(rle))
@@ -337,71 +318,58 @@ def get_latest_checkpoint(root_dir: str, model_name: str):
 
 
 def main(args: argparse.Namespace):
-    # Register the datasets.
-    for d in ["train", "val"]:
-        # Associate a dataset named "dash_{split}" with the function that
-        # returns the data for the split.
-        DatasetCatalog.register(
-            "dash_" + d, lambda d=d: get_dash_dicts(split=d)
-        )
-        MetadataCatalog.get("dash_" + d).set(thing_classes=["object"])
-
-    """
-    class DASHSegModule:
-    def __init__(
-        self,
-        mode: str,
-        train_root_dir: Optional[str] = None,
-        checkpoint_path: Optional[str] = None,
-        seed: Optional[int] = 1,
-        vis_dir: Optional[str] = None,
-        n_visuals: Optional[int] = 30,
-    ):
-
-    """
+    # Register the dataset.
+    DatasetCatalog.register(
+        args.exp_name, lambda: get_dash_dicts(exp_name=args.exp_name)
+    )
+    MetadataCatalog.get(args.exp_name).set(thing_classes=["object"])
 
     if args.mode == "train":
         module = DASHSegModule(
-            mode=args.mode, train_root_dir=args.root_dir, seed=args.seed
+            mode=args.mode,
+            exp_name=args.exp_name,
+            train_root_dir=args.root_dir,
+            seed=args.seed,
         )
         module.train()
     elif args.mode == "eval":
+        # Evaluate the latest checkpoint under the provided model name.
         checkpoint_path = get_latest_checkpoint(
             root_dir=args.root_dir, model_name=args.model_name
         )
 
         module = DASHSegModule(
-            mode=args.mode, checkpoint_path=checkpoint_path, seed=args.seed
+            mode=args.mode,
+            exp_name=args.exp_name,
+            checkpoint_path=checkpoint_path,
+            seed=args.seed,
         )
 
-        val_res = module.eval(split="val")
-
-        # print("Train Results:")
-        # pprint.pprint(train_res)
-        print("Validation Results:")
-        pprint.pprint(val_res)
+        res = module.eval()
+        print("Results:")
+        pprint.pprint(res)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1, help="The random seed.")
     parser.add_argument(
-        "--mode",
-        required=True,
+        "mode",
         type=str,
         choices=["train", "eval"],
         help="Whether to train or run evaluation.",
     )
+    parser.add_argument("exp_name", type=str, help="The name of the experiment to run.")
     parser.add_argument(
         "--root_dir",
         type=str,
-        default="/media/sdc3/mguo/outputs/detectron",
+        default="/home/mguo/outputs/detectron",
         help="The root directory containing models.",
     )
     parser.add_argument(
         "--model_name",
         type=str,
-        default="2020_04_27_20_12_14",
+        default="2020_05_11_11_56_20",
         help="The name of the model to evaluate.",
     )
     args = parser.parse_args()

@@ -22,7 +22,7 @@ Next, run the Unity executable:
 First, generate the test scenes:
 
 ```
-time python scenes/generate.py table1  # ETA: 1 second
+time python scene/generate.py table1  # ETA: 1 second
 ```
 
 ### Table 2
@@ -36,33 +36,63 @@ TODO
 ### Vision Datasets
 
 To generate your own datasets for training the vision module, run the following
-commands. You can choose to either run the tiny dataset or the full dataset.
+commands. You can choose to either run `vision_tiny` or `vision` as the dataset name.
 
 Step 1. Generate scenes for planning, placing, and stacking. 
 
 ```
-time python scenes/generate.py vision  # ETA: 5 seconds
-time python scenes/generate.py vision_tiny  # ETA: 1 second
+time python scene/generate.py <dataset>
 ```
 
-Step 2. Generate Unity images from the states.
-(ETA: TODO)
+Step 2. Run evaluation of the policy to generate placing and stacking frames.
+(`vision_tiny`: 1 minute 24 seconds)
 
 ```
-time ./ns_vqa_dart/scripts/02_generate_unity_images.sh
+time python system/run.py <dataset> vision_states
+python system/client.py
 ```
 
-### Vision Training
+Step 3. Generate unity images and segmentations.
+
+```
+time python system/run.py <dataset> unity_dataset
+```
+
+Then, launch the Unity application.
+
+### Segmentation Model
 
 You can train your own segmentation module and vision module.
 
-Train a segmentation module:
+Train a segmentation module on the segmentation dataset.
+
+```
+time python ns_vqa_dart/scene_parse/detectron2/dash.py train <dataset>
+```
+
+Check visualizations and metrics on the training set.
+
+```
+time python ns_vqa_dart/scene_parse/detectron2/dash.py eval <dataset>
+```
+
+### Feature Extraction Model
+
+First, generate segmentation masks on the feature extraction training set using the 
+trained segmentation model.
 
 ```
 TODO
 ```
 
-Train a vision module:
+Next, generate the dataset we will use for training. Essentially this step creates
+training inputs for each object in the dataset (as opposed to one image per scene).
+
+```
+TODO
+```
+
+Finally, train the feature extraction model:
 
 ```
 TODO
