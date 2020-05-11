@@ -124,7 +124,7 @@ class DASHSegModule:
         trainer.resume_or_load(resume=False)
         trainer.train()
 
-    def eval_example(self, bgr: np.ndarray, vis_id: Optional[int] = Nones):
+    def eval_example(self, bgr: np.ndarray, vis_id: Optional[int] = None):
         """Evaluates a single example.
 
         Args:
@@ -134,7 +134,7 @@ class DASHSegModule:
             masks: A numpy array of shape (N, H, W) of instance masks.
         """
         predictor = DefaultPredictor(self.cfg)
-        outputs = predictor(img)
+        outputs = predictor(bgr)
 
         if vis_id is not None and self.vis_dir is not None:
             self.visualize_predictions(bgr=bgr, outputs=outputs, vis_id=vis_id)

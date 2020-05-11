@@ -311,7 +311,7 @@ def save_pickle(path: str, data: Any):
         path: The path of the pickle file to save.
         data: The data to save.
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    assert not os.path.exists(path)
     with open(path, "wb") as f:
         pickle.dump(data, f)
 

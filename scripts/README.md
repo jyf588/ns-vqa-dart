@@ -67,7 +67,7 @@ You can train your own segmentation module and vision module.
 Train a segmentation module on the segmentation dataset.
 
 ```
-time python ns_vqa_dart/scene_parse/detectron2/dash.py train <dataset>
+time python ns_vqa_dart/scene_parse/detectron2/dash.py train <seg_dataset>
 ```
 
 Check visualizations and metrics on the training set.
@@ -82,7 +82,7 @@ First, generate segmentation masks on the feature extraction training set using 
 trained segmentation model.
 
 ```
-TODO
+time python ns_vqa_dart/scene_parse/detectron2/dash.py eval <attr_dataset>
 ```
 
 Next, generate the dataset we will use for training. Essentially this step creates
