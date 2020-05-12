@@ -8,10 +8,9 @@ import pprint
 from tqdm import tqdm
 from typing import *
 
-from ns_vqa_dart.bullet.dash_dataset import DashDataset
-from ns_vqa_dart.bullet import dash_object
-from ns_vqa_dart.bullet import gen_dataset
+import exp.loader
 from ns_vqa_dart.bullet import util
+from ns_vqa_dart.bullet import dash_object
 
 AXIS_NAMES = ["x", "y", "z"]
 MULTIPLIER = {"radius": 100, "height": 100, "position": 100}
@@ -24,13 +23,7 @@ UNITS = {
 
 
 class Metrics:
-    def __init__(self, plot_path: str):
-        """
-        Args:
-            plot_path: The path to save the plot to.
-        """
-        self.plot_path = plot_path
-
+    def __init__(self):
         # Initialize the error counters for various categories.
         self.counts_dict = {k: 0 for k in ["shape", "color"]}
         self.l1_errors_dict = {
@@ -51,9 +44,6 @@ class Metrics:
         self.x = []
         self.y = []
         self.errors = []
-
-        # Create the directory for the plot path if it doesn't already exist.
-        os.makedirs(os.path.dirname(plot_path), exist_ok=True)
 
     def add_example(self, gt_dict, pred_dict):
         """Computes errors, and adds them to the running total.
@@ -143,21 +133,19 @@ class Metrics:
                     raise ValueError(f"Unrecognized type: {type(v)}")
 
         # Generate a plot.
-        self.plot()
+        # self.plot()
 
-    def plot(self):
-        # print(self.x)
-        # print(self.y)
-        # print(self.errors)
-        plt.scatter(self.x, self.y, s=self.errors, alpha=0.5)
-        plt.savefig(self.plot_path)
+    # def plot(self):
+    # print(self.x)
+    # print(self.y)
+    # print(self.errors)
+    # plt.scatter(self.x, self.y, s=self.errors, alpha=0.5)
+    # plt.savefig(self.plot_path)
 
 
 def main(args: argparse.Namespace):
     pred_dicts = util.load_json(path=args.pred_path)
-    compute_metrics(
-        pred_dicts=pred_dicts, coordinate_frame=args.coordinate_frame
-    )
+    compute_metrics(pred_dicts=pred_dicts, coordinate_frame=args.coordinate_frame)
 
 
 def compute_metrics(
@@ -176,10 +164,7 @@ def compute_metrics(
 
             # Convert from vectors to dictionaries.
             cam_position, cam_orientation = gen_dataset.load_camera_pose(
-                cam_dir=cam_dir,
-                sid=sid,
-                oid=oid,
-                camera_control=camera_control,
+                cam_dir=cam_dir, sid=sid, oid=oid, camera_control=camera_control,
             )
             gt_y_dict = dash_object.y_vec_to_dict(
                 y=labels,
