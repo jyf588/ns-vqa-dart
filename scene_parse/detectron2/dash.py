@@ -34,7 +34,7 @@ class DASHSegModule:
     def __init__(
         self,
         mode: str,
-        exp_name: str,
+        exp_name: Optional[str] = None,
         train_root_dir: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         seed: Optional[int] = 1,
@@ -49,6 +49,7 @@ class DASHSegModule:
             vis_dir: The directory to save visuals to.
             n_visuals: Number of examples to generate visuals for.
         """
+        self.mode = mode
         self.exp_name = exp_name
         self.train_root_dir = train_root_dir
         self.checkpoint_path = checkpoint_path
@@ -61,7 +62,7 @@ class DASHSegModule:
 
         if mode == "train":
             self.set_train_cfg()
-        elif mode == "eval":
+        elif mode in ["eval", "eval_single"]:
             self.set_eval_cfg()
         else:
             raise ValueError(f"Invalid mode: {mode}.")
@@ -100,19 +101,25 @@ class DASHSegModule:
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
     def set_eval_cfg(self):
-        self.cfg.DATASETS.TEST = (self.exp_name,)
-
         assert self.checkpoint_path is not None
         self.cfg.MODEL.WEIGHTS = self.checkpoint_path
         self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
 
-        self.cfg.OUTPUT_DIR = os.path.join(
-            os.path.dirname(self.checkpoint_path),
-            "eval",
-            self.exp_name,
-            self.get_time_dirname(),
-        )
-        os.makedirs(self.cfg.OUTPUT_DIR)
+        if self.mode == "eval_single":
+            DatasetCatalog.register(
+                "eval_single", lambda: get_dash_dicts(exp_name="eval_single")
+            )
+            MetadataCatalog.get("eval_single").set(thing_classes=["object"])
+            self.cfg.DATASETS.TEST = ("eval_single",)
+        else:
+            self.cfg.DATASETS.TEST = (self.exp_name,)
+            self.cfg.OUTPUT_DIR = os.path.join(
+                os.path.dirname(self.checkpoint_path),
+                "eval",
+                self.exp_name,
+                self.get_time_dirname(),
+            )
+            os.makedirs(self.cfg.OUTPUT_DIR)
 
     @staticmethod
     def get_time_dirname():
@@ -320,6 +327,9 @@ def get_dash_dicts(exp_name: str) -> List[Dict]:
             ]
     """
     dataset_dicts = []
+
+    if exp_name == "eval_single":
+        return dataset_dicts
 
     for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
         print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
