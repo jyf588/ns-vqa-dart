@@ -141,11 +141,18 @@ class DASHSegModule:
 
         # This produces a numpy array of shape (N, H, W) containing binary
         # masks.
+        masks = self.get_output_masks(outputs=outputs)
+        return masks
+
+    def get_output_masks(self, outputs):
         masks = outputs["instances"].to("cpu")._fields["pred_masks"].numpy()
         return masks
 
     def eval(
-        self, compute_metrics: Optional[bool] = True, visualize: Optional[bool] = True,
+        self,
+        compute_metrics: Optional[bool] = True,
+        visualize: Optional[bool] = True,
+        save_segs: Optional[bool] = False,
     ):
         """Runs evaluation.
 
@@ -153,36 +160,81 @@ class DASHSegModule:
             split: The split to evaluate.
             checkpoint_path: The checkpoint path.
         """
+        dataset_dicts = get_dash_dicts(exp_name=self.exp_name)
+        n = len(dataset_dicts)
 
+        predictor = DefaultPredictor(self.cfg)
+
+        idxs_to_eval, visualize_idxs, save_seg_idxs = [], [], []
         if visualize:
-            self.visualize_dataset()
+            visualize_idxs = random.sample(range(n), min(self.n_visuals, n))
+            idxs_to_eval += visualize_idxs
+        if save_segs:
+            save_seg_idxs = list(range(len(dataset_dicts)))
+        idxs_to_eval = set(visualize_idxs) | set(save_seg_idxs)
+
+        # Get scene_id to timestep mapping.
+        set2scene_id2timesteps = {}
+        for idx in idxs_to_eval:
+            d = dataset_dicts[idx]
+            set_name, scene_id, timestep = d["image_id"].split("_")
+            timestep = int(timestep)
+            if set_name not in set2scene_id2timesteps:
+                set2scene_id2timesteps[set_name] = {}
+            if scene_id not in set2scene_id2timesteps[set_name]:
+                set2scene_id2timesteps[set_name][scene_id] = []
+            set2scene_id2timesteps[set_name][scene_id].append((idx, timestep))
+
+        print("Evaluating dataset...")
+        for set_name in set2scene_id2timesteps.keys():
+            for scene_id in set2scene_id2timesteps[set_name].keys():
+                print(
+                    f"Evaluating {self.exp_name}\tset: {set_name}\tscene ID: {scene_id}"
+                )
+                scene_loader = exp.loader.SceneLoader(
+                    exp_name=self.exp_name, set_name=set_name, scene_id=scene_id
+                )
+                os.makedirs(scene_loader.detectron_masks_dir)
+
+                for idx, ts in tqdm(set2scene_id2timesteps[set_name][scene_id]):
+                    d = dataset_dicts[idx]
+
+                    # Predictor always takes in a BGR image.
+                    # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L162
+                    # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L212
+                    bgr = cv2.imread(d["file_name"])
+                    outputs = predictor(bgr)
+
+                    if idx in save_seg_idxs:
+                        masks = self.get_output_masks(outputs=outputs)
+                        if idx == 0:
+                            print(f"Saving detectron masks. Showing first example...")
+                            m_img = np.hstack([m.astype(np.uint8) * 255 for m in masks])
+                            vis = self.visualize_predictions(
+                                bgr=bgr,
+                                outputs=outputs,
+                                vis_id=d["image_id"],
+                                save=False,
+                            )
+                            cv2.imshow("masks", m_img)
+                            cv2.imshow("BGR", np.hstack([bgr, vis]))
+                            k = cv2.waitKey(0)
+                            cv2.destroyWindow("masks")
+                            cv2.destroyWindow("BGR")
+                        scene_loader.save_detectron_masks(timestep=ts, masks=masks)
+
+                    if idx in visualize_idxs:
+                        self.visualize_predictions(
+                            bgr=bgr, outputs=outputs, vis_id=d["image_id"]
+                        )
 
         # Compute metrics.
         if compute_metrics:
             res = self.compute_metrics()
             return res
 
-    def visualize_dataset(self):
-        # Dataset.
-        dataset_dicts = get_dash_dicts(exp_name=self.exp_name)
-
-        predictor = DefaultPredictor(self.cfg)
-
-        print("Visualizing predictions...")
-        for idx, d in tqdm(
-            enumerate(
-                random.sample(dataset_dicts, min(self.n_visuals, len(dataset_dicts)))
-            )
-        ):
-            bgr = cv2.imread(d["file_name"])
-            # Predictor always takes in a BGR image.
-            # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L162
-            # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L212
-            outputs = predictor(bgr)
-            self.visualize_predictions(bgr=bgr, outputs=outputs, vis_id=idx)
-
     def visualize_predictions(
-        self, bgr: np.ndarray, outputs: Dict, vis_id: int, remove_scores=True
+        self, bgr: np.ndarray, outputs: Dict, vis_id: str, remove_scores=True, save=True
     ):
         """
 
@@ -205,13 +257,16 @@ class DASHSegModule:
             bgr, metadata=metadata, scale=1.0, instance_mode=ColorMode.SEGMENTATION,
         )
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+        result = v.get_image()
 
-        if self.vis_dir is None:
-            self.vis_dir = os.path.join(self.cfg.OUTPUT_DIR, "images")
-        os.makedirs(self.vis_dir, exist_ok=True)
+        if save:
+            if self.vis_dir is None:
+                self.vis_dir = os.path.join(self.cfg.OUTPUT_DIR, "images")
+            os.makedirs(self.vis_dir, exist_ok=True)
 
-        # Visualizer produces BGR.
-        cv2.imwrite(os.path.join(self.vis_dir, f"{vis_id:02}.png"), v.get_image())
+            # Visualizer produces BGR.
+            cv2.imwrite(os.path.join(self.vis_dir, f"{vis_id}.png"), result)
+        return result
 
     def compute_metrics(self):
         evaluator = COCOEvaluator(
@@ -269,43 +324,46 @@ def get_dash_dicts(exp_name: str) -> List[Dict]:
     for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
         print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
         set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
-        key2paths = set_loader.get_key2paths()
-        for idx in tqdm(range(len(set_loader))):
-            record = {}
+        for scene_id in set_loader.get_scene_ids():
+            scene_loader = exp.loader.SceneLoader(
+                exp_name=exp_name, set_name=set_name, scene_id=scene_id
+            )
+            for timestep in scene_loader.get_timesteps():
+                record = {}
 
-            img_path = key2paths["img"][idx]
-            masks_path = key2paths["masks"][idx]
+                img_path = scene_loader.get_rgb_path(timestep=timestep)
+                masks_path = scene_loader.get_masks_path(timestep=timestep)
 
-            # Retrieve the height and width of the image.
-            masks = np.load(masks_path)
-            _, height, width = masks.shape
+                # Retrieve the height and width of the image.
+                masks = np.load(masks_path)
+                _, height, width = masks.shape
 
-            record["file_name"] = img_path
-            record["image_id"] = f"{set_name}_{idx:06}"
-            record["height"] = height
-            record["width"] = width
+                record["file_name"] = img_path
+                record["image_id"] = f"{set_name}_{scene_id}_{timestep:06}"
+                record["height"] = height
+                record["width"] = width
 
-            objs = []
-            for mask in masks:
-                rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
+                objs = []
+                for mask in masks:
+                    rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
 
-                # Convert `counts` to ascii, otherwise json dump complains about
-                # not being able to serialize bytes.
-                # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
-                # rle["counts"] = rle["counts"].decode("ASCII")
-                assert isinstance(rle, dict)
-                assert len(rle) > 0
-                bbox = list(pycocotools.mask.toBbox(rle))
-                obj = {
-                    "bbox": bbox,
-                    "bbox_mode": BoxMode.XYWH_ABS,
-                    "segmentation": rle,
-                    "category_id": 0,
-                    "iscrowd": 0,
-                }
-                objs.append(obj)
-            record["annotations"] = objs
-            dataset_dicts.append(record)
+                    # Convert `counts` to ascii, otherwise json dump complains about
+                    # not being able to serialize bytes.
+                    # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
+                    # rle["counts"] = rle["counts"].decode("ASCII")
+                    assert isinstance(rle, dict)
+                    assert len(rle) > 0
+                    bbox = list(pycocotools.mask.toBbox(rle))
+                    obj = {
+                        "bbox": bbox,
+                        "bbox_mode": BoxMode.XYWH_ABS,
+                        "segmentation": rle,
+                        "category_id": 0,
+                        "iscrowd": 0,
+                    }
+                    objs.append(obj)
+                record["annotations"] = objs
+                dataset_dicts.append(record)
     return dataset_dicts
 
 
@@ -345,7 +403,7 @@ def main(args: argparse.Namespace):
             seed=args.seed,
         )
 
-        res = module.eval()
+        res = module.eval(save_segs=args.save_segs)
         print("Results:")
         pprint.pprint(res)
 
@@ -371,6 +429,11 @@ if __name__ == "__main__":
         type=str,
         default="2020_05_11_11_56_20",
         help="The name of the model to evaluate.",
+    )
+    parser.add_argument(
+        "--save_segs",
+        action="store_true",
+        help="Whether to save segmentation masks during evaluation.",
     )
     args = parser.parse_args()
     main(args=args)

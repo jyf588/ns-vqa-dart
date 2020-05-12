@@ -82,7 +82,7 @@ First, generate segmentation masks on the feature extraction training set using 
 trained segmentation model.
 
 ```
-time python ns_vqa_dart/scene_parse/detectron2/dash.py eval <attr_dataset>
+time python ns_vqa_dart/scene_parse/detectron2/dash.py eval <attr_dataset> --save_segs
 ```
 
 Next, generate the dataset we will use for training. Essentially this step creates

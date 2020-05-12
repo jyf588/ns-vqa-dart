@@ -1,20 +1,24 @@
-import json
 import os
-import pickle
-import random
 import sys
 import time
-from typing import *
-
+import json
+import pickle
+import random
 import imageio
 import numpy as np
+from typing import *
+
+
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
+import exp.loader
+from ns_vqa_dart.bullet import dash_object
+
 
 class DashTorchDataset(Dataset):
-    def __init__(self, paths: List[str], height: int, width: int):
+    def __init__(self, exp_name: str, coordinate_frame: str, height: int, width: int):
         """A Pytorch Dataset for DASH objects.
 
         Args:
@@ -27,9 +31,13 @@ class DashTorchDataset(Dataset):
             width: The width to resize the image to.
             transforms: The transform to apply to the loaded images.
         """
-        self.paths = paths
+        self.exp_name = exp_name
+        self.coordinate_frame = coordinate_frame
         self.height = height
         self.width = width
+
+        # Get all example indices in the experiment.
+        self.idx2info = exp.loader.ExpLoader(exp_name=exp_name).get_idx2info()
 
         self.normalize = [
             transforms.ToTensor(),
@@ -61,33 +69,23 @@ class DashTorchDataset(Dataset):
         Raises:
             EOFError: If the pickle file is empty.
         """
-        path = self.paths[idx]
-        try:
-            with open(path, "rb") as f:
-                X, y, sid, oid, path = pickle.load(f)
-        except EOFError as e:
-            print(
-                f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example."
-            )
-            # Regenerate idxs until we get successful loading.
-            retries = 0
-            while 1:
-                retries += 1
-                path = self.paths[random.randint(0, self.__len__())]
-                try:
-                    with open(path, "rb") as f:
-                        X, y, sid, oid, path = pickle.load(f)
-                    break
-                except EOFError:
-                    print(
-                        f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example. Retries: {retries}"
-                    )
+        set_name, scene_id, timestep, oidx = self.idx2info[idx]
+        scene_loader = exp.loader.SceneLoader(
+            exp_name=self.exp_name, set_name=set_name, scene_id=scene_id
+        )
+        rgb = scene_loader.load_rgb(timestep=timestep)
+        mask = scene_loader.load_mask(timestep=timestep, oidx=oidx)
+        cam_dict = scene_loader.load_cam(timestep=timestep)
+        odict = scene_loader.load_odict(timestep=timestep, oidx=oidx)
+
+        X = dash_object.compute_X(img=rgb, mask=mask, keep_occluded=True)
+        y = dash_object.compute_y(
+            odict=odict,
+            coordinate_frame=self.coordinate_frame,
+            cam_position=cam_dict["position"],
+            cam_orientation=cam_dict["orientation"],
+        )
 
         X = transforms.Compose(self.normalize)(X)
-        return X, y, sid, oid, path
 
-
-def load_file(path: str):
-    with open(path, "rb") as f:
-        X, y, sid, oid, path = pickle.load(f)
-    return
+        return X, y
