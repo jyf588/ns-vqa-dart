@@ -86,7 +86,7 @@ time python ns_vqa_dart/scene_parse/detectron2/dash.py eval <attr_dataset> --sav
 ```
 
 Next, generate the dataset we will use for training. Essentially this step creates
-training inputs for each object in the dataset (as opposed to one image per scene).
+training inputs for each object in the dataset (as opposed to one example per scene).
 
 ```
 TODO
@@ -95,7 +95,7 @@ TODO
 Finally, train the feature extraction model:
 
 ```
-TODO
+time ./ns_vqa_dart/scripts/exp/seg_tiny/run.sh
 ```
 
 ### Vision dataset versions 

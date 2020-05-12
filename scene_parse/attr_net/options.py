@@ -27,7 +27,13 @@ class BaseOptions:
             help="experiment directory",
         )
         self.parser.add_argument(
-            "--dataset", default="clevr", type=str, help="dataset"
+            "--dataset", default="dash", type=str, help="dataset"
+        )
+        self.parser.add_argument(
+            "--train_set", required=True, type=str, help="Training set"
+        )
+        self.parser.add_argument(
+            "--eval_set", required=True, type=str, help="Evaluation set"
         )
         self.parser.add_argument(
             "--load_checkpoint_path",
@@ -48,12 +54,6 @@ class BaseOptions:
             "--inference_only",
             action="store_true",
             help="Whether to only run inference.",
-        )
-        self.parser.add_argument(
-            "--dataset_dir",
-            required=True,
-            type=str,
-            help="The dataset directory",
         )
         self.parser.add_argument(
             "--cam_dir", type=str, help="The camera directory."
@@ -117,26 +117,6 @@ class BaseOptions:
         )
         self.parser.add_argument(
             "--fp16", action="store_true", help="Whether to use FP 16."
-        )
-        self.parser.add_argument(
-            "--train_start_id",
-            type=int,
-            help="The start example ID from the dataset to use for train, inclusive.",
-        )
-        self.parser.add_argument(
-            "--train_end_id",
-            type=int,
-            help="The start example ID from the dataset to use for train, exclusive.",
-        )
-        self.parser.add_argument(
-            "--eval_start_id",
-            type=int,
-            help="The start example ID from the dataset to use for eval, inclusive.",
-        )
-        self.parser.add_argument(
-            "--eval_end_id",
-            type=int,
-            help="The start example ID from the dataset to use for eval, exclusive.",
         )
         self.parser.add_argument(
             "--batch_size", default=20, type=int, help="batch size"

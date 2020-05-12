@@ -10,22 +10,9 @@ from .clevr_dart_object import ClevrDartObjectDataset
 def get_dataset(opt, split):
     if opt.dataset == "dash":
         if split == "train":
-            start_id = opt.train_start_id
-            end_id = opt.train_end_id
+            ds = DashTorchDataset(opt=opt, exp_name=opt.train_set)
         elif split in ["val", "test"]:
-            start_id = opt.eval_start_id
-            end_id = opt.eval_end_id
-
-        paths = []
-        for fname in os.listdir(opt.dataset_dir):
-            if not fname.endswith(".p"):
-                continue
-            sid = int(fname.split("_")[0])
-            if start_id <= sid < end_id:
-                path = os.path.join(opt.dataset_dir, fname)
-                paths.append(path)
-
-        ds = DashTorchDataset(paths=paths, height=opt.height, width=opt.width)
+            ds = DashTorchDataset(opt=opt, exp_name=opt.eval_set)
 
     elif opt.dataset == "clevr":
         if split == "train":

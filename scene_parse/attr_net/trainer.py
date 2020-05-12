@@ -41,7 +41,7 @@ class Trainer:
         start_time = time.time()
         while t < self.num_iters:
             epoch += 1
-            for data, label, _, _, _ in self.train_loader:
+            for data, label in self.train_loader:
                 # print(data.size())
                 # print(label.size())
                 # print("starting iter")
@@ -104,13 +104,13 @@ class Trainer:
         self.model.eval_mode()
         loss = 0
         t = 0
-        for x, y, _, _, _ in self.val_loader:
+        for x, y in self.val_loader:
             self.model.set_input(x, y)
             self.model.forward()
             loss += self.model.get_loss()
             t += 1
         self.model.train_mode()
-        return loss / t if t is not 0 else 0
+        return loss / t if t != 0 else 0
 
 
 def get_trainer(opt, model, train_loader, val_loader=None):

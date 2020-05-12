@@ -1,6 +1,6 @@
 import numpy as np
 
-RGB2ID = {
+UNITY_RGB2ID = {
     (174, 199, 232): 0,  # blue
     (152, 223, 138): 1,  # green
     (255, 152, 150): 2,  # red
@@ -10,6 +10,7 @@ RGB2ID = {
     (255, 187, 120): 6,  # orange
     (247, 182, 210): 7,  # pink
 }
+UNITY_OIDS = list(UNITY_RGB2ID.values())
 
 
 def seg_img_to_map(seg_img) -> np.ndarray:
@@ -24,28 +25,26 @@ def seg_img_to_map(seg_img) -> np.ndarray:
             `masks`.
     """
     H, W, _ = seg_img.shape
-    seg = np.full((H, W), -1, dtype=np.uint8)
-    ids = []
+    oids = []
     masks = []
 
     # Loop over each possible RGB value.
-    for rgb_value, oid in RGB2ID.items():
+    for rgb_value, oid in UNITY_RGB2ID.items():
         idxs = np.where(
             np.logical_and(
                 seg_img[:, :, 0] == rgb_value[0],
                 np.logical_and(
-                    seg_img[:, :, 1] == rgb_value[1],
-                    seg_img[:, :, 2] == rgb_value[2],
+                    seg_img[:, :, 1] == rgb_value[1], seg_img[:, :, 2] == rgb_value[2],
                 ),
             )
         )
 
-        # There is at least pixel containing the object segmentation.
+        # There is at least one pixel containing the object segmentation.
         if len(idxs[0]) > 0:
             mask = np.full((H, W), False, dtype=bool)
             mask[idxs] = True
             masks.append(mask)
-            ids.append(oid)
+            oids.append(oid)
 
     masks = np.array(masks)
-    return masks, ids
+    return masks, oids
