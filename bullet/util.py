@@ -7,6 +7,7 @@ import pybullet
 import numpy as np
 from typing import *
 from numpy.linalg import inv
+from datetime import datetime
 from os.path import expanduser
 import pybullet_utils.bullet_client as bc
 from scipy.spatial.transform import Rotation as R
@@ -319,3 +320,8 @@ def save_pickle(path: str, data: Any):
 def get_user_homedir() -> str:
     home = expanduser("~")
     return home
+
+
+def get_time_dirname():
+    time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    return time_str

@@ -155,7 +155,7 @@ def compute_metrics(
     coordinate_frame: str,
     plot_path: str,
 ):
-    metrics = Metrics(plot_path=plot_path)
+    metrics = Metrics()
     for sid in sid2info.keys():
         for oid, info in sid2info[sid].items():
             sid, oid = int(sid), int(oid)

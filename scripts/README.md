@@ -28,8 +28,12 @@ time python scene/generate.py table1  # ETA: 1 second
 ### Table 2
 TODO
 
-### Table 3
-TODO
+### Table 3: Vision Performance
+
+```
+python system/vision_metrics.py seg_tiny
+```
+
 
 ## Vision Module
 

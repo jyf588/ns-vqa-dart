@@ -26,12 +26,8 @@ class BaseOptions:
             type=str,
             help="experiment directory",
         )
-        self.parser.add_argument(
-            "--dataset", default="dash", type=str, help="dataset"
-        )
-        self.parser.add_argument(
-            "--train_set", required=True, type=str, help="Training set"
-        )
+        self.parser.add_argument("--dataset", default="dash", type=str, help="dataset")
+        self.parser.add_argument("--train_set", type=str, help="Training set")
         self.parser.add_argument(
             "--eval_set", required=True, type=str, help="Evaluation set"
         )
@@ -55,9 +51,7 @@ class BaseOptions:
             action="store_true",
             help="Whether to only run inference.",
         )
-        self.parser.add_argument(
-            "--cam_dir", type=str, help="The camera directory."
-        )
+        self.parser.add_argument("--cam_dir", type=str, help="The camera directory.")
         self.parser.add_argument(
             "--height", type=int, default=480, help="The image height."
         )
@@ -74,10 +68,7 @@ class BaseOptions:
             help="concatenate original image when sent to network",
         )
         self.parser.add_argument(
-            "--with_depth",
-            default=0,
-            type=int,
-            help="include depth info (rgbd)",
+            "--with_depth", default=0, type=int, help="include depth info (rgbd)",
         )
         # self.parser.add_argument(
         #     "--pred_attr",
@@ -111,9 +102,7 @@ class BaseOptions:
             help="The coordinate frame to train on.",
         )
         self.parser.add_argument(
-            "--plot_path",
-            type=str,
-            help="The path to save the output plot to.",
+            "--plot_path", type=str, help="The path to save the output plot to.",
         )
         self.parser.add_argument(
             "--fp16", action="store_true", help="Whether to use FP 16."
@@ -122,10 +111,7 @@ class BaseOptions:
             "--batch_size", default=20, type=int, help="batch size"
         )
         self.parser.add_argument(
-            "--num_workers",
-            default=4,
-            type=int,
-            help="number of workers for loading",
+            "--num_workers", default=4, type=int, help="number of workers for loading",
         )
         self.parser.add_argument(
             "--learning_rate", default=0.002, type=float, help="learning rate"
@@ -190,10 +176,7 @@ class TrainOptions(BaseOptions):
     def initialize(self):
         BaseOptions.initialize(self)
         self.parser.add_argument(
-            "--num_iters",
-            default=250000,
-            type=int,
-            help="total number of iterations",
+            "--num_iters", default=250000, type=int, help="total number of iterations",
         )
         self.parser.add_argument(
             "--display_every",

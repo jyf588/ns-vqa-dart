@@ -27,6 +27,7 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 
 import exp.loader
+from ns_vqa_dart.bullet import util
 from ns_vqa_dart.bullet.seg import seg_img_to_map
 
 
@@ -97,7 +98,9 @@ class DASHSegModule:
         self.cfg.SOLVER.MAX_ITER = 60000
         self.cfg.SOLVER.CHECKPOINT_PERIOD = 500
 
-        self.cfg.OUTPUT_DIR = os.path.join(self.train_root_dir, self.get_time_dirname())
+        self.cfg.OUTPUT_DIR = os.path.join(
+            self.train_root_dir, self.exp_name, util.get_time_dirname()
+        )
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
 
     def set_eval_cfg(self):
@@ -117,14 +120,9 @@ class DASHSegModule:
                 os.path.dirname(self.checkpoint_path),
                 "eval",
                 self.exp_name,
-                self.get_time_dirname(),
+                util.get_time_dirname(),
             )
             os.makedirs(self.cfg.OUTPUT_DIR)
-
-    @staticmethod
-    def get_time_dirname():
-        time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        return time_str
 
     def train(self):
         trainer = DefaultTrainer(self.cfg)
@@ -157,8 +155,8 @@ class DASHSegModule:
 
     def eval(
         self,
-        compute_metrics: Optional[bool] = True,
-        visualize: Optional[bool] = True,
+        compute_metrics: Optional[bool] = False,
+        visualize: Optional[bool] = False,
         save_segs: Optional[bool] = False,
     ):
         """Runs evaluation.
@@ -329,68 +327,79 @@ def get_dash_dicts(exp_name: str) -> List[Dict]:
     dataset_dicts = []
 
     if exp_name == "eval_single":
-        return dataset_dicts
+        pass
+    else:
+        for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
+            print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
+            set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
+            for scene_id in set_loader.get_scene_ids():
+                scene_loader = exp.loader.SceneLoader(
+                    exp_name=exp_name, set_name=set_name, scene_id=scene_id
+                )
+                for timestep in scene_loader.get_timesteps():
+                    img_path = scene_loader.get_rgb_path(timestep=timestep)
 
-    for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
-        print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
-        set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
-        for scene_id in set_loader.get_scene_ids():
-            scene_loader = exp.loader.SceneLoader(
-                exp_name=exp_name, set_name=set_name, scene_id=scene_id
-            )
-            for timestep in scene_loader.get_timesteps():
-                record = {}
+                    mask_paths = scene_loader.get_mask_paths(timestep=timestep)
 
-                img_path = scene_loader.get_rgb_path(timestep=timestep)
-                masks_path = scene_loader.get_masks_path(timestep=timestep)
-
-                # Retrieve the height and width of the image.
-                masks = np.load(masks_path)
-                _, height, width = masks.shape
-
-                record["file_name"] = img_path
-                record["image_id"] = f"{set_name}_{scene_id}_{timestep:06}"
-                record["height"] = height
-                record["width"] = width
-
-                objs = []
-                for mask in masks:
-                    rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
-
-                    # Convert `counts` to ascii, otherwise json dump complains about
-                    # not being able to serialize bytes.
-                    # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
-                    # rle["counts"] = rle["counts"].decode("ASCII")
-                    assert isinstance(rle, dict)
-                    assert len(rle) > 0
-                    bbox = list(pycocotools.mask.toBbox(rle))
-                    obj = {
-                        "bbox": bbox,
-                        "bbox_mode": BoxMode.XYWH_ABS,
-                        "segmentation": rle,
-                        "category_id": 0,
-                        "iscrowd": 0,
-                    }
-                    objs.append(obj)
-                record["annotations"] = objs
-                dataset_dicts.append(record)
+                    # Retrieve the height and width of the image.
+                    image_id = f"{set_name}_{scene_id}_{timestep:06}"
+                    record = create_record_for_image(
+                        img_path=img_path, mask_paths=mask_paths, image_id=image_id
+                    )
+                    dataset_dicts.append(record)
     return dataset_dicts
 
 
-def get_latest_checkpoint(root_dir: str, model_name: str):
-    model_dir = os.path.join(root_dir, model_name)
+def create_record_for_image(
+    img_path: str, mask_paths: List[str], image_id: str, height=320, width=480
+):
+    record = {}
+
+    record["file_name"] = img_path
+    record["image_id"] = image_id
+    record["height"] = height
+    record["width"] = width
+
+    objs = []
+    for mask_path in mask_paths:
+        mask = np.load(mask_path)
+        rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
+
+        # Convert `counts` to ascii, otherwise json dump complains about
+        # not being able to serialize bytes.
+        # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
+        # rle["counts"] = rle["counts"].decode("ASCII")
+        assert isinstance(rle, dict)
+        assert len(rle) > 0
+        bbox = list(pycocotools.mask.toBbox(rle))
+        obj = {
+            "bbox": bbox,
+            "bbox_mode": BoxMode.XYWH_ABS,
+            "segmentation": rle,
+            "category_id": 0,
+            "iscrowd": 0,
+        }
+        objs.append(obj)
+    record["annotations"] = objs
+    return record
+
+
+def get_latest_checkpoint(root_dir: str, exp_name: str, model_name: str):
+    model_dir = os.path.join(root_dir, exp_name, model_name)
     with open(os.path.join(model_dir, "last_checkpoint"), "r",) as f:
         checkpoint_fname = f.readlines()[0]
     checkpoint_path = os.path.join(model_dir, checkpoint_fname)
     return checkpoint_path
 
 
+def register_dataset(exp_name):
+    DatasetCatalog.register(exp_name, lambda: get_dash_dicts(exp_name=exp_name))
+    MetadataCatalog.get(exp_name).set(thing_classes=["object"])
+
+
 def main(args: argparse.Namespace):
     # Register the dataset.
-    DatasetCatalog.register(
-        args.exp_name, lambda: get_dash_dicts(exp_name=args.exp_name)
-    )
-    MetadataCatalog.get(args.exp_name).set(thing_classes=["object"])
+    register_dataset(exp_name=args.exp_name)
 
     if args.mode == "train":
         module = DASHSegModule(
@@ -403,7 +412,7 @@ def main(args: argparse.Namespace):
     elif args.mode == "eval":
         # Evaluate the latest checkpoint under the provided model name.
         checkpoint_path = get_latest_checkpoint(
-            root_dir=args.root_dir, model_name=args.model_name
+            root_dir=args.root_dir, exp_name=args.exp_name, model_name=args.model_name
         )
 
         module = DASHSegModule(
@@ -413,7 +422,9 @@ def main(args: argparse.Namespace):
             seed=args.seed,
         )
 
-        res = module.eval(save_segs=args.save_segs)
+        res = module.eval(
+            visualize=True, compute_metrics=True, save_segs=args.save_segs
+        )
         print("Results:")
         pprint.pprint(res)
 

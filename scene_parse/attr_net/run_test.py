@@ -22,8 +22,8 @@ from options import get_options
 from datasets import get_dataloader
 from model import get_model
 
-from ns_vqa_dart.bullet import util
-from ns_vqa_dart.bullet import metrics
+from ns_vqa_dart.bullet import util, dash_object
+from ns_vqa_dart.bullet.metrics import Metrics
 
 
 def main():
@@ -33,41 +33,25 @@ def main():
     model.eval_mode()
 
     count = 0
-    sid2info = {}
-    start = time.time()
-    for batch_iter, (data, labels, sids, oids, paths) in enumerate(
-        tqdm(test_loader)
-    ):
-        model.set_input(data)
+    preds = []
+    labels = []
+    for X, Y in tqdm(test_loader):
+        model.set_input(X)
         model.forward()
-        pred = model.get_pred()
-        for i in range(pred.shape[0]):
-            path = paths[i]
-            sid = sids[i].item()
-            oid = oids[i].item()
-            if sid not in sid2info:
-                sid2info[sid] = {}
-            sid2info[sid][oid] = {
-                "pred": pred[i].tolist(),
-                "labels": labels[i].tolist(),
-            }
-        count += pred.shape[0]
-    total_time = time.time() - start
+        outputs = model.get_pred()
+        for i in range(outputs.shape[0]):
+            pred = outputs[i].tolist()
+            y = Y[i].tolist()
+            preds.append(pred)
+            labels.append(y)
+        count += outputs.shape[0]
 
-    # pprint.pprint(sid2info)
-
-    print("%d / %d objects processed" % (count, len(test_loader.dataset)))
-    print("| saving annotation file to %s" % opt.output_path)
-    util.save_json(path=opt.output_path, data=sid2info)
-
-    print("Computing metrics:")
-    metrics.compute_metrics(
-        cam_dir=opt.cam_dir,
-        sid2info=sid2info,
-        camera_control=opt.camera_control,
-        coordinate_frame=opt.coordinate_frame,
-        plot_path=opt.plot_path,
-    )
+    metrics = Metrics()
+    for y_hat, y in zip(preds, labels):
+        gt_dict = dash_object.y_vec_to_dict(y=y, coordinate_frame="world",)
+        pred_dict = dash_object.y_vec_to_dict(y=y_hat, coordinate_frame="world",)
+        metrics.add_example(gt_dict, pred_dict)
+    metrics.print()
 
 
 if __name__ == "__main__":
