@@ -35,7 +35,9 @@ class DashTorchDataset(Dataset):
         self.exp_name = exp_name
 
         # Get all example indices in the experiment.
-        self.idx2info = exp.loader.ExpLoader(exp_name=exp_name).get_idx2info()
+        self.idx2info = exp.loader.ExpLoader(exp_name=exp_name).get_idx2info(
+            filter_stage_oids=True
+        )
 
         self.normalize = [
             transforms.ToTensor(),
@@ -73,6 +75,13 @@ class DashTorchDataset(Dataset):
         cam_dict = scene_loader.load_cam(timestep=timestep)
         odict = scene_loader.load_odict(timestep=timestep, oid=oid)
 
+        meta = {
+            "set_name": set_name,
+            "scene_id": scene_id,
+            "timestep": timestep,
+            "oid": oid,
+        }
+
         X = dash_object.compute_X(img=rgb, mask=mask, keep_occluded=True)
         y = dash_object.compute_y(
             odict=odict,
@@ -83,4 +92,4 @@ class DashTorchDataset(Dataset):
 
         X = transforms.Compose(self.normalize)(X)
 
-        return X, y
+        return X, y, meta

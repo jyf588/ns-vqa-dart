@@ -163,9 +163,9 @@ def compute_metrics(
             labels = info["labels"]
 
             # Convert from vectors to dictionaries.
-            cam_position, cam_orientation = gen_dataset.load_camera_pose(
-                cam_dir=cam_dir, sid=sid, oid=oid, camera_control=camera_control,
-            )
+            # cam_position, cam_orientation = gen_dataset.load_camera_pose(
+            #     cam_dir=cam_dir, sid=sid, oid=oid, camera_control=camera_control,
+            # )
             gt_y_dict = dash_object.y_vec_to_dict(
                 y=labels,
                 coordinate_frame=coordinate_frame,
