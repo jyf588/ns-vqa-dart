@@ -134,9 +134,9 @@ class BaseOptions:
             print("| using cpu")
             opt.gpu_ids = []
 
-        opt.run_dir = os.path.join(opt.run_dir, util.get_time_dirname())
         # print and save options
         if save_options:
+            opt.run_dir = os.path.join(opt.run_dir, util.get_time_dirname())
             args = vars(opt)
             print("| options")
             for k, v in args.items():

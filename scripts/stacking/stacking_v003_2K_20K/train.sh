@@ -1,7 +1,7 @@
 SET=stacking_v003_2K_20K
 DATA_DIR=/home/mguo/data/$SET/data
 RUN_DIR=/home/mguo/outputs/$SET
-CHECKPOINT_EVERY=100
+CHECKPOINT_EVERY=5000
 NUM_ITERS=60000
 
 
