@@ -288,7 +288,9 @@ def load_json(path: str) -> Any:
         return data
 
 
-def save_json(path: str, data: Any):
+def save_json(path: str, data: Any, check_override=True):
+    if check_override:
+        assert not os.path.exists(path)
     with open(path, "w") as f:
         json.dump(data, f, sort_keys=True, indent=2, separators=(",", ": "))
 
@@ -306,13 +308,14 @@ def load_pickle(path: str) -> Any:
     return data
 
 
-def save_pickle(path: str, data: Any):
+def save_pickle(path: str, data: Any, check_override=True):
     """
     Args:
         path: The path of the pickle file to save.
         data: The data to save.
     """
-    assert not os.path.exists(path)
+    if check_override:
+        assert not os.path.exists(path)
     with open(path, "wb") as f:
         pickle.dump(data, f)
 

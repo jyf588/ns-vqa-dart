@@ -132,10 +132,11 @@ cd /data/or_planning_scripts
 
 Finally, run the following commands in each of the three containers:
 ```
-python move_single.py 0  # Reach
-python move_single.py 1  # Move
-python move_single.py 2 l  # Retract
+python move_single.py 0
+python move_single.py 1
+python move_single.py 2 l
 ```
+These correspond to reach, move and retract, respectively.
 
 If you need to rebuild an image, run the following command (replace `v3` with the desired tag).
 ```

@@ -332,15 +332,16 @@ def get_dash_dicts(exp_name: str) -> List[Dict]:
         for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
             print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
             set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
-            for scene_id in set_loader.get_scene_ids():
+            for scene_id in sorted(
+                os.listdir(os.path.join(set_loader.set_dir, "masks"))
+            ):
+                print(scene_id)
                 scene_loader = exp.loader.SceneLoader(
                     exp_name=exp_name, set_name=set_name, scene_id=scene_id
                 )
                 for timestep in scene_loader.get_timesteps():
                     img_path = scene_loader.get_rgb_path(timestep=timestep)
-
                     mask_paths = scene_loader.get_mask_paths(timestep=timestep)
-
                     # Retrieve the height and width of the image.
                     image_id = f"{set_name}_{scene_id}_{timestep:06}"
                     record = create_record_for_image(
