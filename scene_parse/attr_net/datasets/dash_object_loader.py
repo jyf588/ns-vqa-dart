@@ -17,7 +17,7 @@ from ns_vqa_dart.bullet import util
 
 
 class DashTorchDataset(Dataset):
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, split: str):
         """A Pytorch Dataset for DASH objects.
 
         Args:
@@ -25,14 +25,24 @@ class DashTorchDataset(Dataset):
         """
         self.data_dir = data_dir
 
-        self.fnames = os.listdir(data_dir)
+        fnames = sorted(os.listdir(data_dir))
+        split_id = int(len(fnames) * 0.8)
+        if split == "train":
+            self.fnames = fnames[:split_id]
+        elif split in ["val", "test"]:
+            self.fnames = fnames[split_id:]
+
+        print(f"First few fnames selected:")
+        print(self.fnames[:10])
 
         self.normalize = [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5] * 6, std=[0.225] * 6),
         ]
 
-        print(f"Initialized DashTorchDataset containing {len(self)} examples.")
+        print(
+            f"Initialized DashTorchDataset for data_dir {data_dir}, split {split} containing {len(self)} examples."
+        )
 
     def __len__(self) -> int:
         """Gets the total number of examples in the dataset.
@@ -54,16 +64,9 @@ class DashTorchDataset(Dataset):
                 object cropped out.
             y: Labels for the example.
         """
-        X, y = util.load_pickle(os.path.join(self.data_dir, self.fnames[idx]))[:2]
-
-        # X = dash_object.compute_X(img=rgb, mask=mask, keep_occluded=True)
-        # y = dash_object.compute_y(
-        #     odict=odict,
-        #     coordinate_frame=self.opt.coordinate_frame,
-        #     cam_position=cam_dict["position"],
-        #     cam_orientation=cam_dict["orientation"],
-        # )
+        data = util.load_pickle(os.path.join(self.data_dir, self.fnames[idx]))
+        X, y, sid, oid, path = data
 
         X = transforms.Compose(self.normalize)(X)
 
-        return X, y
+        return X, y, sid

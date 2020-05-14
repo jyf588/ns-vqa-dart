@@ -182,7 +182,6 @@ class TrainOptions(BaseOptions):
 class TestOptions(BaseOptions):
     def initialize(self):
         BaseOptions.initialize(self)
-        self.parser.add_argument("--split", default="val")
         self.parser.add_argument(
             "--output_path",
             default="result.json",

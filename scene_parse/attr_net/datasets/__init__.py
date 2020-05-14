@@ -9,7 +9,7 @@ from .clevr_dart_object import ClevrDartObjectDataset
 
 def get_dataset(opt, split):
     if opt.dataset == "dash":
-        ds = DashTorchDataset(data_dir=opt.data_dir)
+        ds = DashTorchDataset(data_dir=opt.data_dir, split=split)
 
     elif opt.dataset == "clevr":
         if split == "train":

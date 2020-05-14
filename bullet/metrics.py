@@ -111,7 +111,7 @@ class Metrics:
         print(f"Regression Errors:")
         for k in self.l1_errors_dict.keys():
             for err_type in self.reg_errors_dict.keys():
-                v = self.reg_errors_dict[err_type][k]
+                v = copy.deepcopy(self.reg_errors_dict[err_type][k])
 
                 # Multiply by multiplier for the key if specified.
                 if k in MULTIPLIER:

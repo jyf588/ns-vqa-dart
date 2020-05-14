@@ -32,18 +32,17 @@ def main():
 
     path = os.path.join(opt.run_dir, "preds.p")
 
-    predictions = []
-    num_preds = 0
-    max_preds = 50
-    for X, Y in tqdm(test_loader):
+    predictions = {}
+    for X, Y, sids in tqdm(test_loader):
         model.set_input(X)
         model.forward()
         outputs = model.get_pred()
+        sids = sids.tolist()
         for i in range(outputs.shape[0]):
-            predictions.append({"pred": outputs[i].tolist(), "y": Y[i].tolist()})
-            num_preds += 1
-        if num_preds > max_preds:
-            break
+            predictions[sids[i]] = {
+                "pred": outputs[i].tolist(),
+                "y": Y[i].tolist(),
+            }
     util.save_pickle(path=path, data=predictions)
 
     # local_metrics = Metrics()
