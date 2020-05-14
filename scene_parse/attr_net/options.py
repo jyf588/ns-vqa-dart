@@ -4,6 +4,9 @@ import torch
 from typing import *
 
 
+from ns_vqa_dart.bullet import util
+
+
 def mkdirs(paths):
     if isinstance(paths, list):
         for path in paths:
@@ -27,9 +30,8 @@ class BaseOptions:
             help="experiment directory",
         )
         self.parser.add_argument("--dataset", default="dash", type=str, help="dataset")
-        self.parser.add_argument("--train_set", type=str, help="Training set")
         self.parser.add_argument(
-            "--eval_set", required=True, type=str, help="Evaluation set"
+            "--data_dir", required=True, type=str, help="The dataset directory."
         )
         self.parser.add_argument(
             "--load_checkpoint_path",
@@ -51,7 +53,7 @@ class BaseOptions:
             action="store_true",
             help="Whether to only run inference.",
         )
-        self.parser.add_argument("--cam_dir", type=str, help="The camera directory.")
+        # self.parser.add_argument("--cam_dir", type=str, help="The camera directory.")
         self.parser.add_argument(
             "--height", type=int, default=480, help="The image height."
         )
@@ -71,36 +73,16 @@ class BaseOptions:
             "--with_depth", default=0, type=int, help="include depth info (rgbd)",
         )
         # self.parser.add_argument(
-        #     "--pred_attr",
-        #     action="store_true",
-        #     help="If true, predicts the object attributes (shape, size, color).",
+        #     "--camera_control",
+        #     type=str,
+        #     choices=["all", "center", "stack"],
+        #     help="The method of controlling the camera.",
         # )
         # self.parser.add_argument(
-        #     "--pred_size",
-        #     action="store_true",
-        #     help="If true, predicts the size (radius and height) of objects.",
+        #     "--coordinate_frame",
+        #     choices=["world", "camera", "unity_camera"],
+        #     help="The coordinate frame to train on.",
         # )
-        # self.parser.add_argument(
-        #     "--pred_position",
-        #     action="store_true",
-        #     help="If true, predicts the object position (x, y, z) in world coordinates.",
-        # )
-        # self.parser.add_argument(
-        #     "--pred_up_vector",
-        #     action="store_true",
-        #     help="If true, predicts the z direction vector in world coordinates.",
-        # )
-        self.parser.add_argument(
-            "--camera_control",
-            type=str,
-            choices=["all", "center", "stack"],
-            help="The method of controlling the camera.",
-        )
-        self.parser.add_argument(
-            "--coordinate_frame",
-            choices=["world", "camera", "unity_camera"],
-            help="The coordinate frame to train on.",
-        )
         self.parser.add_argument(
             "--plot_path", type=str, help="The path to save the output plot to.",
         )
@@ -152,6 +134,7 @@ class BaseOptions:
             print("| using cpu")
             opt.gpu_ids = []
 
+        opt.run_dir = os.path.join(opt.run_dir, util.get_time_dirname())
         # print and save options
         if save_options:
             args = vars(opt)
