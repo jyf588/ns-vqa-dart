@@ -64,9 +64,30 @@ class DashTorchDataset(Dataset):
                 object cropped out.
             y: Labels for the example.
         """
-        data = util.load_pickle(os.path.join(self.data_dir, self.fnames[idx]))
-        X, y, sid, oid, path = data
+        path = os.path.join(self.data_dir, self.fnames[idx])
 
+        try:
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+        except:
+            print(
+                f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example."
+            )
+            # Regenerate idxs until we get successful loading.
+            retries = 0
+            while retries < 50:
+                retries += 1
+                path = self.fnames[random.randint(0, self.__len__())]
+                try:
+                    with open(path, "rb") as f:
+                        data = pickle.load(f)
+                    break
+                except:
+                    print(
+                        f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example. Retries: {retries}"
+                    )
+
+        X, y, sid, oid, path = data
         X = transforms.Compose(self.normalize)(X)
 
         return X, y, sid

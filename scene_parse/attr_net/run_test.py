@@ -44,7 +44,7 @@ def main():
                 "y": Y[i].tolist(),
             }
     util.save_pickle(path=path, data=predictions)
-
+    print(f"Saved predictions to: {path}")
     # local_metrics = Metrics()
     # world_metrics = Metrics()
     # for y_hat, y, meta in zip(preds, labels, meta_list):

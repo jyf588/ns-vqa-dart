@@ -6,7 +6,8 @@ from ns_vqa_dart.bullet import util, dash_object, metrics
 
 
 def main():
-    run_dir = "/home/mguo/outputs/placing_v003_2K_20K/2020_04_22_04_35/eval/2020_05_13_23_53_42"
+    # run_dir = "/home/mguo/outputs/placing_v003_2K_20K/2020_04_22_04_35/eval/2020_05_13_23_53_42"  # Pretrained version
+    run_dir = "/home/mguo/outputs/placing_v003_2K_20K/2020_05_14_01_42_23/eval/2020_05_14_01_59_33"
     load_path = os.path.join(run_dir, "preds.p")
 
     predictions = util.load_pickle(load_path)
