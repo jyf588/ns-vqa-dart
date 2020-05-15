@@ -31,7 +31,7 @@ TODO
 ### Table 3: Vision Performance
 
 ```
-python system/vision_metrics.py seg_tiny
+python system/vision_metrics.py t1
 ```
 
 
