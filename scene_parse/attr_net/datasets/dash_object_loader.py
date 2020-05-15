@@ -1,4 +1,5 @@
 import os
+import cv2
 import sys
 import time
 import json
@@ -88,6 +89,20 @@ class DashTorchDataset(Dataset):
                     )
 
         X, y, sid, oid, path = data
+
+        # print(f"Path: {path}")
+        # input_rgb = np.hstack([X[:, :, :3], X[:, :, 3:6]])
+        # cv2.imshow("example", input_rgb[:, :, ::-1])
+
         X = transforms.Compose(self.normalize)(X)
+
+        # normalized_rgb = X.numpy()
+        # normalized_rgb = np.moveaxis(normalized_rgb, 0, -1)
+        # normalized_rgb = np.hstack(
+        #     [normalized_rgb[:, :, :3], normalized_rgb[:, :, 3:6]]
+        # )
+        # bgr_normalized_img = normalized_rgb[:, :, ::-1]
+        # cv2.imshow("normalized", bgr_normalized_img)
+        # cv2.waitKey(0)
 
         return X, y, sid

@@ -57,7 +57,7 @@ python system/client.py
 ```
 
 Step 3. Generate unity images and segmentations.
-
+# 30 minutes on 20K states
 ```
 time python system/run.py <dataset> unity_dataset
 ```

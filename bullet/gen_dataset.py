@@ -47,33 +47,31 @@ import pprint
 from tqdm import tqdm
 from typing import *
 
-from ns_vqa_dart.bullet.dash_dataset import DashDataset
-import ns_vqa_dart.bullet.dash_object as dash_object
-import ns_vqa_dart.bullet.random_objects as random_objects
-import ns_vqa_dart.bullet.util as util
+from ns_vqa_dart.bullet import dash_object, seg, util
 
 
 def main(args: argparse.Namespace):
     util.delete_and_create_dir(dir=args.dst_dir)
+    if not args.disable_pngs:
+        util.delete_and_create_dir(dir=args.png_dir)
     # os.makedirs(args.dst_dir, exist_ok=True)
 
     paths = []
     # Loop over the scene IDs.
     for sid in tqdm(range(args.start_sid, args.end_sid)):
         # Load the state for the current scene ID.
-        state = util.load_pickle(
-            path=os.path.join(args.states_dir, f"{sid:06}.p")
-        )
+        state = util.load_pickle(path=os.path.join(args.states_dir, f"{sid:06}.p"))
 
         oids = list(state["objects"].keys())
 
         # Only generate for the first two objects if the camera control is
         # stacking. Here we are assuming that the first two objects in the
         # state dictionary always corresponds to the two objects in the stack.
+        oids_to_include = oids
         if args.objects_to_include == 2:
-            oids = oids[:2]
+            oids_to_include = oids[:2]
         elif args.objects_to_include == 1:
-            oids = oids[:1]
+            oids_to_include = oids[:1]
         elif args.objects_to_include == -1:
             pass
         else:
@@ -81,29 +79,35 @@ def main(args: argparse.Namespace):
                 f"Invalid number of objects to include: {args.objects_to_include}"
             )
 
-        # Save the input data.
-        for oid in oids:
-            odict = state["objects"][oid]
-            X, y = load_X_and_y(
-                sid=sid,
-                oid=oid,
-                odict=odict,
-                img_dir=args.img_dir,
-                cam_dir=args.cam_dir,
-                camera_control=args.camera_control,
-                coordinate_frame=args.coordinate_frame,
-            )
+        X_list, y_list, oid_list = load_X_and_y(
+            sid=sid,
+            state=state,
+            img_dir=args.img_dir,
+            cam_dir=args.cam_dir,
+            coordinate_frame=args.coordinate_frame,
+        )
 
+        # Save the input data.
+        for X, y, oid in zip(X_list, y_list, oid_list):
             # Skip over the example if there are issues with the example (e.g.,
             # object is completely occluded)
             if X is None and y is None:
                 print(f"Skipping occluded example sid: {sid}\toid: {oid}")
                 continue
 
-            path = save_example(
-                data_dir=args.dst_dir, sid=sid, oid=oid, X=X, y=y
-            )
+            if oid not in oids_to_include:
+                continue
+
+            # Save the pickle file.
+            path = save_example(data_dir=args.dst_dir, sid=sid, oid=oid, X=X, y=y)
             paths.append(path)
+
+            # Save the png.
+            if not args.disable_pngs:
+                input_img_rgb = np.hstack([X[:, :, :3], X[:, :, 3:6]])
+                eid = f"{sid:06}_{oid:02}"
+                path = os.path.join(args.png_dir, f"{eid}.png")
+                imageio.imwrite(path, input_img_rgb)
 
     # Save a partition of the data.
     split_id = int(len(paths) * 0.8)
@@ -112,9 +116,7 @@ def main(args: argparse.Namespace):
         "val": paths[split_id:],
         "test": paths[split_id:],
     }
-    util.save_json(
-        path=os.path.join(args.dst_dir, "partition.json"), data=partition
-    )
+    util.save_json(path=os.path.join(args.dst_dir, "partition.json"), data=partition)
     train = len(partition["train"])
     val = len(partition["val"])
     test = len(partition["test"])
@@ -122,47 +124,39 @@ def main(args: argparse.Namespace):
 
 
 def load_X_and_y(
-    sid: int,
-    oid: int,
-    odict: Dict,
-    img_dir: str,
-    cam_dir: str,
-    camera_control: str,
-    coordinate_frame: str,
+    sid: int, state: Dict, img_dir: str, cam_dir: str, coordinate_frame: str,
 ):
 
     # Load the image and segmentation for the object.
-    rgb, seg = load_rgb_and_seg(
-        img_dir=img_dir, sid=sid, oid=oid, camera_control=camera_control
-    )
+    rgb, masks, oid_list = load_rgb_and_seg(img_dir=img_dir, sid=sid)
 
-    # TODO: Exclude example if mask area is zero.
-    X = dash_object.compute_X(oid=oid, img=rgb, seg=seg, keep_occluded=False)
+    X_list, y_list = [], []
+    for mask, oid in zip(masks, oid_list):
+        # TODO: Exclude example if mask area is zero.
+        X = dash_object.compute_X(img=rgb, mask=mask, keep_occluded=False)
 
-    # The object is completely occluded so we throw the example out.
-    if X is None:
-        return None, None
+        # The object is completely occluded so we throw the example out.
+        if X is None:
+            return None, None
 
-    # Prepare camera parameters if we are using camera coordinate
-    # frame.
-    if coordinate_frame in ["camera", "unity_camera"]:
-        cam_position, cam_orientation = load_camera_pose(
-            cam_dir=cam_dir, sid=sid, oid=oid, camera_control=camera_control
+        # Prepare camera parameters if we are using camera coordinate
+        # frame.
+        if coordinate_frame in ["camera", "unity_camera"]:
+            cam_position, cam_orientation = load_camera_pose(cam_dir=cam_dir, sid=sid)
+        else:
+            raise ValueError(f"Invalid coordinate frame: {coordinate_frame}")
+        y = dash_object.compute_y(
+            odict=state["objects"][oid],
+            coordinate_frame=coordinate_frame,
+            cam_position=cam_position,
+            cam_orientation=cam_orientation,
         )
-    else:
-        raise ValueError(f"Invalid coordinate frame: {coordinate_frame}")
-    y = dash_object.compute_y(
-        odict=odict,
-        coordinate_frame=coordinate_frame,
-        cam_position=cam_position,
-        cam_orientation=cam_orientation,
-    )
-    return X, y
+        X_list.append(X)
+        y_list.append(y)
+    return X_list, y_list, oid_list
 
 
-def load_rgb_and_seg(
-    img_dir: str, sid: int, oid: int, camera_control: str
-) -> Tuple[np.ndarray, np.ndarray]:
+def load_rgb_and_seg(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the RGB image and segmentation map for a given scene.
 
     Args:
@@ -182,19 +176,15 @@ def load_rgb_and_seg(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb, seg_img = load_rgb_and_seg_img(
-        img_dir=img_dir, sid=sid, oid=oid, camera_control=camera_control
-    )
+    rgb, seg_img = load_rgb_and_seg_img(img_dir=img_dir, sid=sid)
 
     # Convert the segmentation image into an array.
     # TODO: Do this before saving the segmentation.
-    seg = seg_img_to_map(seg_img)
-    return rgb, seg
+    masks, oids = seg.seg_img_to_map(seg_img)
+    return rgb, masks, oids
 
 
-def load_rgb_and_seg_img(
-    img_dir: str, sid: int, oid: int, camera_control: str
-) -> Tuple[np.ndarray, np.ndarray]:
+def load_rgb_and_seg_img(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the RGB image and segmentation map for a given scene.
 
     Args:
@@ -214,9 +204,8 @@ def load_rgb_and_seg_img(
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
-    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_{cam_tid}.png")
-    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_{cam_tid}.png")
+    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_0.png")
+    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_0.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
     return rgb, seg_img
@@ -228,17 +217,7 @@ def load_third_person_image(img_dir: str, sid: str):
     return img
 
 
-def get_camera_target_id(oid: int, camera_control: str):
-    if camera_control == "all":
-        cam_tid = oid
-    elif camera_control in ["center", "stack", "position"]:
-        cam_tid = 0
-    else:
-        raise ValueError(f"Invalid camera control {camera_control}")
-    return cam_tid
-
-
-def load_camera_pose(cam_dir: str, sid: int, oid: int, camera_control: str):
+def load_camera_pose(cam_dir: str, sid: int):
     """Creates a camera with same parameters as camera used to capture images
     for the specified object in the specified scene.
 
@@ -250,17 +229,14 @@ def load_camera_pose(cam_dir: str, sid: int, oid: int, camera_control: str):
     Returns:
         cam: A BulletCamera.
     """
-    cam_tid = get_camera_target_id(oid=oid, camera_control=camera_control)
     path = os.path.join(cam_dir, f"{sid:06}.json")
-    params = util.load_json(path=path)[f"{cam_tid}"]
+    params = util.load_json(path=path)["0"]
     position = params["camera_position"]
     orientation = params["camera_orientation"]
     return position, orientation
 
 
-def save_example(
-    data_dir: str, sid: int, oid: int, X: np.ndarray, y: np.ndarray
-):
+def save_example(data_dir: str, sid: int, oid: int, X: np.ndarray, y: np.ndarray):
     eid = f"{sid:06}_{oid:02}"
     path = os.path.join(data_dir, f"{eid}.p")
 
@@ -289,10 +265,7 @@ if __name__ == "__main__":
         help="The directory to load states from.",
     )
     parser.add_argument(
-        "--img_dir",
-        required=True,
-        type=str,
-        help="The directory to load images from.",
+        "--img_dir", required=True, type=str, help="The directory to load images from.",
     )
     parser.add_argument(
         "--cam_dir",
@@ -305,6 +278,15 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="The destination directory to save the data in.",
+    )
+    parser.add_argument(
+        "--png_dir",
+        required=True,
+        type=str,
+        help="The destination directory to save the data in.",
+    )
+    parser.add_argument(
+        "--disable_pngs", action="store_true", help="Don't save pngs..",
     )
     parser.add_argument(
         "--start_sid",
@@ -323,13 +305,6 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="The first N objects to include in the dataset.",
-    )
-    parser.add_argument(
-        "--camera_control",
-        required=True,
-        type=str,
-        choices=["all", "center", "stack"],
-        help="The method of controlling the camera.",
     )
     parser.add_argument(
         "--coordinate_frame",
