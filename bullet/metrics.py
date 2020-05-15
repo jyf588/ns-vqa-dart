@@ -1,12 +1,13 @@
-import argparse
-import copy
-import matplotlib.pyplot as plt
-import numpy as np
 import os
+import copy
 import pickle
 import pprint
-from tqdm import tqdm
+import argparse
+import collections
+import numpy as np
 from typing import *
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import exp.loader
 from ns_vqa_dart.bullet import util
@@ -39,11 +40,10 @@ class Metrics:
         }
         self.n_total = 0
 
-        # Initialize the structures that will be used to create a scatter plot
-        # of the errors, downstream.
-        self.x = []
-        self.y = []
-        self.errors = []
+        # Initialize the structures that will be used to create a plot of the errors,
+        # downstream.
+        self.hist_errors = []
+        self.hist_pos = []
 
     def add_example(self, gt_dict, pred_dict):
         """Computes errors, and adds them to the running total.
@@ -85,18 +85,9 @@ class Metrics:
             self.reg_errors_dict["neg"][k] += neg_diff
             self.reg_errors_dict["abs"][k] += l1
 
-        # Compute values that will be used for the scatter plot.
-        x_gt, y_gt, _ = gt_dict["position"]
-        self.x.append(x_gt * 100)
-        self.y.append(y_gt * 100)
-        error = (
-            2
-            * np.linalg.norm(
-                np.array(gt_dict["position"] * 100)
-                - np.array(pred_dict["position"] * 100)
-            )
-        ) ** 2
-        self.errors.append(error)
+            if k == "position":
+                self.hist_errors.append(diff)
+                self.hist_pos.append(pred_dict["position"])
 
         self.n_total += 1
 
@@ -131,6 +122,24 @@ class Metrics:
                         )
                 else:
                     raise ValueError(f"Unrecognized type: {type(v)}")
+
+    def plot(self, save_dir=None):
+        name2hist = {"errors": self.hist_errors, "pos": self.hist_pos}
+        for name, hist_data in name2hist.items():
+            fig, axes = plt.subplots(1, 3, figsize=(20, 15))
+            xs, ys, zs = [], [], []
+            for x, y, z in hist_data:
+                xs.append(x)
+                ys.append(y)
+                zs.append(z)
+
+            axes[0].hist(xs, bins=50)
+            axes[1].hist(ys, bins=50)
+            axes[2].hist(zs, bins=50)
+            path = os.path.join(save_dir, f"histogram_{name}.png")
+            plt.savefig(path)
+            print(f"Saved histogram to: {path}.")
+            plt.close()
 
         # Generate a plot.
         # self.plot()
