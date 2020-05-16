@@ -210,6 +210,21 @@ python move_single.py 2 l
 ````
 xhost +si:localuser:root
 sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v2:/data --name openravecont_v2 openrave-ha:v3 /bin/bash
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 0
+```
+
+```
 sudo docker exec -it openravecont_v2 /bin/bash
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 1
+```
+
+```
 sudo docker exec -it openravecont_v2 /bin/bash
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 2 l
 ```
