@@ -20,10 +20,9 @@ class Trainer:
 
         # If we are resuming training, copy the original dir we are resuming from, into
         # the current dir. Most importantly, we load the existing training stats.
-        util.copytree(opt.resume_dir, self.run_dir)
         if opt.resume_dir is not None:
+            util.copytree(opt.resume_dir, self.run_dir)
             assert opt.checkpoint_t is not None
-            self.checkpoint_t = opt.checkpoint_t
             self.stats = json.load(open(f"{self.run_dir}/stats.json"))
         else:
             self.stats = {
@@ -41,14 +40,13 @@ class Trainer:
 
     def train(self):
         print("| start training, running in directory %s" % self.run_dir)
-        t = 0 if self.checkpoint_t is None else self.checkpoint_t
+        t = 0 if self.opt.checkpoint_t is None else self.opt.checkpoint_t
         epoch = 0
         start_time = time.time()
         while t < self.num_iters:
             epoch += 1
             for data, label, _ in self.train_loader:
                 t += 1
-                start_set_input = time.time()
                 self.model.set_input(data, label)
                 self.model.step()
                 loss = self.model.get_loss()
@@ -56,7 +54,9 @@ class Trainer:
                 if t % self.display_every == 0:
                     self.stats["train_losses"].append(loss)
                     t_this_session = (
-                        t if self.checkpoint_t is None else (t - self.checkpoint_t)
+                        t
+                        if self.opt.checkpoint_t is None
+                        else (t - self.opt.checkpoint_t)
                     )
                     avg_iter_time = (time.time() - start_time) / t_this_session
                     print(
