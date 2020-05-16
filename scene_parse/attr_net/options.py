@@ -40,12 +40,6 @@ class BaseOptions:
             help="load checkpoint path",
         )
         self.parser.add_argument(
-            "--checkpoint_t",
-            default=None,
-            type=int,
-            help="Iteration of the loaded checkpoint",
-        )
-        self.parser.add_argument(
             "--gpu_ids", default="0", type=str, help="ids of gpu to be used"
         )
         self.parser.add_argument(
@@ -172,6 +166,18 @@ class TrainOptions(BaseOptions):
             default=2000,
             type=int,
             help="save every N iterations",
+        )
+        self.parser.add_argument(
+            "--checkpoint_t",
+            default=None,
+            type=int,
+            help="Iteration of the loaded checkpoint",
+        )
+        self.parser.add_argument(
+            "--resume_dir",
+            default=None,
+            type=str,
+            help="Run directory to resume training from.",
         )
         self.parser.add_argument(
             "--shuffle_data", default=1, type=int, help="shuffle dataloader"

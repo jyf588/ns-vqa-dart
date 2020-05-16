@@ -1,7 +1,10 @@
 import os
+import time
 import json
 import torch
-import time
+import shutil
+
+from ns_vqa_dart.bullet import util
 
 
 class Trainer:
@@ -15,11 +18,13 @@ class Trainer:
         self.val_loader = val_loader
         self.model = model
 
-        self.checkpoint_t = opt.checkpoint_t
-
-        if opt.load_checkpoint_path is not None:
-            self.stats = json.load(open(f"{self.run_dir}/stats.json"))
+        # If we are resuming training, copy the original dir we are resuming from, into
+        # the current dir. Most importantly, we load the existing training stats.
+        util.copytree(opt.resume_dir, self.run_dir)
+        if opt.resume_dir is not None:
             assert opt.checkpoint_t is not None
+            self.checkpoint_t = opt.checkpoint_t
+            self.stats = json.load(open(f"{self.run_dir}/stats.json"))
         else:
             self.stats = {
                 "train_losses": [],
@@ -42,27 +47,18 @@ class Trainer:
         while t < self.num_iters:
             epoch += 1
             for data, label, _ in self.train_loader:
-                # print(data.size())
-                # print(label.size())
-                # print("starting iter")
                 t += 1
                 start_set_input = time.time()
                 self.model.set_input(data, label)
-                # print(f"t:{t}\tset_input: {time.time() - start_set_input}")
-
-                start_step = time.time()
                 self.model.step()
-                # print(f"t:{t}\tstep: {time.time() - start_step}")
-
-                start_loss = time.time()
                 loss = self.model.get_loss()
-                # print(f"t:{t}\tloss: {time.time() - start_loss}")
 
-                # print("right before display")
                 if t % self.display_every == 0:
-                    # print(f"display")
                     self.stats["train_losses"].append(loss)
-                    avg_iter_time = (time.time() - start_time) / t
+                    t_this_session = (
+                        t if self.checkpoint_t is None else (t - self.checkpoint_t)
+                    )
+                    avg_iter_time = (time.time() - start_time) / t_this_session
                     print(
                         "| iteration %d / %d, epoch %d, loss %f, avg_iter_secs: %.2f\n"
                         % (t, self.num_iters, epoch, loss, avg_iter_time),
@@ -70,9 +66,7 @@ class Trainer:
                     )
                     self.stats["train_losses_ts"].append(t)
 
-                # print("right before checkpoint")
                 if t % self.checkpoint_every == 0 or t >= self.num_iters:
-                    # print("checkpoint")
                     if self.val_loader is not None:
                         print("| checking validation loss")
                         val_loss = self.check_val_loss()
@@ -98,7 +92,6 @@ class Trainer:
 
                 if t >= self.num_iters:
                     break
-                # print("finish iter")
 
     def check_val_loss(self):
         self.model.eval_mode()
