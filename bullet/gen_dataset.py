@@ -110,17 +110,17 @@ def main(args: argparse.Namespace):
                 imageio.imwrite(path, input_img_rgb)
 
     # Save a partition of the data.
-    split_id = int(len(paths) * 0.8)
-    partition = {
-        "train": paths[:split_id],
-        "val": paths[split_id:],
-        "test": paths[split_id:],
-    }
-    util.save_json(path=os.path.join(args.dst_dir, "partition.json"), data=partition)
-    train = len(partition["train"])
-    val = len(partition["val"])
-    test = len(partition["test"])
-    print(f"Saved partition. Train: {train}\tValidation: {val}\tTest: {test}")
+    # split_id = int(len(paths) * 0.8)
+    # partition = {
+    #     "train": paths[:split_id],
+    #     "val": paths[split_id:],
+    #     "test": paths[split_id:],
+    # }
+    # util.save_json(path=os.path.join(args.dst_dir, "partition.json"), data=partition)
+    # train = len(partition["train"])
+    # val = len(partition["val"])
+    # test = len(partition["test"])
+    # print(f"Saved partition. Train: {train}\tValidation: {val}\tTest: {test}")
 
 
 def load_X_and_y(
@@ -204,8 +204,8 @@ def load_rgb_and_seg_img(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "first/rgb", f"{sid:06}_0.png")
-    seg_path = os.path.join(img_dir, "first/seg", f"{sid:06}_0.png")
+    rgb_path = os.path.join(img_dir, "rgb", f"{sid:06}_0.png")
+    seg_path = os.path.join(img_dir, "seg", f"{sid:06}_0.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
     return rgb, seg_img
@@ -280,10 +280,7 @@ if __name__ == "__main__":
         help="The destination directory to save the data in.",
     )
     parser.add_argument(
-        "--png_dir",
-        required=True,
-        type=str,
-        help="The destination directory to save the data in.",
+        "--png_dir", type=str, help="The destination directory to save the data in.",
     )
     parser.add_argument(
         "--disable_pngs", action="store_true", help="Don't save pngs..",
