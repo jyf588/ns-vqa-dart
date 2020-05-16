@@ -26,25 +26,30 @@ from ns_vqa_dart.bullet import util
 
 def main():
     opt = get_options("test")
-    test_loader = get_dataloader(opt, "test")
     model = get_model(opt)
     model.eval_mode()
 
-    path = os.path.join(opt.run_dir, "preds.p")
+    split2loader = {}
+    for split in ["train", "val"]:
+        split2loader[split] = get_dataloader(opt, split)
 
-    predictions = {}
-    for X, Y, sids in tqdm(test_loader):
-        model.set_input(X)
-        model.forward()
-        outputs = model.get_pred()
-        sids = sids.tolist()
-        for i in range(outputs.shape[0]):
-            predictions[sids[i]] = {
-                "pred": outputs[i].tolist(),
-                "y": Y[i].tolist(),
-            }
-    util.save_pickle(path=path, data=predictions)
-    print(f"Saved predictions to: {path}")
+    for split, loader in split2loader.items():
+        print(f"Running evaluation for split: {split}")
+        path = os.path.join(opt.run_dir, f"{split}_preds.p")
+        predictions = {}
+        for X, Y, sids in tqdm(loader):
+            model.set_input(X)
+            model.forward()
+            outputs = model.get_pred()
+            sids = sids.tolist()
+            for i in range(outputs.shape[0]):
+                predictions[sids[i]] = {
+                    "pred": outputs[i].tolist(),
+                    "y": Y[i].tolist(),
+                }
+        util.save_pickle(path=path, data=predictions)
+        print(f"Saved predictions to: {path}")
+
     # local_metrics = Metrics()
     # world_metrics = Metrics()
     # for y_hat, y, meta in zip(preds, labels, meta_list):
