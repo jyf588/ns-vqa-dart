@@ -65,11 +65,10 @@ class DashTorchDataset(Dataset):
                 object cropped out.
             y: Labels for the example.
         """
-        path = os.path.join(self.data_dir, self.fnames[idx])
 
+        path = self.idx2path(idx)
         try:
-            with open(path, "rb") as f:
-                data = pickle.load(f)
+            data = util.load_pickle(path)
         except:
             print(
                 f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example."
@@ -78,10 +77,10 @@ class DashTorchDataset(Dataset):
             retries = 0
             while retries < 50:
                 retries += 1
-                path = self.fnames[random.randint(0, self.__len__())]
+                idx = random.randint(0, self.__len__())
+                path = self.idx2path(idx)
                 try:
-                    with open(path, "rb") as f:
-                        data = pickle.load(f)
+                    data = util.load_pickle(path)
                     break
                 except:
                     print(
@@ -106,3 +105,13 @@ class DashTorchDataset(Dataset):
         # cv2.waitKey(0)
 
         return X, y, sid
+
+    def load_example(self, idx):
+        path = self.idx2path(idx)
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+        return data, path
+
+    def idx2path(self, idx):
+        path = os.path.join(self.data_dir, self.fnames[idx])
+        return path
