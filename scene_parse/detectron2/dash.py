@@ -35,13 +35,13 @@ from ns_vqa_dart.bullet.seg import seg_img_to_map
 class DASHSegModule:
     def __init__(
         self,
-        seed: int,
         mode: str,
         exp_name: Optional[str] = None,
         train_root_dir: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         vis_dir: Optional[str] = None,
         n_visuals: Optional[int] = 30,
+        seed=None,
     ):
         """
         Args:
@@ -51,7 +51,8 @@ class DASHSegModule:
             vis_dir: The directory to save visuals to.
             n_visuals: Number of examples to generate visuals for.
         """
-        self.seed_everything(seed, mode)
+        if seed is not None:
+            self.seed_everything(seed, mode)
         self.mode = mode
         self.exp_name = exp_name
         self.train_root_dir = train_root_dir
