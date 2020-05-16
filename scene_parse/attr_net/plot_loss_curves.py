@@ -48,6 +48,7 @@ def main(args: argparse.Namespace):
     plt.plot(val_ts, val_losses, label="Validation Loss")
     plt.legend()
     plt.savefig(save_path)
+    print(f"Saved plot to: {save_path}")
 
 
 if __name__ == "__main__":

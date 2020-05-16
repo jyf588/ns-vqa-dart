@@ -14,6 +14,7 @@ from typing import *
 from tqdm import tqdm
 from datetime import datetime
 
+import torch
 import pycocotools.mask
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
@@ -34,11 +35,11 @@ from ns_vqa_dart.bullet.seg import seg_img_to_map
 class DASHSegModule:
     def __init__(
         self,
+        seed: int,
         mode: str,
         exp_name: Optional[str] = None,
         train_root_dir: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
-        seed: Optional[int] = 1,
         vis_dir: Optional[str] = None,
         n_visuals: Optional[int] = 30,
     ):
@@ -50,14 +51,13 @@ class DASHSegModule:
             vis_dir: The directory to save visuals to.
             n_visuals: Number of examples to generate visuals for.
         """
+        self.seed_everything(seed, mode)
         self.mode = mode
         self.exp_name = exp_name
         self.train_root_dir = train_root_dir
         self.checkpoint_path = checkpoint_path
         self.vis_dir = vis_dir
         self.n_visuals = n_visuals
-
-        random.seed(seed)
 
         self.cfg = self.get_cfg()
 
@@ -67,6 +67,19 @@ class DASHSegModule:
             self.set_eval_cfg()
         else:
             raise ValueError(f"Invalid mode: {mode}.")
+
+    def seed_everything(self, seed, mode):
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        os.environ["PYTHONHASHSEED"] = str(seed)
+        if mode == "train":
+            torch.backends.cudnn.benchmark = True
+        else:
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
     def get_cfg(self):
         cfg = get_cfg()
