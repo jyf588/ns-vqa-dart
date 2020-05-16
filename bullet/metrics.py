@@ -95,11 +95,16 @@ class Metrics:
         """Prints the metrics computed thus far."""
         np.set_printoptions(2)
 
-        print(f"Classification Accuracies:")
-        for k, v in self.counts_dict.items():
-            print(f"\t{k}: {v / self.n_total * 100:.2f} ({v}/{self.n_total})")
+        table_print = []
+        long_print = []
 
-        print(f"Regression Errors:")
+        long_print.append(f"Classification Accuracies:")
+        for k, v in self.counts_dict.items():
+            acc = f"{v / self.n_total * 100:.2f}"
+            table_print.append(acc)
+            long_print.append(f"\t{k}: {acc} ({v}/{self.n_total})")
+
+        long_print.append(f"Regression Errors:")
         for k in self.l1_errors_dict.keys():
             for err_type in self.reg_errors_dict.keys():
                 v = copy.deepcopy(self.reg_errors_dict[err_type][k])
@@ -111,17 +116,30 @@ class Metrics:
 
                 # Print out the results.
                 if type(v) in [np.float64, float]:
-                    print(
-                        f"\t{k} {err_type} ({units}): {v / self.n_total:.2f} ({v:.2f}/{self.n_total})"
+                    err = f"{v / self.n_total:.2f}"
+                    long_print.append(
+                        f"\t{k} {err_type} ({units}): {err} ({v:.2f}/{self.n_total})"
                     )
+                    if err_type == "abs":
+                        table_print.append(err)
                 elif type(v) == np.ndarray:
-                    print(f"\t{k} {err_type} ({units}):")
+                    long_print.append(f"\t{k} {err_type} ({units}):")
                     for axis_i, v_i in enumerate(v):
-                        print(
-                            f"\t\t{AXIS_NAMES[axis_i]}: {v_i / self.n_total:.2f} ({v_i:.2f}/{self.n_total})"
+                        err = f"{v_i / self.n_total:.2f}"
+                        long_print.append(
+                            f"\t\t{AXIS_NAMES[axis_i]}: {err} ({v_i:.2f}/{self.n_total})"
                         )
+                        if err_type == "abs":
+                            table_print.append(err)
                 else:
                     raise ValueError(f"Unrecognized type: {type(v)}")
+
+        table_print.append(str(self.n_total))
+        table_str = (",").join(table_print)
+        print(table_str)
+
+        for line in long_print:
+            print(line)
 
     def plot(self, save_dir=None):
         name2hist = {"errors": self.hist_errors, "pos": self.hist_pos}
