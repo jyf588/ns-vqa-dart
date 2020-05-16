@@ -1,48 +1,46 @@
 import os
 import sys
+import argparse
 import numpy as np
 
-from ns_vqa_dart.bullet import util, dash_object, metrics
+from ns_vqa_dart.bullet import util, dash_object
+from ns_vqa_dart.bullet.metrics import Metrics
 
 
-def main():
-    # run_dir = "/home/mguo/outputs/placing_v003_2K_20K/2020_04_22_04_35/eval/2020_05_13_23_53_42"  # Pretrained version
-    run_dir = "/home/mguo/outputs/placing_v003_2K_20K/2020_05_14_01_42_23/eval/2020_05_14_02_22_33"
-    load_path = os.path.join(run_dir, "preds.p")
+def main(args):
+    eval_dir = os.path.join(args.run_dir, "eval", args.eval_name)
 
-    predictions = util.load_pickle(load_path)
-    train_m = metrics.Metrics()
-    val_m = metrics.Metrics()
+    split2metrics = {}
+    split2load_path = {}
+    split2save_path = {}
+    for split in ["train", "val"]:
+        split2metrics[split] = Metrics()
+        split2load_path[split] = os.path.join(eval_dir, f"{split}_preds.p")
+        save_path = os.path.join(eval_dir, f"{split}_metrics.txt")
+        split2save_path[split] = save_path
+        assert not os.path.exists(save_path)
 
-    for sid, pred_dict in predictions.items():
-        set = "train"
-        if sid >= 16000:
-            set = "val"
-        yhat = np.array(pred_dict["pred"])
-        y = np.array(pred_dict["y"])
+    for split, load_path in split2load_path.items():
+        predictions = util.load_pickle(load_path)
 
-        pred_dict = dash_object.y_vec_to_dict(y=yhat, coordinate_frame="world")
-        gt_dict = dash_object.y_vec_to_dict(y=y, coordinate_frame="world")
-        if set == "train":
-            train_m.add_example(gt_dict=gt_dict, pred_dict=pred_dict)
-        elif set == "val":
-            val_m.add_example(gt_dict=gt_dict, pred_dict=pred_dict)
+        for sid, pred_dict in predictions.items():
+            yhat = np.array(pred_dict["pred"])
+            y = np.array(pred_dict["y"])
 
-    train_save_path = os.path.join(run_dir, "train_metrics.txt")
-    val_save_path = os.path.join(run_dir, "val_metrics.txt")
+            pred_dict = dash_object.y_vec_to_dict(y=yhat, coordinate_frame="world")
+            gt_dict = dash_object.y_vec_to_dict(y=y, coordinate_frame="world")
+            split2metrics[split].add_example(gt_dict=gt_dict, pred_dict=pred_dict)
 
-    print(f"Saving metrics to: {train_save_path}")
-    print(f"Saving metrics to: {val_save_path}")
-
-    assert not os.path.exists(train_save_path)
-    assert not os.path.exists(val_save_path)
-
-    sys.stdout = open(train_save_path, "wt")
-    train_m.print()
-
-    sys.stdout = open(val_save_path, "wt")
-    val_m.print()
+    for split, metrics in split2metrics.items():
+        save_path = split2save_path[split]
+        sys.stdout = open(save_path, "wt")
+        metrics.print()
+        print(f"Saved metrics to: {save_path}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run_dir", required=True, type=str)
+    parser.add_argument("--eval_name", required=True, type=str)
+    args = parser.parse_args()
+    main(args)
