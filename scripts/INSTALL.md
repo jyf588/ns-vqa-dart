@@ -178,38 +178,37 @@ docker cp <src_path> openravecont:<dst_path>
 Quick commands to spin up multiple OpenRAVE's:
 
 ### Container v1:
+
 ```
 xhost +si:localuser:root
 sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v1:/data --name openravecont_v1 openrave-ha:v3 /bin/bash
-sudo docker exec -it openravecont_v1 /bin/bash
-sudo docker exec -it openravecont_v1 /bin/bash
-```
 
-### Reach
-```
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 0
 ```
 
-### Move
 ```
+sudo docker exec -it openravecont_v1 /bin/bash
+
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 1
 ```
 
-### Retract
 ```
+sudo docker exec -it openravecont_v1 /bin/bash
+
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 2 l
 ```
 
 ### Container v2:
-````
+```
 xhost +si:localuser:root
 sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v2:/data --name openravecont_v2 openrave-ha:v3 /bin/bash
+
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 0
@@ -217,6 +216,7 @@ python move_single.py 0
 
 ```
 sudo docker exec -it openravecont_v2 /bin/bash
+
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 1
@@ -224,6 +224,34 @@ python move_single.py 1
 
 ```
 sudo docker exec -it openravecont_v2 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 2 l
+```
+
+### Container v3:
+
+````
+xhost +si:localuser:root
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v3:/data --name openravecont_v3 openrave-ha:v3 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 0
+```
+
+```
+sudo docker exec -it openravecont_v3 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 1
+```
+
+```
+sudo docker exec -it openravecont_v3 /bin/bash
+
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 2 l
