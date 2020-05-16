@@ -1,5 +1,5 @@
 SET=stacking_v003_2K_20K
-MODEL_NAME=2020_05_15_21_35_20
+MODEL_NAME=2020_05_16_02_36_30
 DATA_DIR=/home/mguo/data/$SET/data
 MODEL_DIR=/home/mguo/outputs/$SET/$MODEL_NAME
 RUN_DIR=$MODEL_DIR/eval
