@@ -1,15 +1,21 @@
 import os
 import json
+import pprint
 
 from torch.utils.data import DataLoader
 from .dash_object_loader import DashTorchDataset
 from .clevr_object import ClevrObjectDataset
 from .clevr_dart_object import ClevrDartObjectDataset
 
+from ns_vqa_dart.bullet import util
+
 
 def get_dataset(opt, split):
     if opt.dataset == "dash":
-        ds = DashTorchDataset(data_dir=opt.data_dir, split=split)
+        data_dirs = util.load_json(path=opt.data_dirs_json)
+        print(f"Loaded data directories from {opt.data_dirs_json}:")
+        pprint.pprint(data_dirs)
+        ds = DashTorchDataset(data_dirs=data_dirs, split=split)
 
     elif opt.dataset == "clevr":
         if split == "train":

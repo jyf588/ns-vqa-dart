@@ -31,7 +31,10 @@ class BaseOptions:
         )
         self.parser.add_argument("--dataset", default="dash", type=str, help="dataset")
         self.parser.add_argument(
-            "--data_dir", required=True, type=str, help="The dataset directory."
+            "--data_dirs_json",
+            required=True,
+            type=str,
+            help="A JSON file containing a list of data directories we want to load from.",
         )
         self.parser.add_argument(
             "--load_checkpoint_path",

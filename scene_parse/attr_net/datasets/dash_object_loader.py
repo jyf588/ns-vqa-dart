@@ -18,23 +18,24 @@ from ns_vqa_dart.bullet import util
 
 
 class DashTorchDataset(Dataset):
-    def __init__(self, data_dir: str, split: str):
+    def __init__(self, data_dirs: List[str], split: str, split_frac=0.8):
         """A Pytorch Dataset for DASH objects.
 
         Args:
-            data_dir: A folder of data to load from. Should be a folder of pickle files.
+            data_dirs: A list of data directories to load data from. Each directory 
+            should be a folder of pickle files.
         """
-        self.data_dir = data_dir
+        self.paths = []
 
-        fnames = sorted(os.listdir(data_dir))
-        split_id = int(len(fnames) * 0.8)
-        if split == "train":
-            self.fnames = fnames[:split_id]
-        elif split in ["val", "test"]:
-            self.fnames = fnames[split_id:]
+        # Loop over the directories.
+        for data_dir in data_dirs:
+            print(f"Gathering data from {data_dir}...")
+            p = [os.path.join(data_dir, f) for f in sorted(os.listdir(data_dir))]
+            split_paths = util.compute_split(split, p, split_frac)
+            self.paths += split_paths
 
-        print(f"First few fnames selected:")
-        print(self.fnames[:10])
+            print(f"First 10 examples selected:")
+            print(split_paths[:10])
 
         self.normalize = [
             transforms.ToTensor(),
@@ -51,7 +52,7 @@ class DashTorchDataset(Dataset):
         Returns:
             n_examples: The number of examples in the dataset.
         """
-        return len(self.fnames)
+        return len(self.paths)
 
     def __getitem__(self, idx: int):
         """Loads a single example from the dataset.
@@ -66,7 +67,7 @@ class DashTorchDataset(Dataset):
             y: Labels for the example.
         """
 
-        path = self.idx2path(idx)
+        path = self.paths[idx]
         try:
             data = util.load_pickle(path)
         except:
@@ -78,7 +79,7 @@ class DashTorchDataset(Dataset):
             while retries < 50:
                 retries += 1
                 idx = random.randint(0, self.__len__())
-                path = self.idx2path(idx)
+                path = self.paths[idx]
                 try:
                     data = util.load_pickle(path)
                     break
@@ -111,7 +112,3 @@ class DashTorchDataset(Dataset):
         with open(path, "rb") as f:
             data = pickle.load(f)
         return data, path
-
-    def idx2path(self, idx):
-        path = os.path.join(self.data_dir, self.fnames[idx])
-        return path
