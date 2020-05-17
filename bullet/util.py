@@ -350,3 +350,13 @@ class AutoVivification(dict):
             value = self[item] = type(self)()
             return value
 
+
+def compute_split(split, examples, split_frac):
+    split_id = int(len(examples) * split_frac)
+    if split == "train":
+        split_examples = examples[:split_id]
+    elif split == "val":
+        split_examples = examples[split_id:]
+    else:
+        raise ValueError(f"Invalid split: {split}.")
+    return split_examples
