@@ -36,7 +36,7 @@ class DASHSegModule:
     def __init__(
         self,
         mode: str,
-        exp_name: Optional[str] = None,
+        dataset_name: str,
         train_root_dir: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         vis_dir: Optional[str] = None,
@@ -51,14 +51,15 @@ class DASHSegModule:
             vis_dir: The directory to save visuals to.
             n_visuals: Number of examples to generate visuals for.
         """
-        if seed is not None:
-            self.seed_everything(seed, mode)
         self.mode = mode
-        self.exp_name = exp_name
+        self.dataset_name = dataset_name
         self.train_root_dir = train_root_dir
         self.checkpoint_path = checkpoint_path
         self.vis_dir = vis_dir
         self.n_visuals = n_visuals
+
+        if seed is not None:
+            self.seed_everything(seed, mode)
 
         self.cfg = self.get_cfg()
 
@@ -76,9 +77,8 @@ class DASHSegModule:
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         os.environ["PYTHONHASHSEED"] = str(seed)
-        if mode == "train":
-            torch.backends.cudnn.benchmark = True
-        else:
+        # Only set this during eval, since it could slow training.
+        if mode == "eval":
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
@@ -92,8 +92,6 @@ class DASHSegModule:
 
         # Data configurations.
         cfg.INPUT.MASK_FORMAT = "bitmask"
-        cfg.DATASETS.TRAIN = (self.exp_name,)
-        cfg.DATASETS.TEST = ()
         cfg.DATALOADER.NUM_WORKERS = 2
 
         # Model configurations.
@@ -102,20 +100,22 @@ class DASHSegModule:
         return cfg
 
     def set_train_cfg(self):
+        torch.backends.cudnn.benchmark = True
+
+        self.cfg.DATASETS.TRAIN = (self.dataset_name,)
+
         # Let training initialize from model zoo
         self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
         )
 
-        self.cfg.SOLVER.IMS_PER_BATCH = 2
-        self.cfg.SOLVER.BASE_LR = 0.00025
-        self.cfg.SOLVER.MAX_ITER = 60000
+        self.cfg.SOLVER.IMS_PER_BATCH = 2 * 2
+        self.cfg.SOLVER.BASE_LR = 0.00025 * 2
+        self.cfg.SOLVER.MAX_ITER = 600000
         self.cfg.SOLVER.CHECKPOINT_PERIOD = 500
 
-        self.cfg.OUTPUT_DIR = os.path.join(
-            self.train_root_dir, self.exp_name, util.get_time_dirname()
-        )
-        os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
+        self.cfg.OUTPUT_DIR = os.path.join(self.train_root_dir, util.get_time_dirname())
+        os.makedirs(self.cfg.OUTPUT_DIR)
 
     def set_eval_cfg(self):
         assert self.checkpoint_path is not None
@@ -129,7 +129,7 @@ class DASHSegModule:
             MetadataCatalog.get("eval_single").set(thing_classes=["object"])
             self.cfg.DATASETS.TEST = ("eval_single",)
         else:
-            self.cfg.DATASETS.TEST = (self.exp_name,)
+            self.cfg.DATASETS.TEST = (self.dataset_name,)
             self.cfg.OUTPUT_DIR = os.path.join(
                 os.path.dirname(self.checkpoint_path),
                 "eval",
@@ -302,12 +302,14 @@ class DASHSegModule:
         return res
 
 
-def get_dash_dicts(exp_name: str) -> List[Dict]:
+def get_dash_dicts(set2dir: Dict, split: str, split_frac=0.8) -> List[Dict]:
     """Prepares the dataset dictionaries for the DASH dataset for detectron2
     training.
 
     Args:
-        exp_name: The name of the experiment to load data for.
+        set2dir: A mapping from set name to image and segmentation image directories.
+        split: Whether to create train or val split. Default will sort the files in each
+            `data_dir`, and split first 80% to train and last 20% to val, for each dir.
 
     Returns:
         dataset_dicts: A list of dataset dictionaries, in the format:
@@ -340,48 +342,78 @@ def get_dash_dicts(exp_name: str) -> List[Dict]:
     """
     dataset_dicts = []
 
-    if exp_name == "eval_single":
-        pass
-    else:
-        for set_name in exp.loader.ExpLoader(exp_name=exp_name).set_names:
-            print(f"Loading the dataset for experiment {exp_name}, set {set_name}...")
-            set_loader = exp.loader.SetLoader(exp_name=exp_name, set_name=set_name)
-            for scene_id in sorted(
-                os.listdir(os.path.join(set_loader.set_dir, "masks"))
-            ):
-                print(scene_id)
-                scene_loader = exp.loader.SceneLoader(
-                    exp_name=exp_name, set_name=set_name, scene_id=scene_id
-                )
-                for timestep in scene_loader.get_timesteps():
-                    img_path = scene_loader.get_rgb_path(timestep=timestep)
-                    mask_paths = scene_loader.get_mask_paths(timestep=timestep)
-                    # Retrieve the height and width of the image.
-                    image_id = f"{set_name}_{scene_id}_{timestep:06}"
-                    record = create_record_for_image(
-                        img_path=img_path, mask_paths=mask_paths, image_id=image_id
-                    )
-                    dataset_dicts.append(record)
+    # Collect sorted examples from the various sets. We sort because that way splitting
+    # is deterministic.
+    example_sets = []
+    for set_name, set_dirs in set2dir.items():
+        set_examples = collect_sorted_examples_for_set(set_name, set_dirs)
+        example_sets.append(set_examples)
+
+    # Only include examples for the current split.
+    examples = []
+    for s in example_sets:
+        split_examples = compute_split(split=split, examples=s, split_frac=split_frac)
+        examples += split_examples
+
+    # Convert examples into records.
+    for set_name, sid, img_path, seg_img_path in tqdm(examples):
+        image_id = f"{set_name}_{sid}"
+        seg_img = imageio.imread(seg_img_path)
+        masks, _ = seg_img_to_map(seg_img)
+
+        # Create the record.
+        record = create_record_for_image(
+            image_id=image_id, img_path=img_path, masks=masks
+        )
+        dataset_dicts.append(record)
     return dataset_dicts
 
 
+def compute_split(split, examples, split_frac):
+    split_id = int(len(examples) * split_frac)
+    if split == "train":
+        split_examples = examples[:split_id]
+    elif split == "val":
+        split_examples = examples[split_id:]
+    else:
+        raise ValueError(f"Invalid split: {split}.")
+    return split_examples
+
+
+def collect_sorted_examples_for_set(set_name, set_dirs):
+    img_dir = set_dirs["img"]
+    seg_dir = set_dirs["seg"]
+
+    # Verify that both directories have the same set of filenames.
+    img_fnames = set(os.listdir(img_dir))
+    seg_fnames = set(os.listdir(seg_dir))
+    assert img_fnames == seg_fnames
+
+    examples = []
+    for fname in sorted(os.listdir(img_dir)):
+        sid_with_zero, _ = fname.split(".")
+        sid, _ = sid_with_zero.split("_")
+        img_path = os.path.join(img_dir, fname)
+        seg_path = os.path.join(seg_dir, fname)
+        examples.append((set_name, sid, img_path, seg_path))
+    return examples
+
+
 def create_record_for_image(
-    img_path: str, mask_paths: List[str], image_id: str, height=320, width=480
+    image_id: str, img_path: str, masks: np.ndarray, height=320, width=480
 ):
     record = {}
-
     record["file_name"] = img_path
     record["image_id"] = image_id
     record["height"] = height
     record["width"] = width
 
     objs = []
-    for mask_path in mask_paths:
-        mask = np.load(mask_path)
-        rle = pycocotools.mask.encode(np.asarray(mask, order="F"))
+    for m in masks:
+        rle = pycocotools.mask.encode(np.asarray(m, order="F"))
 
-        # Convert `counts` to ascii, otherwise json dump complains about
-        # not being able to serialize bytes.
+        # Convert `counts` to ascii, otherwise json dump complains about not being able
+        # to serialize bytes.
         # https://github.com/facebookresearch/detectron2/issues/200#issuecomment-614407341
         # rle["counts"] = rle["counts"].decode("ASCII")
         assert isinstance(rle, dict)
@@ -407,41 +439,48 @@ def get_latest_checkpoint(root_dir: str, exp_name: str, model_name: str):
     return checkpoint_path
 
 
-def register_dataset(exp_name):
-    DatasetCatalog.register(exp_name, lambda: get_dash_dicts(exp_name=exp_name))
-    MetadataCatalog.get(exp_name).set(thing_classes=["object"])
+def register_dataset(dataset_name, set2dir, split):
+    DatasetCatalog.register(dataset_name, lambda: get_dash_dicts(set2dir, split))
+    MetadataCatalog.get(dataset_name).set(thing_classes=["object"])
 
 
 def main(args: argparse.Namespace):
-    # Register the dataset.
-    register_dataset(exp_name=args.exp_name)
+    # Register the train and validation datasets.
+    set_names = ["planning_v003_20K", "placing_v003_2K_20K", "stacking_v003_2K_20K"]
+    set2dir = {}
+    for n in set_names:
+        images_dir = os.path.join("/home/mguo/data", n, "unity_output/images")
+        img_dir = os.path.join(images_dir, "rgb")
+        seg_dir = os.path.join(images_dir, "seg")
+        set2dir[n] = {"img": img_dir, "seg": seg_dir}
+
+    for split in ["train", "val"]:
+        dataset_name = f"dash_{split}"
+        register_dataset(dataset_name=dataset_name, set2dir=set2dir, split="train")
 
     if args.mode == "train":
         module = DASHSegModule(
-            mode=args.mode,
-            exp_name=args.exp_name,
-            train_root_dir=args.root_dir,
-            seed=args.seed,
+            mode=args.mode, dataset_name="dash_train", train_root_dir=args.root_dir,
         )
         module.train()
-    elif args.mode == "eval":
-        # Evaluate the latest checkpoint under the provided model name.
-        checkpoint_path = get_latest_checkpoint(
-            root_dir=args.root_dir, exp_name=args.exp_name, model_name=args.model_name
-        )
+    # elif args.mode == "eval":
+    #     # Evaluate the latest checkpoint under the provided model name.
+    #     checkpoint_path = get_latest_checkpoint(
+    #         root_dir=args.root_dir, exp_name=args.exp_name, model_name=args.model_name
+    #     )
 
-        module = DASHSegModule(
-            mode=args.mode,
-            exp_name=args.exp_name,
-            checkpoint_path=checkpoint_path,
-            seed=args.seed,
-        )
+    #     module = DASHSegModule(
+    #         mode=args.mode,
+    #         dataset_name="dash_val",
+    #         checkpoint_path=checkpoint_path,
+    #         seed=args.seed,  # Set seed since we want deterministic results.
+    #     )
 
-        res = module.eval(
-            visualize=True, compute_metrics=True, save_segs=args.save_segs
-        )
-        print("Results:")
-        pprint.pprint(res)
+    #     res = module.eval(
+    #         visualize=True, compute_metrics=True, save_segs=args.save_segs
+    #     )
+    #     print("Results:")
+    #     pprint.pprint(res)
 
 
 if __name__ == "__main__":
@@ -453,7 +492,6 @@ if __name__ == "__main__":
         choices=["train", "eval"],
         help="Whether to train or run evaluation.",
     )
-    parser.add_argument("exp_name", type=str, help="The name of the experiment to run.")
     parser.add_argument(
         "--root_dir",
         type=str,
