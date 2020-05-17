@@ -72,6 +72,7 @@ class AttributeNetwork:
         self.gpu_ids = opt.gpu_ids
         if self.use_cuda:
             self.net.cuda(opt.gpu_ids[0])
+            torch.backends.cudnn.benchmark = True
 
         self.opt = opt
         self.input, self.label = None, None
