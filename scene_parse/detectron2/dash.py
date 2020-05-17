@@ -38,6 +38,7 @@ class DASHSegModule:
         mode: str,
         dataset_name: str,
         train_root_dir: Optional[str] = None,
+        resume_from_dir=None,
         checkpoint_path: Optional[str] = None,
         vis_dir: Optional[str] = None,
         n_visuals: Optional[int] = 30,
@@ -54,6 +55,7 @@ class DASHSegModule:
         self.mode = mode
         self.dataset_name = dataset_name
         self.train_root_dir = train_root_dir
+        self.resume_from_dir = resume_from_dir
         self.checkpoint_path = checkpoint_path
         self.vis_dir = vis_dir
         self.n_visuals = n_visuals
@@ -352,7 +354,9 @@ def get_dash_dicts(set2dir: Dict, split: str, split_frac=0.8) -> List[Dict]:
     # Only include examples for the current split.
     examples = []
     for s in example_sets:
-        split_examples = compute_split(split=split, examples=s, split_frac=split_frac)
+        split_examples = util.compute_split(
+            split=split, examples=s, split_frac=split_frac
+        )
         examples += split_examples
 
     # Convert examples into records.
@@ -367,17 +371,6 @@ def get_dash_dicts(set2dir: Dict, split: str, split_frac=0.8) -> List[Dict]:
         )
         dataset_dicts.append(record)
     return dataset_dicts
-
-
-def compute_split(split, examples, split_frac):
-    split_id = int(len(examples) * split_frac)
-    if split == "train":
-        split_examples = examples[:split_id]
-    elif split == "val":
-        split_examples = examples[split_id:]
-    else:
-        raise ValueError(f"Invalid split: {split}.")
-    return split_examples
 
 
 def collect_sorted_examples_for_set(set_name, set_dirs):
