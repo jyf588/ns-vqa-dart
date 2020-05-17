@@ -261,7 +261,9 @@ def euler_to_up(euler: List[float]) -> List[float]:
 
 def delete_and_create_dir(dir: str):
     if os.path.exists(dir):
-        user_input = input(f"dst dir already exists: {dir}. Delete and continue? [y/n]")
+        user_input = input(
+            f"Destination Directory already exists: {dir}. Delete and continue? [y/n] "
+        )
         if user_input == "y":
             shutil.rmtree(dir)
         else:
