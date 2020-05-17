@@ -1,6 +1,6 @@
 DATA_DIRS_JSON=ns_vqa_dart/scripts/combined/data_dirs.json
 RUN_DIR=/home/mguo/outputs/combined
-CHECKPOINT_EVERY=5000
+CHECKPOINT_EVERY=2000
 NUM_ITERS=600000
 
 

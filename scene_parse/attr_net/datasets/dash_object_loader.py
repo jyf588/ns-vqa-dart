@@ -3,6 +3,7 @@ import cv2
 import sys
 import time
 import json
+import pprint
 import pickle
 import random
 import imageio
@@ -25,6 +26,7 @@ class DashTorchDataset(Dataset):
             data_dirs: A list of data directories to load data from. Each directory 
             should be a folder of pickle files.
         """
+        print(f"*****Initializing Dataset*****")
         self.paths = []
 
         # Loop over the directories.
@@ -34,8 +36,8 @@ class DashTorchDataset(Dataset):
             split_paths = util.compute_split(split, p, split_frac)
             self.paths += split_paths
 
-            print(f"First 10 examples selected:")
-            print(split_paths[:10])
+            print(f"First 5 examples selected:")
+            pprint.pprint(split_paths[:5])
 
         self.normalize = [
             transforms.ToTensor(),
