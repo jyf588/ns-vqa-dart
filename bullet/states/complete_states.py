@@ -44,40 +44,49 @@ import os
 import pprint
 from tqdm import tqdm
 
-import ns_vqa_dart.bullet.random_objects as random_objects
+import scene.generator
 import ns_vqa_dart.bullet.util as util
 
 
 def main(args: argparse.Namespace):
     util.delete_and_create_dir(dir=args.dst_dir)
 
+    # Load scene parameters for sampling attributes.
+    scene_params = util.load_json(args.scene_json_path)
+
     # Loop over each state in the directory.
-    for state_fname in tqdm(os.listdir(args.src_dir)):
-        # Load the state.
-        src_path = os.path.join(args.src_dir, state_fname)
-        state = util.load_pickle(path=src_path)
+    n_trials, n_states, n_objects = 0, 0, 0
+    for t in tqdm(sorted(os.listdir(args.src_dir))):
+        src_t_dir = os.path.join(args.src_dir, t)
+        dst_t_dir = os.path.join(args.dst_dir, t)
+        util.delete_and_create_dir(dir=dst_t_dir)
+        n_trials += 1
+        for fname in sorted(os.listdir(src_t_dir)):
+            # Load the state.
+            src_path = os.path.join(src_t_dir, fname)
+            state = util.load_pickle(path=src_path)
 
-        # Loop over the objects.
-        new_state_objects = {}
-        for idx, odict in enumerate(state["objects"]):
-            # Assign oid. We arbitrarily use the idx of the object as the
-            # object ID. We want the object IDs to be between [0, max_objects)
-            # because when renderering the objects later on in Unity, Unity
-            # requires that object tags are pre-defined as a fixed set of
-            # possible object IDs.
-            oid = idx
+            # Loop over the objects.
+            new_state_objects = []
+            for odict in state["objects"]:
+                # Assign random color.
+                odict["color"] = scene.generator.gen_rand_color(scene_params["colors"])
+                new_state_objects.append(odict)
+                n_objects += 1
 
-            # Assign random color.
-            odict["color"] = random_objects.generate_random_color()
+            # Override the object states with updated states.
+            state["objects"] = new_state_objects
 
-            new_state_objects[oid] = odict
-
-        # Override the object states.
-        state["objects"] = new_state_objects
-
-        # Save the state.
-        dst_path = os.path.join(args.dst_dir, state_fname)
-        util.save_pickle(path=dst_path, data=state)
+            # Save the state.
+            dst_path = os.path.join(dst_t_dir, fname)
+            util.save_pickle(path=dst_path, data=state)
+            n_states += 1
+    print(
+        f"Number of updated entities:\n"
+        f"\tTrials: {n_trials}\n"
+        f"\tStates: {n_states}\n"
+        f"\tObjects: {n_objects}\n"
+    )
 
 
 if __name__ == "__main__":
@@ -94,6 +103,12 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="The destination directory to save the full, complete states.",
+    )
+    parser.add_argument(
+        "--scene_json_path",
+        required=True,
+        type=str,
+        help="The path to the JSON file that contains scene parameters to sample from.",
     )
     args = parser.parse_args()
     pprint.pprint(vars(args))
