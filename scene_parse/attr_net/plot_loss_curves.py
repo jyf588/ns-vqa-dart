@@ -42,10 +42,13 @@ def main(args: argparse.Namespace):
     train_losses = loss_dict["train_losses"]
     val_ts = loss_dict["val_losses_ts"]
     val_losses = loss_dict["val_losses"]
+    best_val_loss = loss_dict["best_val_loss"]
+    best_val_t = loss_dict["model_t"]
 
     plt.yscale("log")
     plt.plot(train_ts, train_losses, label="Training Loss")
     plt.plot(val_ts, val_losses, label="Validation Loss")
+    plt.plot([best_val_t], [best_val_loss], marker="o", markersize=10, color="red")
     plt.legend()
     plt.savefig(save_path)
     print(f"Saved plot to: {save_path}")
