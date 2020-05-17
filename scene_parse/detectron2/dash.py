@@ -111,10 +111,10 @@ class DASHSegModule:
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
         )
 
-        self.cfg.SOLVER.IMS_PER_BATCH = 2 * 2
-        self.cfg.SOLVER.BASE_LR = 0.00025 * 2
+        self.cfg.SOLVER.IMS_PER_BATCH = 2
+        self.cfg.SOLVER.BASE_LR = 0.00025
         self.cfg.SOLVER.MAX_ITER = 600000
-        self.cfg.SOLVER.CHECKPOINT_PERIOD = 500
+        self.cfg.SOLVER.CHECKPOINT_PERIOD = 2000
 
         self.cfg.OUTPUT_DIR = os.path.join(self.train_root_dir, util.get_time_dirname())
         os.makedirs(self.cfg.OUTPUT_DIR)
