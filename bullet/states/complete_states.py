@@ -44,6 +44,7 @@ import os
 import pprint
 from tqdm import tqdm
 
+import scene.options as scene_options
 import scene.generator
 import ns_vqa_dart.bullet.util as util
 
@@ -52,7 +53,10 @@ def main(args: argparse.Namespace):
     util.delete_and_create_dir(dir=args.dst_dir)
 
     # Load scene parameters for sampling attributes.
-    scene_params = util.load_json(args.scene_json_path)
+    task2opt, task2gen_opt = scene_options.create_options(args.scene_json_path)
+    manip_opt_list = task2gen_opt[args.task]["manip"]
+    assert all(e["colors"] == manip_opt_list[0]["colors"] for e in manip_opt_list)
+    colors = manip_opt_list[0]["colors"]
 
     # Loop over each state in the directory.
     n_trials, n_states, n_objects = 0, 0, 0
@@ -70,7 +74,7 @@ def main(args: argparse.Namespace):
             new_state_objects = []
             for odict in state["objects"]:
                 # Assign random color.
-                odict["color"] = scene.generator.gen_rand_color(scene_params["colors"])
+                odict["color"] = scene.generator.gen_rand_color(colors)
                 new_state_objects.append(odict)
                 n_objects += 1
 
@@ -92,6 +96,9 @@ def main(args: argparse.Namespace):
 if __name__ == "__main__":
     print("*****complete_states.py*****")
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--task", required=True, type=str, help="The task we are running for.",
+    )
     parser.add_argument(
         "--src_dir",
         required=True,

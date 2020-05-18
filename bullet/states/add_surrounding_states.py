@@ -39,79 +39,66 @@ from tqdm import tqdm
 from typing import *
 
 import ns_vqa_dart.bullet.dash_object as dash_object
-from ns_vqa_dart.bullet.random_objects import RandomObjectsGenerator
+from scene.generator import SceneGenerator
+import scene.options
 import ns_vqa_dart.bullet.util as util
-import my_pybullet_envs.utils as env_utils
 
 
 def main(args: argparse.Namespace):
     util.delete_and_create_dir(dir=args.dst_dir)
 
-    # For n_objs: We want at least 2 objects total, and minimum number of
-    # existing objects is 1 (placing).
-    objects_generator = RandomObjectsGenerator(
-        seed=1,
-        n_objs_bounds=(1, 6),
-        obj_dist_thresh=0.1,
-        max_retries=50,
-        shapes=["box", "cylinder", "sphere"],
-        colors=["red", "yellow", "green", "blue"],
-        radius_bounds=(0.01, 0.07),
-        height_bounds=(0.05, 0.20),
-        x_bounds=(env_utils.TX_MIN, env_utils.TX_MAX),
-        y_bounds=(env_utils.TY_MIN, env_utils.TY_MAX),
-        z_bounds=(0.0, 0.0),
-        mass_bounds=(env_utils.MASS_MIN, env_utils.MASS_MAX),
-        mu_bounds=(1.0, 1.0),
-        position_mode="com",
-    )
+    # Create options based on the JSON configurations.
+    task2opt, task2gen_opt = scene.options.create_options(args.scene_json_path)
+    opt = task2opt[args.task]
+    surround_gen_opt_list = task2gen_opt[args.task]["surround"]
+    assert len(surround_gen_opt_list) == 1
+    surround_gen_opt = surround_gen_opt_list[0]
 
-    original_count = 0
-    new_count = 0
+    # Create the scene generator.
+    scene_generator = SceneGenerator(seed=opt["seed"], opt=surround_gen_opt)
+
+    scene_count = 0
+    manip_count = 0
+    surround_count = 0
 
     # Loop over states in the source directory.
-    fnames = sorted(os.listdir(args.src_dir))
-    for fname in tqdm(fnames):
-        # Load the current state file.
-        src_state = util.load_pickle(path=os.path.join(args.src_dir, fname))
-        src_oid2odict = src_state["objects"]
-        src_oids = list(src_oid2odict.keys())
-        src_odicts = list(src_oid2odict.values())
-        n_objs_orig = len(src_state["objects"])
+    for t in tqdm(sorted(os.listdir(args.src_dir))):
+        src_t_dir = os.path.join(args.src_dir, t)
+        dst_t_dir = os.path.join(args.dst_dir, t)
+        util.delete_and_create_dir(dst_t_dir)
+        for f in sorted(os.listdir(src_t_dir)):
+            scene_count += 1
 
-        # Generate random surrounding objects around existing objects.
-        new_odicts = objects_generator.generate_tabletop_objects(
-            existing_odicts=src_odicts
-        )
+            # Load the current state file.
+            state = util.load_pickle(path=os.path.join(src_t_dir, f))
 
-        # Assign object IDs to the new objects.
-        # Object IDs are assigned starting after the maximum existing
-        # object ID in the source objects.
-        oid2odicts = dash_object.assign_ids_to_odicts(
-            odicts=new_odicts, start_id=max(src_oids) + 1
-        )
+            # Extract the existing objects in the state, which are manipulable objects.
+            manip_odicts = state["objects"]
+            manip_count += len(manip_odicts)
 
-        # Combine new objects with existing objects.
-        for oid, odict in oid2odicts.items():
-            src_state["objects"][oid] = odict
-        n_objs_new = len(src_state["objects"])
+            # Generate random surrounding objects around existing objects.
+            surround_odicts = scene_generator.generate_tabletop_objects(
+                existing_odicts=manip_odicts, unique_odicts=manip_odicts
+            )
+            surround_count += len(surround_odicts)
 
-        # Save the new state file into the destination directory.
-        util.save_pickle(
-            path=os.path.join(args.dst_dir, fname), data=src_state
-        )
+            # Add to existing list of objects.
+            state["objects"] += surround_odicts
 
-        original_count += n_objs_orig
-        new_count += n_objs_new
+            # Save the new state file into the destination directory.
+            util.save_pickle(path=os.path.join(dst_t_dir, f), data=state)
 
-    print(f"Number of scenes: {len(fnames)}")
-    print(f"Original number of objects: {original_count}")
-    print(f"New number of objects: {new_count}")
+    print(f"Number of scenes: {scene_count}")
+    print(f"Manip count: {manip_count}")
+    print(f"Surround count: {surround_count}")
 
 
 if __name__ == "__main__":
     print("*****add_surrounding_states.py*****")
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--task", required=True, type=str, help="The task to generate states for.",
+    )
     parser.add_argument(
         "--src_dir",
         required=True,
@@ -123,6 +110,12 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="The directory containing original states.",
+    )
+    parser.add_argument(
+        "--scene_json_path",
+        required=True,
+        type=str,
+        help="The path to the JSON file specifying scene sampling parameters.",
     )
     args = parser.parse_args()
 
