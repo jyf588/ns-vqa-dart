@@ -22,40 +22,41 @@ import pprint
 from tqdm import tqdm
 from typing import *
 
-import scene.options as scene_options
-import scene.generate as scene_gen
+import ns_vqa_dart.bullet.dash_object as dash_object
+from ns_vqa_dart.bullet.random_objects import RandomObjectsGenerator
 import ns_vqa_dart.bullet.util as util
+import my_pybullet_envs.utils as env_utils
 
 
 def main(args: argparse.Namespace):
-    util.delete_and_create_dir(args.dst_dir)
+    util.delete_and_create_dir(args.dst_dir, exist_ok=True)
 
     # Create options based on the JSON configurations.
-    task2opt, task2gen_opt = scene_options.create_options(args.scene_json_path)
+    task2opt, task2gen_opt = scene.options.create_options(args.scene_json_path)
+    opt = task2opt[args.task]
+    surround_gen_opt_list = task2gen_opt[args.task]["surround"]
+    assert len(surround_gen_opt_list) == 1
+    surround_gen_opt = surround_gen_opt_list[0]
 
-    tasks = ["stack", "place"]
-    n_tasks = len(tasks)
-    assert args.n_examples % n_tasks == 0
-    n_examples_per_task = args.n_examples // n_tasks
+    objects_generator = RandomObjectsGenerator(
+        seed=1,
+        n_objs_bounds=(2, 7),
+        obj_dist_thresh=0.1,
+        max_retries=50,
+        shapes=["box", "cylinder", "sphere"],
+        radius_bounds=(0.01, 0.07),
+        height_bounds=(0.05, 0.20),
+        x_bounds=(env_utils.TX_MIN, env_utils.TX_MAX),
+        y_bounds=(env_utils.TY_MIN, env_utils.TY_MAX),
+        z_bounds=(0.0, 0.0),
+        position_mode="com",
+    )
 
-    # Create the scenes for each task, using the options for each task.
-    task2scenes = {}
-    for task in ["stack", "place"]:
-        opt = task2opt[task]
-        # Create the scene generator. Seeds are specified at the task-level.
-        type2gen = scene_gen.create_generators(
-            seed=opt["seed"], type2gen_opt=task2gen_opt[task]
-        )
-        task_scenes = scene_gen.generate_scenes(
-            n_scenes=n_examples_per_task, type2gen=type2gen
-        )
-        task2scenes[task] = task_scenes
-
-    for task, scenes in task2scenes.items():
-        for idx, scene in enumerate(scenes):
-            state = {"objects": scene}
-            eid = f"{task}_{idx:06}"
-            util.save_pickle(path=os.path.join(args.dst_dir, f"{eid}.p"), data=state)
+    for sid in tqdm(range(args.n_examples)):
+        odicts = objects_generator.generate_tabletop_objects()
+        oid2odicts = dash_object.assign_ids_to_odicts(odicts=odicts, start_id=0)
+        state = {"objects": oid2odicts}
+        util.save_pickle(path=os.path.join(args.dst_dir, f"{sid:06}.p"), data=state)
 
 
 if __name__ == "__main__":
