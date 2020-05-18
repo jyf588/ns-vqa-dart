@@ -56,13 +56,32 @@ def main(args: argparse.Namespace):
         util.delete_and_create_dir(dir=args.png_dir)
     # os.makedirs(args.dst_dir, exist_ok=True)
 
+    if args.format == "flat":
+        src_examples = []
+        for f in sorted(os.listdir(args.states_dir)):
+            sid = f.split(".")[0]
+            state_path = os.path.join(args.states_dir, f)
+            e = (sid, state_path)
+            src_examples.append(e)
+    elif args.format == "nested":
+        src_examples = []
+        for t in sorted(os.listdir(args.states_dir)):
+            t_dir = os.path.join(args.states_dir, t)
+            for f in sorted(os.listdir(t_dir)):
+                state_path = os.path.join(t_dir, f)
+                frame_id = f.split(".")[0]
+                sid = f"{t}_{frame_id}"
+                e = (sid, state_path)
+                src_examples.append((e))
+
     paths = []
     # Loop over the scene IDs.
-    for sid in tqdm(range(args.start_sid, args.end_sid)):
+    for idx in tqdm(range(args.start_sid, args.end_sid)):
+        sid, state_path = src_examples[idx]
         # Load the state for the current scene ID.
-        state = util.load_pickle(path=os.path.join(args.states_dir, f"{sid:06}.p"))
+        state = util.load_pickle(path=state_path)
 
-        oids = list(state["objects"].keys())
+        oids = [oid for oid in range(len(state["objects"]))]
 
         # Only generate for the first two objects if the camera control is
         # stacking. Here we are assuming that the first two objects in the
@@ -105,7 +124,7 @@ def main(args: argparse.Namespace):
             # Save the png.
             if not args.disable_pngs:
                 input_img_rgb = np.hstack([X[:, :, :3], X[:, :, 3:6]])
-                eid = f"{sid:06}_{oid:02}"
+                eid = f"{sid}_{oid:02}"
                 path = os.path.join(args.png_dir, f"{eid}.png")
                 imageio.imwrite(path, input_img_rgb)
 
@@ -204,8 +223,8 @@ def load_rgb_and_seg_img(img_dir: str, sid: int) -> Tuple[np.ndarray, np.ndarray
         segmentation: A 2D segmentation map where each pixel stores the object 
             ID it belongs to.
     """
-    rgb_path = os.path.join(img_dir, "rgb", f"{sid:06}_0.png")
-    seg_path = os.path.join(img_dir, "seg", f"{sid:06}_0.png")
+    rgb_path = os.path.join(img_dir, "rgb", f"{sid}_0.png")
+    seg_path = os.path.join(img_dir, "seg", f"{sid}_0.png")
     rgb = imageio.imread(uri=rgb_path)
     seg_img = imageio.imread(uri=seg_path)
     return rgb, seg_img
@@ -229,7 +248,7 @@ def load_camera_pose(cam_dir: str, sid: int):
     Returns:
         cam: A BulletCamera.
     """
-    path = os.path.join(cam_dir, f"{sid:06}.json")
+    path = os.path.join(cam_dir, f"{sid}.json")
     params = util.load_json(path=path)["0"]
     position = params["camera_position"]
     orientation = params["camera_orientation"]
@@ -237,7 +256,7 @@ def load_camera_pose(cam_dir: str, sid: int):
 
 
 def save_example(data_dir: str, sid: int, oid: int, X: np.ndarray, y: np.ndarray):
-    eid = f"{sid:06}_{oid:02}"
+    eid = f"{sid}_{oid:02}"
     path = os.path.join(data_dir, f"{eid}.p")
 
     util.save_pickle(path=path, data=[X, y, sid, oid, path])
@@ -258,6 +277,9 @@ def path_to_sid_oid(path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--format", required=True, type=str, help="The format.",
+    )
     parser.add_argument(
         "--states_dir",
         required=True,

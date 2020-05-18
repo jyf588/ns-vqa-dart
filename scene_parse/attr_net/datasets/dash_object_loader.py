@@ -90,13 +90,13 @@ class DashTorchDataset(Dataset):
                         f"Warning: EOF error when reading pickle file {path} for idx {idx}. Sampling new example. Retries: {retries}"
                     )
 
-        X, y, sid, oid, path = data
+        X_before_normalize, y, sid, oid, path = data
+        X = transforms.Compose(self.normalize)(X_before_normalize)
 
-        # print(f"Path: {path}")
-        # input_rgb = np.hstack([X[:, :, :3], X[:, :, 3:6]])
+        # input_rgb = np.hstack(
+        #     [X_before_normalize[:, :, :3], X_before_normalize[:, :, 3:6]]
+        # )
         # cv2.imshow("example", input_rgb[:, :, ::-1])
-
-        X = transforms.Compose(self.normalize)(X)
 
         # normalized_rgb = X.numpy()
         # normalized_rgb = np.moveaxis(normalized_rgb, 0, -1)
