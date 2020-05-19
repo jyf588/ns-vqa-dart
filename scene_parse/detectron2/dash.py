@@ -69,6 +69,7 @@ class DASHSegModule:
             self.set_train_cfg()
         elif mode in ["eval", "eval_single"]:
             self.set_eval_cfg()
+            self.predictor = DefaultPredictor(self.cfg)
         else:
             raise ValueError(f"Invalid mode: {mode}.")
 
@@ -125,9 +126,7 @@ class DASHSegModule:
         self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
 
         if self.mode == "eval_single":
-            DatasetCatalog.register(
-                "eval_single", lambda: get_dash_dicts(exp_name="eval_single")
-            )
+            DatasetCatalog.register("eval_single", lambda: get_dash_dicts(None, None))
             MetadataCatalog.get("eval_single").set(thing_classes=["object"])
             self.cfg.DATASETS.TEST = ("eval_single",)
         else:
@@ -154,8 +153,7 @@ class DASHSegModule:
         Returns:
             masks: A numpy array of shape (N, H, W) of instance masks.
         """
-        predictor = DefaultPredictor(self.cfg)
-        outputs = predictor(bgr)
+        outputs = self.predictor(bgr)
 
         if vis_id is not None and self.vis_dir is not None:
             self.visualize_predictions(bgr=bgr, outputs=outputs, vis_id=vis_id)
@@ -184,7 +182,7 @@ class DASHSegModule:
         dataset_dicts = get_dash_dicts(exp_name=self.exp_name)
         n = len(dataset_dicts)
 
-        predictor = DefaultPredictor(self.cfg)
+        # predictor = DefaultPredictor(self.cfg)
 
         idxs_to_eval, visualize_idxs, save_seg_idxs = [], [], []
         if visualize:
@@ -224,7 +222,7 @@ class DASHSegModule:
                     # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L162
                     # https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/defaults.py#L212
                     bgr = cv2.imread(d["file_name"])
-                    outputs = predictor(bgr)
+                    outputs = self.predictor(bgr)
 
                     if idx in save_seg_idxs:
                         masks = self.get_output_masks(outputs=outputs)
@@ -343,6 +341,9 @@ def get_dash_dicts(set2dir: Dict, split: str, split_frac=0.8) -> List[Dict]:
             ]
     """
     dataset_dicts = []
+
+    if set2dir is None and split is None:
+        return dataset_dicts
 
     # Collect sorted examples from the various sets. We sort because that way splitting
     # is deterministic.
