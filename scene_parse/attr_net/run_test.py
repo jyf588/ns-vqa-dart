@@ -30,7 +30,7 @@ def main():
     model.eval_mode()
 
     split2loader = {}
-    for split in ["train", "val"]:
+    for split in ["val", "train"]:
         split2loader[split] = get_dataloader(opt, split)
 
     for split, loader in split2loader.items():
@@ -41,7 +41,7 @@ def main():
             model.set_input(X)
             model.forward()
             outputs = model.get_pred()
-            sids = sids.tolist()
+            # sids = sids.tolist()
             for i in range(outputs.shape[0]):
                 predictions[sids[i]] = {
                     "pred": outputs[i].tolist(),
