@@ -177,11 +177,11 @@ docker cp <src_path> openravecont:<dst_path>
 
 Quick commands to spin up multiple OpenRAVE's:
 
-### Container v1:
+### Container 8000:
 
 ```
 xhost +si:localuser:root
-sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v1:/data --name openravecont_v1 openrave-ha:v3 /bin/bash
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8000:/data --name openravecont_8000 openrave-ha:v3 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -189,7 +189,7 @@ python move_single.py 0
 ```
 
 ```
-sudo docker exec -it openravecont_v1 /bin/bash
+sudo docker exec -it openravecont_8000 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -197,17 +197,17 @@ python move_single.py 1
 ```
 
 ```
-sudo docker exec -it openravecont_v1 /bin/bash
+sudo docker exec -it openravecont_8000 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 2 l
 ```
 
-### Container v2:
+### Container 8001:
 ```
 xhost +si:localuser:root
-sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v2:/data --name openravecont_v2 openrave-ha:v3 /bin/bash
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8001:/data --name openravecont_8001 openrave-ha:v3 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -215,7 +215,7 @@ python move_single.py 0
 ```
 
 ```
-sudo docker exec -it openravecont_v2 /bin/bash
+sudo docker exec -it openravecont_8001 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -223,18 +223,18 @@ python move_single.py 1
 ```
 
 ```
-sudo docker exec -it openravecont_v2 /bin/bash
+sudo docker exec -it openravecont_8001 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
 python move_single.py 2 l
 ```
 
-### Container v3:
+### Container 8002:
 
-````
+```
 xhost +si:localuser:root
-sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_v3:/data --name openravecont_v3 openrave-ha:v3 /bin/bash
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8002:/data --name openravecont_8002 openrave-ha:v3 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -242,7 +242,7 @@ python move_single.py 0
 ```
 
 ```
-sudo docker exec -it openravecont_v3 /bin/bash
+sudo docker exec -it openravecont_8002 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
@@ -250,7 +250,89 @@ python move_single.py 1
 ```
 
 ```
-sudo docker exec -it openravecont_v3 /bin/bash
+sudo docker exec -it openravecont_8002 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 2 l
+```
+
+### Container 8003:
+
+```
+xhost +si:localuser:root
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8003:/data --name openravecont_8003 openrave-ha:v3 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 0
+```
+
+```
+sudo docker exec -it openravecont_8003 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 1
+```
+
+```
+sudo docker exec -it openravecont_8003 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 2 l
+```
+
+
+### Container 8010:
+
+```
+xhost +si:localuser:root
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8010:/data --name openravecont_8010 openrave-ha:v3 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 0
+```
+
+```
+sudo docker exec -it openravecont_8010 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 1
+```
+
+```
+sudo docker exec -it openravecont_8010 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 2 l
+```
+
+### Container 8011:
+
+```
+xhost +si:localuser:root
+sudo docker run --gpus=all -ti --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v ~/container_data_8011:/data --name openravecont_8011 openrave-ha:v3 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 0
+```
+
+```
+sudo docker exec -it openravecont_8011 /bin/bash
+
+source bashrc
+cd /data/or_planning_scripts
+python move_single.py 1
+```
+
+```
+sudo docker exec -it openravecont_8011 /bin/bash
 
 source bashrc
 cd /data/or_planning_scripts
