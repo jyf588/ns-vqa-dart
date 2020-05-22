@@ -68,9 +68,7 @@ COLOR2RGBA = {
 
 
 class BulletRenderer:
-    def __init__(
-        self, p=None, assets_dir: Optional[str] = "my_pybullet_envs/assets"
-    ):
+    def __init__(self, p=None, assets_dir: Optional[str] = "my_pybullet_envs/assets"):
         self.p = p
         self.assets_dir = assets_dir
 
@@ -213,6 +211,7 @@ class BulletRenderer:
             if color is not None:
                 self.p.changeVisualShape(oid, -1, rgbaColor=COLOR2RGBA[color])
             self.p.changeDynamics(oid, -1, lateralFriction=mu)
+            self.p.changeDynamics(oid, -1, lateralFriction=mu, rollingFriction=0.0008)
         return oid
 
     def create_primitive(
@@ -280,10 +279,7 @@ class BulletRenderer:
                 )
             else:
                 visual_shape_id = self.p.createVisualShape(
-                    shapeType=geom,
-                    radius=r,
-                    halfExtents=half_extents,
-                    length=h,
+                    shapeType=geom, radius=r, halfExtents=half_extents, length=h,
                 )
         # Errors can occur when trying to render predictions that are
         # physically impossible.

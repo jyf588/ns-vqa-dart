@@ -255,7 +255,6 @@ def euler_to_up(euler: List[float]) -> List[float]:
     up = rotation_to_up(rotation=rotmat)
     return up
 
-
 """ File I/O utility functions. """
 
 
@@ -292,7 +291,7 @@ def load_json(path: str) -> Any:
 
 def save_json(path: str, data: Any, check_override=True):
     if check_override:
-        assert not os.path.exists(path)
+        assert not os.path.exists(path), path
     with open(path, "w") as f:
         json.dump(data, f, sort_keys=True, indent=2, separators=(",", ": "))
 
